@@ -1,0 +1,18 @@
+0
+//------------------------------------
+//Index   ItemIndex   Comment
+//------------------------------------
+0         14,213      //Titan's Anger
+end
+
+1
+//-------------------------------------------------------------------
+//	Index   	Group   MonsterClass   CreateRate   Comment
+//-------------------------------------------------------------------
+	0         	0       053            80      		//Golden Titan
+	0         	1       053            60      		//Golden Titan
+	0         	2       054            50      		//Golden Soldier
+	0         	3       079            40      		//Golden Derkon
+	0         	4       082            30      		//Golden Tantalos
+	0         	5       083            20      		//Golden Wheel
+end

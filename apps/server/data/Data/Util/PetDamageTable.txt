@@ -1,0 +1,27 @@
+// =============================================================================
+// # WizarD TeaM Emulator
+// # https://www.wzteam.com.br/
+// # https://www.facebook.com/WizardTeamDev
+// # https://www.youtube.com/@wizardteam9953
+// =============================================================================
+// # © 2008 - 2025 WizarD TeaM Development
+// # This file is part of the WzTeaM MuOnline Server files.
+// =============================================================================
+
+// ------------------------------------------------------------------------
+// Index   MinLevel   MaxLevel   MinReset   MaxReset   DamageRate   Comment
+// ------------------------------------------------------------------------
+   0       *          *          *          *          1000         // Angel
+   1       *          *          *          *          1000         // Satan
+   2       *          *          *          *          1000         // Uniria
+   3       *          *          *          *          1000         // Dinorant
+   4       *          *          *          *          1000         // Dark Horse
+   5       *          *          *          *          1000         // Dark Spirit
+   6       *          *          *          *          1000         // Fenrir
+   7       *          *          *          *          1000         // Demon
+   8       *          *          *          *          1000         // Maria
+   9       *          *          *          *          1000         // Rudolf
+   10      *          *          *          *          1000         // Panda
+   11      *          *          *          *          1000         // Unicorn
+   12      *          *          *          *          1000         // Skeleton
+end

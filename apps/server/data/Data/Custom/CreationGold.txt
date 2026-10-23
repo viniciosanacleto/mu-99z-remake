@@ -1,0 +1,15 @@
+;============================================================
+; Jewel of Creation (14,022) -> Bonus em Gold
+;============================================================
+; Altere somente GoldValue para mudar o valor creditado.
+; O GameServer le este valor no momento do uso da joia.
+; Nao precisa recompilar para mudar o valor.
+;
+; Exemplo:
+; GoldValue=50    -> credita 50 Gold
+; GoldValue=500   -> credita 500 Gold
+; GoldValue=0     -> desativa o bonus e nao consome a joia
+;============================================================
+
+[CreationGold]
+GoldValue=20

@@ -1,0 +1,17 @@
+// =============================================================================
+// # WizarD TeaM Emulator
+// # https://www.wzteam.com.br/
+// # https://www.facebook.com/WizardTeamDev
+// # https://www.youtube.com/@wizardteam9953
+// =============================================================================
+// # © 2008 - 2025 WizarD TeaM Development
+// # This file is part of the WzTeaM MuOnline Server files.
+// =============================================================================
+
+// -----------------------------------------------------------------------------------
+// [*/0~3]        [0~3]             [0~365]   [0~2000000000]   [Max Char 32]
+// AccountLevel   NewAccountLevel   Days      Money            Code            Comment
+// -----------------------------------------------------------------------------------
+// DEMOSTRATION
+// 0              1                 31        0                "month"         //Use: /buyvip month
+end

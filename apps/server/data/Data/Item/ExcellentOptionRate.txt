@@ -1,0 +1,138 @@
+// =============================================================================
+// # WizarD TeaM Emulator
+// # https://www.wzteam.com.br/
+// # https://www.facebook.com/WizardTeamDev
+// # https://www.youtube.com/@wizardteam9953
+// =============================================================================
+// # © 2008 - 2025 WizarD TeaM Development
+// # This file is part of the WzTeaM MuOnline Server files.
+// =============================================================================
+
+// ---------------------------------------------------------------------------------------------
+//         [00,000]       [00,000]       [Max 32 Char]                        [0~100]
+// Index   ItemMinIndex   ItemMaxIndex   Name                                 DropRate   Comment
+// ---------------------------------------------------------------------------------------------
+   1       00,000         04,511         "Add Hunt MP"                        60         //General Weapon
+   2       00,000         04,511         "Add Hunt HP"                        60         //General Weapon
+   4       00,000         04,511         "Add Speed"                          50         //General Weapon
+   8       00,000         04,511         "Mul Physi Damage"                   20         //General Weapon
+   16      00,000         04,511         "Add Physi Damage By Level"          20         //General Weapon
+   32      00,000         04,511         "Add Excellent Damage Rate"          10         //General Weapon
+   1       05,000         05,511         "Add Hunt MP"                        40         //General Staff
+   2       05,000         05,511         "Add Hunt HP"                        40         //General Staff
+   4       05,000         05,511         "Add Speed"                          50         //General Staff
+   8       05,000         05,511         "Mul Magic Damage"                   20         //General Staff
+   16      05,000         05,511         "Add Magic Damage By Level"          20         //General Staff
+   32      05,000         05,511         "Add Excellent Damage Rate"          10         //General Staff
+   1       06,000         06,511         "Add Money Amount Drop Rate"         40         //General Shield
+   2       06,000         06,511         "Mul Defense Success Rate"           40         //General Shield
+   4       06,000         06,511         "Add Damage Reflect"                 20         //General Shield
+   8       06,000         06,511         "Add Damage Reduction"               10         //General Shield
+   16      06,000         06,511         "Mul MP"                             40         //General Shield
+   32      06,000         06,511         "Mul HP"                             20         //General Shield
+   1       07,000         11,511         "Add Money Amount Drop Rate"         40         //General Armor
+   2       07,000         11,511         "Mul Defense Success Rate"           40         //General Armor
+   4       07,000         11,511         "Add Damage Reflect"                 20         //General Armor
+   8       07,000         11,511         "Add Damage Reduction"               10         //General Armor
+   16      07,000         11,511         "Mul MP"                             40         //General Armor
+   32      07,000         11,511         "Mul HP"                             20         //General Armor
+   1       13,008         13,008         "Add Money Amount Drop Rate"         50         //Ring of Ice
+   2       13,008         13,008         "Mul Defense Success Rate"           50         //Ring of Ice
+   4       13,008         13,008         "Add Damage Reflect"                 50         //Ring of Ice
+   8       13,008         13,008         "Add Damage Reduction"               30         //Ring of Ice
+   16      13,008         13,008         "Mul MP"                             50         //Ring of Ice
+   32      13,008         13,008         "Mul HP"                             50         //Ring of Ice
+   1       13,009         13,009         "Add Money Amount Drop Rate"         50         //Ring of Poison
+   2       13,009         13,009         "Mul Defense Success Rate"           50         //Ring of Poison
+   4       13,009         13,009         "Add Damage Reflect"                 40         //Ring of Poison
+   8       13,009         13,009         "Add Damage Reduction"               30         //Ring of Poison
+   16      13,009         13,009         "Mul MP"                             50         //Ring of Poison
+   32      13,009         13,009         "Mul HP"                             40         //Ring of Poison
+   1       13,021         13,021         "Add Money Amount Drop Rate"         50         //Ring of Fire
+   2       13,021         13,021         "Mul Defense Success Rate"           50         //Ring of Fire
+   4       13,021         13,021         "Add Damage Reflect"                 40         //Ring of Fire
+   8       13,021         13,021         "Add Damage Reduction"               30         //Ring of Fire
+   16      13,021         13,021         "Mul MP"                             50         //Ring of Fire
+   32      13,021         13,021         "Mul HP"                             40         //Ring of Fire
+   1       13,022         13,022         "Add Money Amount Drop Rate"         50         //Ring of Earth
+   2       13,022         13,022         "Mul Defense Success Rate"           50         //Ring of Earth
+   4       13,022         13,022         "Add Damage Reflect"                 40         //Ring of Earth
+   8       13,022         13,022         "Add Damage Reduction"               30         //Ring of Earth
+   16      13,022         13,022         "Mul MP"                             50         //Ring of Earth
+   32      13,022         13,022         "Mul HP"                             40         //Ring of Earth
+   1       13,023         13,023         "Add Money Amount Drop Rate"         50         //Ring of Wind
+   2       13,023         13,023         "Mul Defense Success Rate"           50         //Ring of Wind
+   4       13,023         13,023         "Add Damage Reflect"                 40         //Ring of Wind
+   8       13,023         13,023         "Add Damage Reduction"               30         //Ring of Wind
+   16      13,023         13,023         "Mul MP"                             50         //Ring of Wind
+   32      13,023         13,023         "Mul HP"                             40         //Ring of Wind
+   1       13,024         13,024         "Add Money Amount Drop Rate"         50         //Ring of Magic
+   2       13,024         13,024         "Mul Defense Success Rate"           50         //Ring of Magic
+   4       13,024         13,024         "Add Damage Reflect"                 40         //Ring of Magic
+   8       13,024         13,024         "Add Damage Reduction"               30         //Ring of Magic
+   16      13,024         13,024         "Mul MP"                             50         //Ring of Magic
+   32      13,024         13,024         "Mul HP"                             40         //Ring of Magic
+   1       13,012         13,012         "Add Hunt MP"                        50         //Pendant of Lighting
+   2       13,012         13,012         "Add Hunt HP"                        50         //Pendant of Lighting
+   4       13,012         13,012         "Add Speed"                          40         //Pendant of Lighting
+   8       13,012         13,012         "Mul Magic Damage"                   40         //Pendant of Lighting
+   16      13,012         13,012         "Add Magic Damage By Level"          40         //Pendant of Lighting
+   32      13,012         13,012         "Add Excellent Damage Rate"          30         //Pendant of Lighting
+   1       13,013         13,013         "Add Hunt MP"                        50         //Pendant of Fire
+   2       13,013         13,013         "Add Hunt HP"                        50         //Pendant of Fire
+   4       13,013         13,013         "Add Speed"                          40         //Pendant of Fire
+   8       13,013         13,013         "Mul Physi Damage"                   40         //Pendant of Fire
+   16      13,013         13,013         "Add Physi Damage By Level"          40         //Pendant of Fire
+   32      13,013         13,013         "Add Excellent Damage Rate"          30         //Pendant of Fire
+   1       13,025         13,025         "Add Hunt MP"                        50         //Pendant of Ice
+   2       13,025         13,025         "Add Hunt HP"                        50         //Pendant of Ice
+   4       13,025         13,025         "Add Speed"                          50         //Pendant of Ice
+   8       13,025         13,025         "Mul Magic Damage"                   40         //Pendant of Ice
+   16      13,025         13,025         "Add Magic Damage By Level"          40         //Pendant of Ice
+   32      13,025         13,025         "Add Excellent Damage Rate"          30         //Pendant of Ice
+   1       13,026         13,026         "Add Hunt MP"                        50         //Pendant of Wind
+   2       13,026         13,026         "Add Hunt HP"                        50         //Pendant of Wind
+   4       13,026         13,026         "Add Speed"                          40         //Pendant of Wind
+   8       13,026         13,026         "Mul Physi Damage"                   40         //Pendant of Wind
+   16      13,026         13,026         "Add Physi Damage By Level"          40         //Pendant of Wind
+   32      13,026         13,026         "Add Excellent Damage Rate"          30         //Pendant of Wind
+   1       13,027         13,027         "Add Hunt MP"                        50         //Pendant of Water
+   2       13,027         13,027         "Add Hunt HP"                        50         //Pendant of Water
+   4       13,027         13,027         "Add Speed"                          40         //Pendant of Water
+   8       13,027         13,027         "Mul Magic Damage"                   40         //Pendant of Water
+   16      13,027         13,027         "Add Magic Damage By Level"          40         //Pendant of Water
+   32      13,027         13,027         "Add Excellent Damage Rate"          30         //Pendant of Water
+   1       13,028         13,028         "Add Hunt MP"                        50         //Pendant of Ability
+   2       13,028         13,028         "Add Hunt HP"                        50         //Pendant of Ability
+   4       13,028         13,028         "Add Speed"                          40         //Pendant of Ability
+   8       13,028         13,028         "Mul Physi Damage"                   40         //Pendant of Ability
+   16      13,028         13,028         "Add Physi Damage By Level"          40         //Pendant of Ability
+   32      13,028         13,028         "Add Excellent Damage Rate"          30         //Pendant of Ability
+   1       12,003         12,003         "Add Wing HP"                        50         //Wings of Spirit
+   2       12,003         12,003         "Add Wing MP"                        50         //Wings of Spirit
+   4       12,003         12,003         "Add Ignore Defense Rate"            20         //Wings of Spirit
+   8       12,003         12,003         "Add BP"                             0          //Wings of Spirit
+   16      12,003         12,003         "Add Speed"                          0          //Wings of Spirit
+   1       12,004         12,004         "Add Wing HP"                        50         //Wings of Soul
+   2       12,004         12,004         "Add Wing MP"                        50         //Wings of Soul
+   4       12,004         12,004         "Add Ignore Defense Rate"            20         //Wings of Soul
+   8       12,004         12,004         "Add BP"                             0          //Wings of Soul
+   16      12,004         12,004         "Add Speed"                          0          //Wings of Soul
+   1       12,005         12,005         "Add Wing HP"                        50         //Wings of Devil
+   2       12,005         12,005         "Add Wing MP"                        50         //Wings of Devil
+   4       12,005         12,005         "Add Ignore Defense Rate"            20         //Wings of Devil
+   8       12,005         12,005         "Add BP"                             0          //Wings of Devil
+   16      12,005         12,005         "Add Speed"                          0          //Wings of Devil
+   1       12,006         12,006         "Add Wing HP"                        50         //Wings of Darkness
+   2       12,006         12,006         "Add Wing MP"                        50         //Wings of Darkness
+   4       12,006         12,006         "Add Ignore Defense Rate"            20         //Wings of Darkness
+   8       12,006         12,006         "Add BP"                             0          //Wings of Darkness
+   16      12,006         12,006         "Add Speed"                          0          //Wings of Darkness
+   1       13,030         13,030         "Add Wing HP"                        50         //Cape of Lord
+   2       13,030         13,030         "Add Wing MP"                        50         //Cape of Lord
+   4       13,030         13,030         "Add Ignore Defense Rate"            10         //Cape of Lord
+   8       13,030         13,030         "Add Wing Leadership"                50         //Cape of Lord
+   1       13,003         13,003         "Add Dinorant 1"                     50         //Dinorant
+   2       13,003         13,003         "Add BP"                             50         //Dinorant
+   4       13,003         13,003         "Add Speed"                          50         //Dinorant
+end

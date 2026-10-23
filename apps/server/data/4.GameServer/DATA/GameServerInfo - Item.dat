@@ -1,0 +1,112 @@
+[GameServerInfo]
+;==================================================
+; Transformation Ring Settings
+;==================================================
+TransformationRing1 = 2
+TransformationRing2 = 7
+TransformationRing3 = 14
+TransformationRing4 = 8
+TransformationRing5 = 9
+TransformationRing6 = 41
+
+;==================================================
+; Guardian Inc Damage Settings
+;==================================================
+SatanIncDamageConstA = 10
+DinorantIncDamageConstA = 10
+
+;==================================================
+; Guardian Dec Damage Settings
+;==================================================
+AngelDecDamageConstA = 10
+DinorantDecDamageConstA = 10
+DinorantDecDamageConstB = 10
+DarkHorseDecDamageConstA = 10
+DarkHorseDecDamageConstB = 3
+
+;==================================================
+; Apple Potion Settings
+;==================================================
+DWApplePotionRate = 3
+DKApplePotionRate = 3
+FEApplePotionRate = 3
+MGApplePotionRate = 3
+DLApplePotionRate = 3
+
+;==================================================
+; Small Life Potion Settings
+;==================================================
+DWSmallLifePotionRate = 5
+DKSmallLifePotionRate = 5
+FESmallLifePotionRate = 5
+MGSmallLifePotionRate = 5
+DLSmallLifePotionRate = 5
+
+;==================================================
+; Midle Life Potion Settings
+;==================================================
+DWMidleLifePotionRate = 10
+DKMidleLifePotionRate = 10
+FEMidleLifePotionRate = 10
+MGMidleLifePotionRate = 10
+DLMidleLifePotionRate = 10
+
+;==================================================
+; Large Life Potion Settings
+;==================================================
+DWLargeLifePotionRate = 30
+DKLargeLifePotionRate = 30
+FELargeLifePotionRate = 45
+MGLargeLifePotionRate = 45
+DLLargeLifePotionRate = 30
+
+;==================================================
+; Small Mana Potion Settings
+;==================================================
+DWSmallManaPotionRate = 20
+DKSmallManaPotionRate = 20
+FESmallManaPotionRate = 20
+MGSmallManaPotionRate = 20
+DLSmallManaPotionRate = 20
+
+;==================================================
+; Midle Mana Potion Settings
+;==================================================
+DWMidleManaPotionRate = 30
+DKMidleManaPotionRate = 30
+FEMidleManaPotionRate = 30
+MGMidleManaPotionRate = 30
+DLMidleManaPotionRate = 30
+
+;==================================================
+; Large Mana Potion Settings
+;==================================================
+DWLargeManaPotionRate = 90
+DKLargeManaPotionRate = 90
+FELargeManaPotionRate = 90
+MGLargeManaPotionRate = 90
+DLLargeManaPotionRate = 90
+
+;==================================================
+; Drink Potion Settings
+;==================================================
+AleIncSpeed = 20
+AleIncSpeedTime = 80
+OliveOfLoveIncSpeed = 20
+OliveOfLoveIncSpeedTime = 180
+RemedyOfLoveIncDamage = 40
+RemedyOfLoveIncDamageTime = 90
+
+;==================================================
+; Potion of Bless Settings
+;==================================================
+PotionOfBlessConstA = 0
+PotionOfBlessConstB = 0
+PotionOfBlessTimeConstA = 120
+
+;==================================================
+; Potion of Soul Settings
+;==================================================
+PotionOfSoulConstA = 20
+PotionOfSoulConstB = 8
+PotionOfSoulTimeConstA = 60

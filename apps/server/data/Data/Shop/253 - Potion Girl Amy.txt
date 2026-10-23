@@ -1,0 +1,22 @@
+// -----------------------------------------------------------------------------------------------------------
+// [00,000]    [0~13]      [0~255]      [0-1]         [0-1]        [0~7]       [0~63]      [Index]
+// ItemIndex   ItemLevel   Durability   SkillSwitch   LuckSwitch   Aditional   Excellent   SetOption   Comment
+// -----------------------------------------------------------------------------------------------------------
+   14,000      0           050          0             0            0           0           0           //Apple
+   14,008      0           255          0             0            0           0           0           //Antidote
+   14,001      0           50           0             0            0           0           0                     //Small Healing Potion
+   14,002      0           50           0             0            0           0           0                     //Healing Potion
+//   14,003      0           50           0             0            0           0           0                     //Large Healing Potion
+   14,004      0           50           0             0            0           0           0                     //Small Mana Potion
+   14,005      0           50           0             0            0           0           0                     //Mana Potion
+   14,006      0           50           0             0            0           0           0                     //Large Mana Potion
+   14,035      0           50           0             0            0           0           0                     //Small SD Potion
+   14,036      0           50           0             0            0           0           0                     //SD Potion
+   14,037      0           50           0             0            0           0           0                     //Large SD
+   14,038      0           50           0             0            0           0           0                     //Small AG Potion
+   14,039      0           50           0             0            0           0           0                     //AG Potion
+   14,040      0           50           0             0            0           0           0                     //Large AG
+// 14,010      0           1            0             0            0           0           0           //VALE GOLD 50
+// 14,014      0           255           0             0            0           0           0                     //Jewel of Soul
+   13,2        0      0       1       1        1            0            1
+end

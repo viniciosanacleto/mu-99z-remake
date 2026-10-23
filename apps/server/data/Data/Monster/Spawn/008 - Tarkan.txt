@@ -1,0 +1,70 @@
+// =====================================================================
+//# - WzTeam Server Files Premium , All Rights Reserved.
+//# - https://www.wizardteam.com.br/
+//# - © 2008~2024 WIZARD TEAM EMULADOR
+// =====================================================================
+
+0
+// --------------------------------------------------------------
+//                [0~30]        [1~255]     [1~255]     [*/0~8]
+// MonsterIndex   SpawnRadius   LocationX   LocationY   Direction
+// --------------------------------------------------------------
+   240            0             196         57          3
+end
+
+1
+// ----------------------------------------------------------------------------------------------------------
+//                [0~30]        [1~255]       [1~255]       [1~255]     [1~255]     [*/0~8]     [1~1000]
+// MonsterIndex   SpawnRadius   RangeStartX   RangeStartY   RangeEndX   RangeEndY   Direction   MaxSpawnCount
+// ----------------------------------------------------------------------------------------------------------
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+   63             5             160           216           160         216         *           6               // Death Beam Knight
+end
+
+2
+// --------------------------------------------------------------
+//                [0~30]        [1~255]     [1~255]     [*/0~8]
+// MonsterIndex   SpawnRadius   LocationX   LocationY   Direction
+// --------------------------------------------------------------
+end
+
+// UPLEVEL: random birth areas, moving groups, at most 8 monsters per group.
+1
+// Monster Radius X Y TX TY Dir Count
+62 5 140 49 149 58 -1 8 // "Mutant"
+62 5 150 70 159 79 -1 8 // "Mutant"
+57 5 157 97 166 106 -1 8 // "Iron Wheel"
+57 5 182 110 191 119 -1 8 // "Iron Wheel"
+57 5 202 100 211 109 -1 8 // "Iron Wheel"
+58 5 89 146 98 155 -1 8 // "Tantalos"
+60 5 72 122 81 131 -1 8 // "Bloody wolf"
+60 5 118 173 127 182 -1 8 // "Bloody wolf"
+57 5 4 242 13 251 -1 8 // "Iron Wheel"
+58 5 36 48 45 57 -1 8 // "Tantalos"
+60 5 178 210 187 219 -1 8 // "Bloody wolf"
+62 5 24 172 33 181 -1 8 // "Mutant"
+57 5 10 98 19 107 -1 8 // "Iron Wheel"
+58 5 88 20 97 29 -1 8 // "Tantalos"
+end
+
+// OriX 2026-09-22 v2: 8 monsters per requested spot
+1
+57 2 39 249 40 250 -1 8 // Iron Wheel
+58 2 39 246 40 247 -1 8 // Tantalos
+60 2 41 247 42 248 -1 8 // Bloody wolf
+62 2 36 233 37 234 -1 8 // Mutant
+57 2 36 229 37 230 -1 8 // Iron Wheel
+58 2 23 215 24 216 -1 8 // Tantalos
+60 2 20 213 21 214 -1 8 // Bloody wolf
+62 2 87 50 88 51 -1 8 // Mutant
+57 2 90 49 91 50 -1 8 // Iron Wheel
+58 2 90 53 91 54 -1 8 // Tantalos
+60 2 79 127 80 128 -1 8 // Bloody wolf
+end

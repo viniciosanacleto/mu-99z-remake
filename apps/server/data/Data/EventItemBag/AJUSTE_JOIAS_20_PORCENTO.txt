@@ -1,0 +1,24 @@
+AJUSTE DE DROP DE JOIAS - APROX. 20%
+
+Alteracao aplicada SOMENTE nas EventItemBags da pasta Monster que contem exclusivamente joias.
+DropRate alterado de 10000 (100%) para 2000 (20%).
+
+Joias consideradas:
+- Jewel of Bless  = 14,013
+- Jewel of Soul   = 14,014
+- Jewel of Life   = 14,016
+- Jewel of Creation = 14,022
+- Jewel of Chaos  = 12,015
+
+Observacao importante:
+O Jewel of Chaos nao aparece nas bags da pasta Monster deste pacote. Portanto, o drop GLOBAL de Chaos por monstros comuns/mapas nao pode ser reduzido por estes arquivos. Esse drop costuma ficar em configuracoes gerais de ItemDrop/GameServer/MonsterDrop, que precisam ser ajustadas separadamente.
+
+Arquivos alterados:
+- Balrog.txt
+- Gorgon.txt
+- Hydra.txt
+- Ice Queen.txt
+- Red Dragon.txt
+- Skeleton King.txt
+- White Wizard.txt
+- Zaikan.txt

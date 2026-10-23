@@ -1,0 +1,37 @@
+# Rascunho de engenharia reversa (dumps do REA, strings, scripts avulsos).
+# Achados que importam vão para docs/.
+.re/
+*.rea-snapshot*
+
+# Capturas do muproxy (sessões JSON e logs). Vetores golden que viram teste
+# ficam em apps/server/internal/capture/testdata/golden/ e continuam versionados.
+captures/
+*.pcap
+*.pcapng
+*.log
+
+# Build e ferramentas Go
+apps/server/bin/
+/bin/
+*.exe
+*.test
+*.out
+coverage.*
+go.work
+go.work.sum
+
+# Segredos e configuração local (URLs de banco etc.)
+.env
+.env.*
+!.env.example
+
+# Editores e SO
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+Thumbs.db
+
+# Configuração local do Claude Code
+.claude/settings.local.json

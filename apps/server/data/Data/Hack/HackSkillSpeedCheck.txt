@@ -1,0 +1,15 @@
+// =============================================================================
+// # WizarD TeaM Emulator
+// # https://www.wzteam.com.br/
+// # https://www.facebook.com/WizardTeamDev
+// # https://www.youtube.com/@wizardteam9953
+// =============================================================================
+// # © 2008 - 2025 WizarD TeaM Development
+// # This file is part of the WzTeaM MuOnline Server files.
+// =============================================================================
+
+// -----------------------------------------------------------------------------------------------------------------------------------
+//         [*/N]   [*/N]      [*/N]      [*/N]      [*/N]      [*/N]      [*/N]      [InMs]                           [0~2]
+// Index   Class   MinLevel   MaxLevel   MinReset   MaxReset   MinSpeed   MaxSpeed   MaxDelay   MinCount   MaxCount   Action   Comment
+// -----------------------------------------------------------------------------------------------------------------------------------
+end

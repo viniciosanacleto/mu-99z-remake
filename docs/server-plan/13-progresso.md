@@ -1,0 +1,195 @@
+# 13 — Progresso da reconstrução do servidor
+
+Arquivo de rastreio para retomar o trabalho. Atualizar ao fim de cada etapa: marcar `[x]`, registrar descobertas novas do REA (com endereço) e o resultado dos testes.
+
+Legenda: `[x]` feito e testado · `[~]` em andamento/parcial · `[ ]` a fazer.
+
+## Como retomar
+
+1. Ler esta página e a seção "Próximo passo".
+2. `cd apps/server && go test ./...` deve passar antes de qualquer mudança.
+3. Fases e critérios de pronto: [12-roadmap-e-incognitas.md](12-roadmap-e-incognitas.md).
+4. Originais em `/Users/viniciosanacleto/Downloads/99zFREE-AM-VS2026`; dados copiados para `apps/server/data/` conforme a necessidade (mesmos caminhos relativos).
+
+## Fase 0 — Fundação
+
+- [x] Módulo Go `github.com/viniciosanacleto/mu-remake/apps/server` (Go 1.27)
+- [x] `internal/protocol/frame` — parser incremental C1/C2/C3/C4 e builders
+- [x] `internal/protocol/crypto` — XOR32, SimpleModulus (+ leitura de `.dat`), Bux, cifra de fluxo do GS
+- [x] `internal/protocol/gscodec` — pipeline completo do socket do GameServer (fluxo → frame → SimpleModulus/serial → XOR32) nos dois sentidos
+- [x] `internal/config/ini` — leitor compatível com `GetPrivateProfile*`
+- [x] `internal/config/mutext` — tokenizer dos `.txt`/`.dat` de dados (`//`, aspas, `end`, seções numeradas)
+- [x] `internal/config/serverlist` — `ServerList.dat`
+- [x] Parsers de todos os arquivos de `Data/` (teste que carrega 100% dos arquivos): `game/datacoverage_test.go`, 296 arquivos = 274 lidos pelo original e carregados pelo Go (incluindo os 5 Lua, agente T), 22 ignorados com motivo; doc [16](16-cobertura-dados.md) (agente R)
+- [x] Proxy de captura `cmd/muproxy` + `internal/capture` (decodifica CS e GS, log, sessões golden com `capture.Replay`, reescrita de endereço em `F4 03` e `C3 B1 00`); doc [15](15-captura.md) (agente R). Pendente: capturas reais com o `Main.exe`
+
+## Fase 1 — Login
+
+- [x] `internal/connect` — módulo ConnectServer (hello, `F3 EA`, `F4 06`, `F4 03`, limite por IP, idle timeout, anti-flood)
+- [x] `cmd/muserver` — bootstrap com listener do ConnectServer
+- [x] `internal/store` — PostgreSQL (pgx, migrations embutidas, seed de `DefaultClassType`) + implementação em memória; suíte de conformidade roda nas duas (`MU_TEST_DATABASE_URL`)
+- [x] `internal/auth` — login (códigos 0/1/2/3/4/7), sessão única (chave minúscula), kick com mesma senha, limite IP/HWID, expiração de VIP, tickets de troca de servidor, senhas `plain:` → argon2id
+- [x] `internal/config/gsconfig` — `GameServerInfo - *.dat` (dicionário offset→chave em `.re/cfgmap.txt`)
+- [x] `internal/game/item` — item 16 bytes (DB) e 7 bytes (cliente)
+- [x] `internal/game/charset` — CharSet de 18 bytes (lista de personagens e viewport), com asas/pets custom
+- [x] `internal/gamedata` — terrenos (100 mapas, reaproveita o último `.att`), MapManager, Gate, MapServerInfo, SkillList, tabela de EXP
+- [x] `internal/game` — sessão TCP (`gscodec`), mundo em goroutine única, timers 100 ms/1 s, índices 0x53FC..0x57E3, F1 00, F3 09 (verificação/HWID), F1 01, F1 02 (logout com contagem), 0E, F3 00 (+F3 F9, DE 00), F3 01, F3 02, F3 03 (+F3 10, F3 11, C2 12 próprio), viewport de jogadores (C2 12 / C1 14), troca de servidor (B1 00 / B1 01), mensagens Lang (Eng/Por/Spn) e notice `0D`
+- [x] `cmd/muserver` — sobe ConnectServer + instâncias `4.GameServer` (código 0) e `5.GameServerCS` (código 19); `-db` PostgreSQL ou memória; `account create`
+- [x] `hackcheck.go` — HackPacketCheck (`0x488070`): regra obrigatória por head/sub, tipo C1/C3 exigido, serial de C3/C4, limites de contagem
+- [x] `options.go` — opções do cliente (`C1 13 F3 30`, carga na entrada, gravação pelo cliente)
+- [x] `hub.go` + `friend.go` + `store/friends*.go` (migração `0004_friends.sql`) — mapa de personagens online entre instâncias (DS 0x70/0x71), amigos e mail (C0–CB) com a semântica das SPs `WZ_*Friend*`/`WZ_*Mail`
+- [x] `money.go` — `C3 10 22 FE` (zen, big-endian)
+- [x] Ferramenta de migração MSSQL → PostgreSQL (`cmd/migrate`, doc [14](14-migracao.md))
+- [x] Coluna `Patente` (u32 em `F3 03` [112]) e demais colunas custom (agentes N e P; migração 0015)
+
+## Fases 2–6 (4 subagentes paralelos, concluídos)
+
+Briefing comum em `.re/AGENT_BRIEF.md`. Pontos de extensão em `internal/game/ext.go` (hooks entre módulos) e `dispatch.go` (`worldHandlers`, `f3Handlers`).
+
+| Agente | Arquivos | Escopo |
+|---|---|---|
+| A ✅ | `move.go`, `teleport.go`, `chat.go`, `command.go` | D3/DF/18 e andador de 100 ms, gates/1C/F3 12, magia Teleport, chat 00/whisper 02/filtro/ChatLimitTime, CommandManager com `/move` e `/post` |
+| B ✅ | `monster.go`, `monster_ai.go`, `npc.go`, `combat.go`, `gamedata/monsters.go` | MonsterList/Spawn, C2 13, IA completa + pathfinder, D7, dano/defesa/crítico/excelente, morte/regen, EXP 9C, drop de zen/itens, respawn do jogador, NPC 30/31 |
+| C ✅ | `inventory.go`, `itemcalc.go`, `itemmove.go`, `itemuse.go`, `mapitem.go`, `shop.go`, `warehouse.go`, `trade.go`, `gamedata/itemdata.go` | itens no mapa (C2 20/21, 22, 23), mover 24 (inventário/baú/trade), 25, usar 26 (poções, Bless/Soul/Life, orbes), Convert/durabilidade/requisitos/preços/reparo, lojas 30–34, baú 81–83 com senha e taxa, trade 36–3D |
+| D ✅ (sem guild) | `stats.go`, `levelup.go`, `party.go`, `pk.go`, `gamedata/charstats.go`; doc [08b](08b-personagem-nivel-party-pk.md) | CalcCharacter completo (48 ItemOption, sets +10..+15, asas, CustomAttribute), F3 E1/E3, level up F3 05, F3 06, party 40–44 com EXP compartilhada, PK F3 08 |
+
+### Pendências deixadas pelos agentes
+
+- **A:** demais comandos (`pendingCommands`: stats, itens, guild, GM, `/vendo`, `/compro`, `/minhainfo`, `/superdrop`, `/combo`, `/offline`); limpezas pré-gate (`beforeGateMoveHooks`), `mapChangeHooks`, saída do Blood Castle, aviso de cavalo do DL (`C1 07 A7`), pacotes de skin/guild após teleport; gate 97 (checagens de guild/castelo); MoveSummon; CommandRequirement.txt e ponte Lua (`commandScriptHook`); flags não identificadas (`obj+0x24a8`, `0x5d2`, `0x296`, `0x2468`, `0x3d4&3`, banimentos de chat `0x254`/`0x20af`; Authority `0x250` aproximada pelo GameMaster.txt). Hooks à espera: `partyMembersHook`, `guildChatHook`, `chatAnswerHook`, `chaosCastleStateHook`, `castleBattleHook`, `globalPostHook`, `moveEffectHook`.
+- **A, desvios deliberados:** o bit de ocupação 0x02 acompanha o gate move; caminho de 15 passos tem um 16º slot de folga (o original transborda).
+- **B:** PvP (`0x40dca0`, SD, regras de PK) recusado; skills de jogador (heads 10, 19, 1E); ataque em área de monstro (`0x4b7a20`) e MonsterSkill (`0x4bdcd0`); tabela de % de dano de skill; traps (classes 100–110); summons; drops excelentes/set e opções de itens dropados; divisão de EXP em party (`0x4c5ea0`); perda de EXP na morte (`0x50f330`); reflect, mana shield, reduções, refill por hit; mapeamento de offsets do MapManager (`+0x1c/+0x24/+0x28`, RespawnGate `+0x68`) inferido.
+- **B, a conferir:** com `AddExperienceRate_AL0 = 500`, matar um Bull Fighter inteiro dá 38.500 de EXP. É o que o código calcula; confirmar se é a intenção do servidor.
+- **C:** NPCs de loja surgem pelo ShopManager (ligado pelo coordenador, abaixo); taxas de poções complexas (`0x1a84/0x1aac/0x1ad4/0x1afc/0x1b10`) tratadas como 0, poções de SD não curam; multiplicador de preço de poção assumido = durabilidade; valores passados em registrador estimados (flag de `C1 06 2A`, qual lado recebe `3C 0`/`3C 2`, lock do `83` ao abrir, `C1 0B 39` talvez com 6 bytes de item); não feitos: zen dividido em party, ItemStack seção 1, preços CustomJewel, imposto do castelo, criação de Dark Horse/Raven, movimentos de chaos box (flags 3, 5..20) e loja pessoal (4), drops especiais, demais consumíveis do 26 (frutas, scrolls, ale), orbes com quest, flags de trava `obj+0x286/0x3dc/0x20aX`, bit "aceita trade" `obj+0x434`, Jewel of Harmony, bônus de atributo do módulo stats nos requisitos.
+- **D:** guild (heads 50..66, E1..EB) não iniciada: falta engenharia reversa do protocolo de guild do DataServer; opções de set ancient (`0x4f2f70/0x4f30f0`); campos de buff/master/efeitos zerados; nível de pet não persistido; auto-party por senha; restaurar party ao reconectar; regras de duelo/guerra/CS no PK; bonus manager (`0x4188f0`) = 100; U-COMBAT-02 continua aberta.
+- **Coordenador:** sussurro entre instâncias via Hub (`whisperRelay` em `hub.go`, equivalente ao relay DS 0x72/0x73).
+- **Coordenador, integração entre módulos** (`integration_test.go`):
+  - `spawnNPCHook` → `spawnFixedNPC` (monster.go): os NPCs de loja do ShopManager (`0x4f55e0`) surgem no primeiro tick de 1 s;
+  - morte de monstro segue `0x4cda80`: EXP de party (`0x4c5ea0`) quando o matador tem party, senão `0x4c5970`; sem EXP para summons e para as classes listadas em `noExpMonster`;
+  - EXP solo aplica a taxa CustomMonster (`0x4670a0`) e o `9C` mostra 0 quando houve level up;
+  - `samePartyHook`: direito de loot compartilhado na party;
+  - `equipmentChanged` não chama mais `recalcHook` duas vezes (`rebuildCharSet` já recalcula, como `0x4c6ba0`).
+- **Ambiente local:** o `BlackList.txt` original lista `127.0.0.1`, então o ConnectServer recusa conexões do próprio host. Para testar com o cliente na mesma máquina, remova a linha de `apps/server/data/1.ConnectServer/BlackList.txt` ou aponte `-blacklist` para um arquivo sem entradas.
+
+Pendentes sem dono: guild (50..66, E1..EB, protocolo DS), quests (A0/A2), Chaos Machine (86–88), loja pessoal (3F), duelo (AA–AC), eventos (BC, DS, CC, Kalima, Golden Archer, invasões), Castle Siege, customs WizardTeam (XShop, JewelBank, LuckyWheel, attack/offline, reset).
+
+## Rodadas 2–4 (concluídas; no máximo 2 agentes desde o estouro de memória)
+
+> **2026-10-22, estouro de memória**: a sessão caiu com 4 agentes, testes `-race` e um contêiner SQL Server (`mu-mssql`, parado) rodando ao mesmo tempo. A partir daqui rodam **no máximo 2 agentes** e os testes usam `-p 2` (`-race` só em `internal/game` com `-p 1`). F, G, H e I terminaram; J (Castle Siege) e L (comandos WizardTeam) também terminaram. **Rodada 4** (M–U terminaram; nenhum agente rodando; U = skill 215 Chain Lightning (`0x4fdbd0`), anúncio +13 da Chaos Machine (`0x5120b0`), cache de reconexão `0x4e1350`/retomada de offline (U-CUST-15); T = ponte Lua 5.2 (`ScriptMain`, `ScriptCore`, `WelcomeMessage`, `CustomWindowName`, `CalcCharacter.lua`), doc 17; S = ligar ao jogo os parsers novos do R (freebies, CommandRequirement, MonsterMove/MonsterSchedule, BlackList IP/HWID, CustomEvolution, MobCombo, GHRS, ItemLevel); R = teste de cobertura de todos os arquivos de `Data/` e proxy de captura `cmd/muproxy` para o bloco 14; Q = pendências antigas: IA do Dark Raven U-PET-01, Summon Party/Teleport Ally `B0`, push-back, efeitos Save=1, skills de Castle Siege 67–72/75, campo do battle soccer U-GUILD-01): M = `/offline` (índice 21), comandos 50–65 e fixos (`/vendo`, `/compro`, `/minhainfo`, `/superdrop`, `/combo`); N = comandos de GM 100–135, eventos custom (`Custom/Event/*`) e customs de mundo (Patente, Arena, Move, Gate, Respawn, NPCCommand, DeathMessage, MonsterKillCount, MobCombo, EventDrop, SummonScroll, HealthBar, LukeHelper, CreationGold, DailyReward). Coordenador: importação de `ResetData`, itens periódicos. O = XShop/XShopRecharge, LuckyWheel, CustomJewel e JewelBank; P = pendências de mundo do N (CustomArena, EventDrop, LukeHelper, HealthBar, MonsterKillCount, SummonScroll, CreationGold, DailyReward, Patente, agenda `C2 F3 EF`).
+
+Plano completo dos blocos restantes, na ordem: 1 quests · 2 Chaos Machine · 3 guild · 4 skills/PvP/buffs · 5 drops completos · 6 skills de monstro/summons/traps · 7 pets · 8 loja pessoal · 9 duelo · 10 eventos · 11 Castle Siege · 12 customs WizardTeam · 13 migração MSSQL→PostgreSQL · 14 teste com o cliente original.
+
+| Dono | Blocos | Arquivos | Status |
+|---|---|---|---|
+| Coordenador | 1 quests | `quest.go`, `gamedata/quests.go`, doc [09d](09d-quests.md) | ✅ A0/A1/A2/A3, conversa com NPC 229/235, objetivos (itens/zen), recompensas 1–8/0x10 (pontos, evolução, herói, combo), drop de item de quest com variante de party; testes em `quest_test.go`. Incógnitas U-QUEST-01..03 |
+| Coordenador | 10 eventos | `event.go`, `devilsquare.go`, `bloodcastle.go`, `gamedata/events.go`, doc [10c](10c-eventos.md) | ✅ Devil Square, Blood Castle, InvasionManager (`invasion.go`), BonusManager (`bonus.go`, `w.bonusValue` ainda não chamado por EXP/drop/chaos) e contagem diária de entradas (`event_entry.go` + `store/event_entry.go`, migração 0007, U-EVT-02 resolvida) com testes passando; DropEvent (`dropevent.go`) e Golden Archer (`goldenarcher.go`, `store/golden_archer.go`, migração 0009) prontos; Chaos Castle feito pelo agente I; Kalima (`kalima.go`, `gamedata/kalima.go`: Lost Map, portão do Kundun, IA do portão, regen do Kundun) pronto; Illusion Temple e CastleDeep feitos pelo agente K; Crywolf e Kanturu **não existem** neste build: `Crywolf.dat` e `Kanturu.dat` estão em `Data/Event`, mas nenhum dos dois executáveis (`GameServer.exe`, `CastleSiege.exe`) tem as strings desses arquivos nem código que os leia (mesmo caso do Illusion Temple). A migração 13 fica para depois da rodada 2 (depende das tabelas de guild e pets) |
+| E | 3 guild, aliança, guerra | `guild.go`, `guild_ds.go`, `guild_union.go`, `guild_war.go`, `store/guild*.go`, `0005_guild.sql`, doc [09b](09b-guild.md) | ✅ pacotes 50–57, 60–67, E1/E2/E5/E6/E9/EB; protocolo DS A0 00..10 reproduzido como gerenciador compartilhado pelo Hub; aliança, rival, guerra e pontuação; testes inclusive store em PostgreSQL. Pendências: campo do battle soccer (U-GUILD-01), auto-aceite de mestre offline, trava de senha WizardTeam no 53; ganchos de guerra no PvP ficam com F |
+| Coordenador | 13 migração MSSQL→PostgreSQL | `cmd/migrate`, `internal/migrate`, doc [14](14-migracao.md) | ✅ fontes SQL Server e script `.sql` (UTF-16), contas, personagens, baús, opções, amigos/mail, guilds, pets e serial; testado com o `MuOnline.sql` original e com importação completa no PostgreSQL. Também `EventEntryCount`, `EventGoldenArcher`, `MuCastle_*` (J), `ResetData` e os rankings (`RankingDuel`, `RankingBloodCastle`, `RankingChaosCastle`, `RankingDevilSquare`, `RankingIllusionTemple`). Pendente: rodar com o `MuOnline.bak` restaurado; `PeriodicItem`, `GiftData`, `CustomPick`, `Character.Patente` e as colunas de ranking custom já entram; `DailyRewardData` e `MonsterKillCount` entram com os módulos do agente N |
+| I (rodada 3) | 10 Chaos Castle | `chaoscastle.go`, `gamedata/events.go` (`LoadChaosCastle`) | ✅ entrada AF 01, AF 02, estados, buracos por etapa, queda, knock-back, pontuação, jackpot, vencedor e resultado `93`; achou o layout errado do `93` do Blood Castle (campos em 17/21/25, corrigido pelo coordenador). Incógnitas U-CC-01..04 |
+| K (rodada 3) | 10 Illusion Temple, CastleDeep | `illusiontemple.go`, `castledeep.go`, `gamedata/castledeep.go` | ✅ CastleDeep completo (agenda, sorteio de grupo, estágios por minuto, spawn atributo 7, avisos por grupo de servidores via `C1 94 21` reproduzidos pelo Hub, aviso de morte dos chefes). Illusion Temple **não existe** neste build além de uma classe vazia: `IllusionTemple.dat` nunca é lido; só o `91` tipo 5 (mensagem 45) foi reproduzido. Desvio deliberado: o sorteio de grupo sem vencedor não trava o servidor. Incógnitas U-CD-01/02, U-IT-01 |
+| F | 4 skills de jogador, efeitos/buffs, PvP/SD, 9 duelo | `skill.go`, `effect.go`, `pvp.go`, `duel.go`, doc [08c](08c-skills-efeitos-pvp.md) | ✅ heads 10/19/1E/1B, dispatch por skill (`0x4f9730`), combo, CAttack::Attack completo (`0x40b110`), sistema de efeitos (16 slots, DoT, bits de ViewSkillState), PvP (`0x40dca0`), penalidade de morte, duelo AA–AD. Achados: o SD nunca absorve dano neste build (taxa em CServerInfo+0x494 sem chave); Infinity Arrow não expira (+0x1830 sem chave). Pendências: summons, Summon Party, Teleport Ally (B0), skills de Castle Siege 67–72/75, push-back, efeitos com Save=1 não persistidos |
+| G | 2 Chaos Machine, 8 loja pessoal, 7 pets | `chaos.go`, `pshop.go`, `pet.go`, `store/pet*.go`, `0006_pets.sql`, doc [09c](09c-chaos-loja-pets.md) | ✅ todas as receitas do binário (86/87/88), chaos box (flags 3, 5..20) com transação de inventário, loja pessoal 3F completa, nível/EXP de Dark Horse/Raven com protocolo DS 0x07/0x09/0x34 (U-STATS-03 resolvida). Pendências: IA de ataque do Dark Raven (U-PET-01), anúncio de +item, CustomStore WizardTeam |
+| H | 6 skills de monstro/summons/traps, 5 drops completos, opções de set | `monster_skill.go`, `summon.go`, `drop.go`, `gamedata/drops.go`, `gamedata/sets.go`, doc [10b](10b-monstros-drops.md) | ✅ drop completo na ordem do original (bags, ItemDrop/ItemMoneyDrop, set, excelente, opções), item bags, zen dividido na party, CustomMonster, opções de set ancient (U-STATS-01 resolvida), MagicList/área/MonsterSkill de monstros, traps, summons, regen dos atributos 5–9; offsets do MapManager confirmados |
+| Coordenador | integração da rodada 2 | `integration.go`, `bonus.go` | ✅ efeitos dos monstros → sistema de efeitos de F; skills 30–36 → summons de H; BonusManager ligado à EXP solo/party, drop (item/excelente/set) e Chaos Mix; teste do Devil Square estabilizado |
+| Coordenador (rodada 4) | rankings do DataServer | `ranking.go`, `store/ranking.go`, `0011_ranking.sql`, doc [10c](10c-eventos.md) | ✅ relatórios DS 3C (duelo, `0x476bc0`), 3D (BC, `0x476c50`), 3E (CC, `0x476ce0`), 3F (DS, `0x4705d0`) somados por personagem como `FUN_0040f470..0040fb80` do DataServer; importação das tabelas `Ranking*` |
+| Coordenador (rodada 4) | itens periódicos, save do personagem nos comandos | `periodic.go`, `item.PeriodicActive/Expire`, `store/periodic.go`, `0012_periodic_item.sql`, doc [10e](10e-customs-wizardteam.md) | ✅ `CPeriodicItem` completo: duração na criação (`0x4753e0`), carga no login (`0x4d3a70`/`0x4d38e0`), save junto do personagem (`0x4d3c00`), expiração a cada segundo (`0x4d36e0`), `D5 01`/`D5 02` na coleta, movimento e `/clearinv`; importação de `PeriodicItem`. **U-CUST-01 resolvida**: `0x475c30` é o save do personagem (DS `C2 30`), agora chamado por `/readd`, `/reset`, `/mreset` e `/rename`. U-CUST-03 resolvida; nova U-PER-01 (`obj+0x964`) |
+| M (rodada 4) | 12 offline, comandos 50–65 e fixos | `offline.go`, `customstore.go`, `customattack.go`, `custompick.go`, `command_custom.go`, `command_hardcoded.go`, `gamedata/customcmd.go`, `store/custom.go`, `0013_custom_commands.sql`, doc [10e](10e-customs-wizardteam.md) | ✅ `/offline` e índice 21 (objeto sem socket que continua no mundo, removido ao relogar a conta ou por `/dcfriend`; U-CUST-06 resolvida), CustomStore (`/store`, `/offstore`, compra em joias), CustomAttack (`/attack`, `/offattack`, `F3 0A/0B`, robô de 100 ms), `/gift`, casamento, `/buyvip`, `/pack4155`/`/unpack`, CustomPick (`/pick*` + coleta automática), `/vendo`, `/compro`, `/minhainfo`, `/superdrop`, `/combo`. Incógnitas U-CUST-15..28 (cache de reconexão `0x4e1350` não reconstruído) |
+| N (rodada 4) | 12 GM 100–135, eventos custom, customs de mundo | `command_gm.go`, `customevent*.go`, `custom_world.go`, `gamedata/customevent.go`, `gamedata/customworld.go`, `store/ban.go`, `store/customevent.go`, `0015_custom_events.sql`, doc [10f](10f-gm-eventos-custom.md) | ✅ todos os comandos de GM com linha no CommandManager (bans persistidos e aplicados no login/seleção, `/bcstart` `/dsstart` `/ccstart`, `/hide`, `/make`, `/drop`, `/makeset`, `/mob`, `/setvip`…); eventos Prainha, Death, Theft, Mata-Mata, Duplas, Roleta, Raffle e Esconde-esconde (`/escesc`) com patente e ranking; `commandEventBlockHook` ligado (**U-CUST-07 resolvida**); CustomMove, Gate, Respawn, NPCCommand, DeathMessage. Pendentes: CustomArena, EventDrop, LukeHelper, HealthBar, MonsterKillCount, SummonScroll, CreationGold, DailyReward, CustomPatente (`C1 0C F3 E5`), janela de agenda de eventos (`C2 F3 EF`). Incógnitas U-GM-01..06, U-CEVT-01..10 |
+| O (rodada 4) | 12 XShop, Recharge, CustomJewel, JewelBank, LuckyWheel | `xshop.go`, `xshop_recharge.go`, `customjewel.go`, `jewelbank.go`, `luckywheel.go`, `gamedata/customshop.go`, `store/cashshop.go`, `0016_custom_shop.sql`, roteadores `faHandlers`/`fbHandlers` em `dispatch.go`, doc [10e](10e-customs-wizardteam.md) | ✅ loja de créditos com overrides e escrita de preço por GM, débito/estorno; Recharge (QR do BMP local, sem download: U-XSHOP-03); joias custom (requisitos, sucesso/falha, preço; **U-CUST-22 resolvida**); banco de joias (depósito/saque, pacotes, `F3 F5`); roleta (sem `Sleep` global: U-LW-02; custo comparado a Coin1 nunca carregado: U-LW-01). Bugs do original mantidos: saque de Chaos/Life fora de 10/20/30/99 dá uma joia só (U-JWL-04) e o pack sai da tabela errada (U-JWL-03). Os três foram corrigidos depois, em 2026-10-23 (ver "Próximo passo"). Migração importa `MEMB_INFO.Credits` e `CustomJewelBank` |
+| P (rodada 4) | 12 customs de mundo restantes | `customarena.go`, `customeventdrop.go`, `lukehelper.go`, `healthbar.go`, `killcount.go`, `summonscroll.go`, `creationgold.go`, `dailyreward.go`, `patente.go`, `windowtime.go`, `custom_world_ext.go`, `gamedata/customworld_ext.go`, `store/customworld.go`, `0017_custom_world.sql`, `migrate/custom_world.go`, doc [10f](10f-gm-eventos-custom.md) | ✅ CustomArena (30 arenas; `0x443c50` é a entrada da arena, não checagem de CS), EventDrop, Luke Helper, HealthBar (`C2 F3 E2`), MonsterKillCount (DS 0x50), SummonScroll, CreationGold (`FA 12`, DS F7 06 → `MEMB_INFO.Gold`), DailyReward (`FB 17/18/02`, tabela `DailyReward` fora do `MuOnline.sql`), Patente (`C1 0C F3 E5`; `CustomPatente.txt` não vem nos arquivos, lista vazia ⇒ -1), janela de agenda `C2 F3 EF` (**U-CEVT-06 resolvida**). Importa `MonsterKillCount` e `DailyReward`. Incógnitas U-CW-01..10 |
+| Q (rodada 4) | pendências antigas de skills, pets, guild | `pet_raven.go`, `pushback.go`, `effect_save.go`, `skill_guild.go`, `guild_soccer.go`, `round_q.go`, docs 08c/09c/09b/10d | ✅ IA e ataque do Dark Raven (**U-PET-01 resolvida**), push-back/knock-back (lista `CustomMobCombo.txt`), efeitos Save=1 no `EffectList`, Summon Party (63, `MoveSummon.txt`) e Teleport Ally (`B0`), skills de Castle Siege 67–72/75 (**U-CS-07**), battle soccer completo (`CBattleSoccer`, mapa 6, bola classe 200; **U-GUILD-01 resolvida**). `obj+0x5d2` = contagem do Summon Party (**U-CUST-05 resolvida**; o coordenador ligou a checagem de ocupado nos resets). Incógnitas U-PET-04/05, U-SKILL-07/08/09, U-GUILD-09 |
+| S (rodada 4) | parsers do R ligados ao jogo | `datauses.go`, `freebies.go`, `cmdrequirement.go`, `monstermove.go`, `monsterschedule.go`, `blacklist.go`, `customevo.go`, `itemlevel.go`, `skillspeed.go`, `ghrs.go`, docs 16/10e/10/07/08 | ✅ DefaultClassFreebies na 1ª entrada (`IsNewChar`), CommandRequirement antes do comando (`0x440660`), Marlon andarilho (MonsterMove), MonsterSchedule abre/fecha NPCs (não é spawn), BlackList IP no accept e HWID no `F3 09`, CustomEvolution = item 14,211 (o `/evo` não o usa), ItemLevel nos nomes (**U-CUST-23 resolvida**), HackSkillSpeedCheck nos `19`/`1E`/Nova. **CustomGHRS**: no GS-CS todo `/reset` é recusado (0x3DF) porque o DataServer deste pacote não responde `F8` e o limite fica 0 — fiel ao original (U-GHRS-01). Pendentes: skill 215 Chain Lightning ausente, anúncio +13 da Chaos Machine (`0x5120b0`) |
+| T (rodada 4) | ponte Lua 5.2 | `lua.go`, `lua_api.go`, `go.mod` (`github.com/Shopify/go-lua v0.0.0-20261007132305-3f823f845ff9`), doc [17](17-lua.md) | ✅ dois estados Lua como no original (ScriptMain com `require` próprio `0x4a5220`; o `CalcCharacter.lua` é carregado mas nunca chamado, `CalcLuaScriptSwitch` não é lido ⇒ `stats.go` é o cálculo efetivo); 194 funções registradas (`0x4a3f40`), 182 com comportamento original; 16 de 17 `BridgeFunction_*` nos pontos originais; WelcomeMessage e CustomWindowName (`C1 84 F3 E8` a cada segundo) de ponta a ponta. Pendentes: `ItemDrop/ItemGive`, `MonsterSummonCreate`, `CharacterGetRespawnLocation`, `PostSend`, `UserActionSend`, `UserInfoSend`; SQL/LuaSQL sem backend (ponte para PostgreSQL); flags de permissão 2, 3, 4, 7, 9, 0xB–0xD |
+| U (rodada 4) | Chain Lightning, anúncio +13, reconexão | `skill_chain.go`, `chaos_announce.go`, `reconnect.go`, `store/reconnect.go`, `0018_reconnect.sql`, `auth/offline.go`, docs 08c/09c/10e | ✅ skill 215 (`0x4fdbd0`, cadeia de 3 alvos 100/70/50%, `C1 10 BF 0A`; o `SkillList.txt` não tem a linha 215, então na prática é recusada); anúncio do mix +13 (`0x5120b0`, msg 500; bug do original mantido: compara `AnnounceMinLevelChaosMix` com o índice do item); `CReconnect` (registro 0x13C ao sair do jogo, `ReconnectData`, 300 s, restauração no load de party/auto points/auto reset/ataque/pick/preços da loja offline, recriação de ataque e loja offline na partida com `ReconnectOfflineSwitch`). O original **não** retoma o objeto offline na nova conexão: remove e restaura pelo registro. **U-CUST-15, U-CHAOS-04 resolvidas**; novas U-CUST-29..31 |
+| Coordenador | 12 customs WizardTeam | `command_player.go`, doc [10e](10e-customs-wizardteam.md) | ✅ (bloco concluído com M, N, O e P nas linhas acima). Histórico: mapa índice → função do `switch` de `0x435400`; prontos `/f /a /v /e /c` (com `auto` e distribuição a cada segundo), `/pk`, `/zen`, `/clearinv`, `/readd`; o agente L fez 1–3, 12–15, 19, 20, 22–28 (`command_player2.go`: `/evo`, `/bau`, `/reset` com auto-reset, `/mreset`, `/rename`, `/dcfriend`, `/open`, `/classe`, `/ezen`, `/autopotion`, `/lock`, `/unlock` e o evento CustomQuiz do `/resp`; `store/command.go`, migração 0010 `reset_data`). Faltam o 21 `/offline` (CHelperOffline), os comandos 50+ e de GM, XShop, JewelBank, LuckyWheel, ataque/loja offline e importar `ResetData` na migração |
+| J (rodada 3) | 11 Castle Siege | `castlesiege*.go` (estado, NPCs, inscrição, batalha, impostos, pacotes, ganchos), `gamedata/castlesiege.go`, `store/castle*.go`, `0008_castle.sql`, `migrate/castle.go`, doc [10d](10d-castle-siege.md) | ✅ B2 00..1F, B3–B7, B9, BB; 10 estados com CheckSync; escolha dos lados por SEQ_NUM; compra/reparo/upgrade de portões e estátuas; coroa e interruptores; impostos (chaos, loja, Land of Trial); armas de cerco, life stone, mercenários; protocolo DS 0x80..0x89 trocado por `CastleStore` (memória e Postgres); migração das 5 tabelas `MuCastle_*`. O código de cerco também existe no `GameServer.exe` (ServerType 1). Incógnitas U-CS-01..08 |
+
+Depois da rodada 2: 10 eventos, 11 Castle Siege, 12 customs, 13 migração, 14 teste com o cliente original.
+
+## Descobertas desta reconstrução (REA)
+
+Já refletidas em [02](02-protocolo-de-rede.md) e [03](03-connect-server.md):
+
+| Data | Binário | Endereço | Descoberta |
+|---|---|---|---|
+| 2026-10-22 | GameServer | `0x4ceb30` | XOR32: `EDI = 2` (C1) / `3` (C2), `EAX = size-1` ⇒ processa `n = size-1 … start+1`. **Resolve U-PROTO-01.** |
+| 2026-10-22 | GameServer | `0x5049c0` | XOR32 também é aplicado a C3/C4 **depois** do SimpleModulus (sobre o pacote remontado como C1/C2). |
+| 2026-10-22 | GameServer | `0x5051d0`, `0x504f00`, `0x5126b0`, `0x487a60` | **Cifra de fluxo** em todo byte do socket do GS: recepção `b = (b ^ K2) - K1`, envio `b = (b + K1) ^ K2`. Chaves derivadas de `CustomerName` e `ServerSerial` (`Common.dat`). |
+| 2026-10-22 | GameServer | `0x4ecb40` | `ServerVersion "1.00.00"` ⇒ 5 bytes = caracteres 0,2,3,5,6 (`"10000"`). |
+| 2026-10-22 | ConnectServer | `0x407930` | Dispatcher real (não `0x4039d0`, que é um destrutor). Sub lido em `packet[3]`. |
+| 2026-10-22 | ConnectServer | `0x4035f0` | `F4 03`: código lido como **u8** em `[4]`. |
+| 2026-10-22 | ConnectServer | `0x403740`, `0x403870` | `F4 06`: `C2 size F4 06 countHi countLo` + 4 bytes/entrada; `F3 EA`: `C2 size F3 EA count(u8)` + 34 bytes/entrada; ambos enviados com contagem 0 se o JoinServer não estiver vivo. |
+| 2026-10-22 | GameServer | `0x4db050` | `F1 00` = `C1 0E F1 00 01 idx_hi idx_lo ver[5] ServerCode(u16 LE)`. **Resolve U-PROTO-02.** Alocação de índice `0x50c260`: round-robin; servidor fechando ⇒ `F1 01 02`; cheio ⇒ `F1 01 04`. Seriais iniciais: recepção 0xFF, envio 0. |
+| 2026-10-22 | GameServer | `0x4d9360`, `0x4a18d0`, `0x4db220` | `F1 01` (resultado em CL): versão/serial ⇒ 6; ConnectMember ⇒ 2; JS≠1 ⇒ resultado do JS (ou 8 após 3 tentativas); bloc_code ⇒ 5; AccountLevel < ServerLock ⇒ 10 (0x0A); ok ⇒ 1 e estado 2. **Resolve U-AUTH-03.** |
+| 2026-10-22 | GameServer | `0x472d00`, `0x4daef0` | Lista `F3 00` é **C3**: `[4] flag de classe (2/3/4) [5] MoveCnt [6] count` + 34 bytes/entrada (slot, nome, nível u16, CtlCode, CharSet 18, G_Status); depois `C1 32 F3 F9` por personagem (9 itens × 5 bytes) e `C1 0E DE 00 flag 00 ExpA ExpB MaxLevel CharacterDeleteMaxLevel`. |
+| 2026-10-22 | GameServer/DS | `0x4d95c0`, `0x473770`, `0x40bcf0` | `F3 01` → `C1 2C F3 01 result name[10] slot level(u16) classByte 0xFF×24`; falhas locais enviam o mesmo pacote com result 0. Classes: 0x00/0x10/0x20 livres; 0x30 exige ExtClass bit 2, 0x40 bit 1, 0x50 bit 0, 0x60 bit 3. |
+| 2026-10-22 | GameServer | `0x4d9780` | `F3 02` → `C1 05 F3 02 result` (1 ok, 0 falha DS, 2 recusado: switch, código pessoal ou conta com Lock>0). |
+| 2026-10-22 | GameServer | `0x473a10` | `C3 74 F3 03` completo: após `[56]` vêm ResetCount, LevelUpPoint, Life, MaxLife, Mana, MaxMana, BP, MaxBP, Str, Agi, Vit, Ene, Leadership (u32), Level u16 em 108, `obj+0x2500` u32 em 112. **Resolve U-PROTO-03.** |
+| 2026-10-22 | GameServer | `0x49b3f0`, `0x5019d0` | Inventário `C4 F3 10 count` + 8 bytes (slot + item de 7); magias `C1 F3 11 count(u16)` + 3 bytes (slot, idx&0xFF, (idx/255)&7 \| nível<<3). |
+| 2026-10-22 | GameServer | `0x4c6ba0`, `0x515160` | CharSet de 18 bytes reconstruído (**resolve U-ITEM-03**); entrada `C2 12` = 44 bytes com padding de alinhamento em 22–23 e 41–43 (**resolve U-PROTO-04**). |
+| 2026-10-22 | GameServer | `0x4ce630` | Correção do doc 02: no SimpleModulus `t3 = r3` sem máscara (a máscara `& 0xFFFF` só entra em `t2`). Com a máscara a ida e volta falhava para blocos ≥ 4 bytes. |
+| 2026-10-22 | GameServer | `0x515510` | Entrada `C2 13` de 16 bytes (**resolve U-PROTO-05**). |
+| 2026-10-22 | GameServer | `0x4bbc70`, `0x4baa20` | Spawn: arquivos lidos como fluxo de tokens; seção 1 expande por Quantity, seção 2 ganha ±3, seção 5 ignorada, dir -1 → rand&7; linhas com colunas extras nas seções 3/4 são mal lidas como no original. Índices `0..0x5013` round-robin com reaproveitamento após 10 s (**resolve U-WORLD-01**). |
+| 2026-10-22 | GameServer | `0x4c5a30`, `0x4b7290` | EXP por monstro (fatia por dano, base `(L+25)·L/3`, ×1,25 × taxas) e drop (ItemDropRate_AL, item L-2..L+4, zen = MoneyAmountDropRate_AL × EXP / 100). |
+| 2026-10-22 | GameServer | `0x4d8b80`, `0x4c4480` | D3 e andador: ver resumo do agente A acima; F3 12 = "cliente pronto após teleport"; chat cortado no offset 0x48; CommandManager com registro de 0x23 ints (custos Coin1–3, msgs 307–309). |
+
+## Mapa do código
+
+| Pacote | Conteúdo |
+|---|---|
+| `cmd/muserver` | `run()`: ConnectServer + uma instância de GameServer por pasta em `-instances` (padrão `4.GameServer,5.GameServerCS`), Hub compartilhado; subcomando `account create` |
+| `internal/protocol/frame` | `Next` (parser incremental), `Build`, `Head`, `Sub`, `Payload`, limites `MaxSizeConnect/Game` |
+| `internal/protocol/crypto` | `Xor32Encrypt/Decrypt`, `ModulusKeys` (`LoadKeyFile`, `Encrypt`, `Decrypt`), `Bux`, `StreamKeys`/`DeriveStreamKeys` |
+| `internal/protocol/gscodec` | `Server` (Feed/Encode) e `Client` (inverso, para testes e bots) |
+| `internal/config/ini` | `Load/Parse`, `String(sec,key,def,size)`, `Int(sec,key,def)` |
+| `internal/config/mutext` | `Tokenize`, `Table`, `Sections`, `Line.Int/String` |
+| `internal/config/serverlist` | `Load` → `[]Entry` |
+| `internal/connect` | `Registry` (estado vivo, `Report`, `MarkDown`, `SetAuthStatus`), builders `Hello/ServerNames/ServerList/ServerInfo`, `Handle`, `Server` TCP |
+| `internal/config/gsconfig` | `GameServerInfo - *.dat` + `Common.dat` de cada instância |
+| `internal/store` | `Store` (memória e PostgreSQL), migrações, templates de classe, amigos/mail |
+| `internal/auth` | login/logout de contas, sessões, troca de servidor |
+| `internal/gamedata` | terreno, mapas/gates, EXP, skills, itens, quests, monstros/spawns, dados de personagem |
+| `internal/game` | `World` (goroutine única por instância) e os módulos: login/personagens/entrada (`login.go`, `character.go`, `enterworld.go`), viewport, movimento/teleporte/chat/comandos (A), monstros/NPC/combate (B), itens/lojas/baú/trade (C), atributos/level/party/PK (D), amigos, avisos, HackPacketCheck, Hub |
+| `internal/game/item`, `internal/game/charset` | codecs de item (16 bytes DB / 7 bytes wire) e CharSet de 18 bytes |
+
+Dados copiados dos originais em `apps/server/data/`, com os caminhos originais: `Data/**`, `1.ConnectServer/`, `2.DataServer/BadSyntax.txt`, `3.JoinServer/JoinServer.ini`, `4.GameServer/DATA/`, `5.GameServerCS/DATA/`. Chaves do cliente usadas só em teste: `internal/protocol/crypto/testdata/{Enc1,Dec2}.dat`.
+
+## Testes
+
+| Data | Comando | Resultado |
+|---|---|---|
+| 2026-10-22 | `go vet ./... && go test -race -count=1 ./...` (apps/server) | 8 pacotes, todos `ok` |
+| 2026-10-22 | idem, após integrar A–D | 15 pacotes, todos `ok` (`internal/game` ≈ 80 s); `gofmt -l .` limpo; servidor sobe CS 44405, GS 55900 e GS-CS 55919 |
+| 2026-10-22 | `go vet ./... && gofmt -l . && go test -p 2 ./...` após DropEvent, Golden Archer e ligação do BonusManager | 17 pacotes, todos `ok` (`internal/game` 48 s) |
+| 2026-10-22 | idem após Chaos Castle (I), Kalima, comandos `/f /a /v /e /c /pk /zen /clearinv /readd`, CastleDeep e Illusion Temple (K) | 17 pacotes, todos `ok` |
+| 2026-10-22 | `MU_TEST_DATABASE_URL=postgres://mu:mu@localhost:55432/mu?sslmode=disable go test -p 2 -count=1 ./...` após integrar J e L (com os testes de store/migrate em PostgreSQL) | 17 pacotes, todos `ok` (`internal/game` 52 s). A integração corrigiu: datas da linha nova de `reset_data` no Postgres (usavam `now()` do banco em vez de `commandNow`), campos de reset/master reset/nível de conta no `F3 E0` (offsets 48/52/56), `CommandWareNumber` fixo em 20 no baú, trava de conta (0x6F2) no trade e na saída de guild |
+| 2026-10-22 | `MU_TEST_DATABASE_URL=... go test -p 2 -count=1 ./...` com rankings, itens periódicos, saves de comando e importações `ResetData`/`Ranking*`/`PeriodicItem` (agentes M e N ainda rodando) | 17 pacotes `ok`; corrigido o sufixo de nomes do `TestPostgresCommandStore`, que colidia a cada 10 s no banco compartilhado |
+| 2026-10-23 | `go vet ./... && gofmt -l . && MU_TEST_DATABASE_URL=... go test -p 2 -count=1 ./...` após a rodada 4 inteira (M–U) | 19 pacotes, todos `ok` (`internal/game` 83 s); migrações 0001–0018 (0003 e 0014 vagas); sessão REA fechada |
+| 2026-10-23 | idem, após corrigir os bugs do original no JewelBank (U-JWL-03/04), LuckyWheel (U-LW-01/03) e GHRS (U-GHRS-01) | 19 pacotes, todos `ok`; `TestLuaAPIBasics` passou a usar a mensagem 993 como exemplo de inexistente (a 991 agora existe) |
+
+## Bugs do original ainda reproduzidos (não corrigidos)
+
+Comportamentos errados do binário original que o Go reproduz de propósito, à espera de decisão do usuário. Para corrigir um, mudar o código, o teste que fixa o comportamento e marcar o item como "Corrigido" no doc citado (como em U-JWL-03/04, U-LW-01/03 e U-GHRS-01).
+
+| Sistema | Bug | Código Go | Doc |
+|---|---|---|---|
+| Chaos mix | O anúncio do +13 compara `AnnounceMinLevelChaosMix` com o **índice** do item, não com o nível: só os itens 0,0..0,10 ficam de fora; +10..+12 e +14/+15 nunca anunciam | `chaos_announce.go` | [09c](09c-chaos-loja-pets.md) seção 1.3, U-CHAOS-04 |
+| Battle soccer | Ao fim da partida (limite de gols) o CLEAN reporta o **time 0** como vencedor, seja quem for que marcou; o teste de retângulo de intrusos no mapa 6 nunca vale | `guild_soccer.go` | [09b](09b-guild.md) seção 5b |
+| Casamento | O `/accept` apaga o item de casamento com a quantidade da seção 1 (divórcio) em vez da seção 0; o presente (13,42) não existe no `Item.txt` e nunca é criado | `command_custom.go` | [10e](10e-customs-wizardteam.md) U-CUST-26 |
+| Theft (GM) | Permite inscrever o mesmo jogador duas vezes | `customevent_kill.go` | [10f](10f-gm-eventos-custom.md) |
+| Death (GM) | Evento cancelado mantém a tabela de inscritos marcada | `customevent_kill.go` | [10f](10f-gm-eventos-custom.md) |
+| Prainha (GM) | Com vários sobreviventes, `0x24f0` fica marcado em quem estava na lista; o sucesso da inscrição cai no comando 131 | `customevent_sobre.go` | [10f](10f-gm-eventos-custom.md) |
+| Mata-Mata de Duplas | `/dupla` de GM (índice 133) é inalcançável com o `PairEvent.txt` original (a sintaxe do jogador também é `/dupla` e sempre encerra a linha); o segundo membro da dupla campeã ganha 13 pontos e patente 10; no W.O. por saída o segundo membro vai ao FIGHT | `customevent_pair.go` | [10f](10f-gm-eventos-custom.md) |
+| `/bcstart` `/dsstart` `/ccstart` | No minuto 59 a agenda pede minuto 60 e o evento forçado nunca dispara | `command_gm.go` | [10f](10f-gm-eventos-custom.md) índices 125–127 |
+| CustomArena / patente | Todo inscrito recebe o bag (não só o vencedor); arena com um só lutador termina sem 0x1F9; a morte só olha a primeira arena em luta; a patente de todos vai a cada jogador a cada segundo | `customarena.go`, `patente.go` | [10f](10f-gm-eventos-custom.md) |
+| SummonScroll / DailyReward | Grupo de uma linha sempre invoca (peso ignorado); a DailyReward guarda só o mês (linhas do mesmo mês do ano anterior contam) | `summonscroll.go`, `dailyreward.go` | [10f](10f-gm-eventos-custom.md) |
+| JewelBank | O teste do item no slot de mesmo número do tipo no depósito nunca recusa (não reproduzido, sem efeito) | `jewelbank.go` | [10e](10e-customs-wizardteam.md) U-JWL-05 |
+
+## Próximo passo
+
+Blocos 1–13 concluídos. Resta:
+
+1. **Bloco 14 — teste com o cliente original** (depende do usuário, Windows): subir `go run ./cmd/muserver -data data -db ...` com um `-blacklist` sem `127.0.0.1`, apontar o `Main.exe` para o ConnectServer (ou para o `cmd/muproxy`, doc [15](15-captura.md)) e gravar sessões golden em `internal/capture/testdata/golden/`. Dúvidas abertas: serial C3 após troca de servidor de mapa e endereço do ConnectServer no `License.wzt`.
+2. **Migração real**: restaurar o `MuOnline.bak` num SQL Server e rodar `cmd/migrate -from sqlserver://...`.
+3. ~~Decisões pendentes~~ **corrigidas em 2026-10-23** a pedido do usuário: saque de Chaos/Life do JewelBank (U-JWL-03/04), custo da LuckyWheel debitado dos créditos (U-LW-01/03), resposta `F8` do GHRS feita pelo próprio serviço (U-GHRS-01); mensagens 909/991/992 acrescentadas à cópia do `Message.txt`.
+4. Bugs do original ainda reproduzidos: ver a seção acima; corrigir só com aval do usuário.
+5. Restos menores: ponte SQL do Lua para o PostgreSQL e 6 funções Lua, auto-party por senha (U-CUST-04), demais incógnitas listadas em cada doc.

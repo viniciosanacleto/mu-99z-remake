@@ -1,0 +1,21 @@
+// =============================================================================
+// # WizarD TeaM Emulator
+// # https://www.wzteam.com.br/
+// # https://www.facebook.com/WizardTeamDev
+// # https://www.youtube.com/@wizardteam9953
+// =============================================================================
+// # © 2008 - 2025 WizarD TeaM Development
+// # This file is part of the WzTeaM MuOnline Server files.
+// =============================================================================
+
+// ---------------------------------------------------------
+//              [*]     [*/255]   		[*/255]   		[Max 128 Char]
+// 	NPCIndex    Map 	CordX			CordY 			Message
+// ----------------------------------------------------------------------
+	247			0		130				126				"Se for Forte o Suficiente, sua habilidade será restaurada"
+	249			0		130				128				"Sua Honra foi será Restaurada!"
+	247			*		*				*				"Bem Vindo ao Servidor"
+	249			*		*				*				"Ajude a Salvar nosso Continente"
+	240			*		*				*				"Seus Items estarão seguros!"
+//	900			*		*				*				"Troco Gold's por Resets"
+end

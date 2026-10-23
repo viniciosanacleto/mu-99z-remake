@@ -1,0 +1,159 @@
+[GameServerInfo]
+;==================================================
+; Custom Arena Settings
+;==================================================
+CustomArenaSwitch = 0
+CustomArenaMapNumber = -1
+CustomArenaVictimScoreDecrease = 0
+CustomArenaKillerScoreIncrease = 1
+
+;==================================================
+; Custom Attack Settings
+;==================================================
+CustomAttackSwitch = 1
+CustomAttackMapZone = -1
+CustomAttackBuffEnable_AL0 = 0
+CustomAttackBuffEnable_AL1 = 0
+CustomAttackBuffEnable_AL2 = 0
+CustomAttackBuffEnable_AL3 = 0
+CustomAttackExperienceRate_AL0 = 100
+CustomAttackExperienceRate_AL1 = 100
+CustomAttackExperienceRate_AL2 = 100
+CustomAttackExperienceRate_AL3 = 100
+CustomAttackMaxTimeLimit_AL0 = 0
+CustomAttackMaxTimeLimit_AL1 = 0
+CustomAttackMaxTimeLimit_AL2 = 0
+CustomAttackMaxTimeLimit_AL3 = 0
+CustomAttackPotion_AL0 = 0
+CustomAttackPotion_AL1 = 0
+CustomAttackPotion_AL2 = 0
+CustomAttackPotion_AL3 = 0
+CustomAttackPotionDelay_AL0 = 250
+CustomAttackPotionDelay_AL1 = 250
+CustomAttackPotionDelay_AL2 = 250
+CustomAttackPotionDelay_AL3 = 250
+CustomAttackPotionRate1 = 50
+CustomAttackPotionRate2 = 50
+CustomAttackRepair_AL0 = 0
+CustomAttackRepair_AL1 = 0
+CustomAttackRepair_AL2 = 0
+CustomAttackRepair_AL3 = 0
+
+;==================================================
+; Custom Attack Offline Settings
+;==================================================
+CustomAttackOfflineSwitch = 0
+CustomAttackOfflineBuffEnable_AL0 = 0
+CustomAttackOfflineBuffEnable_AL1 = 0
+CustomAttackOfflineBuffEnable_AL2 = 0
+CustomAttackOfflineBuffEnable_AL3 = 0
+CustomAttackOfflineExperienceRate_AL0 = 100
+CustomAttackOfflineExperienceRate_AL1 = 100
+CustomAttackOfflineExperienceRate_AL2 = 100
+CustomAttackOfflineExperienceRate_AL3 = 100
+CustomAttackOfflineKeepEnable_AL0 = 0
+CustomAttackOfflineKeepEnable_AL1 = 0
+CustomAttackOfflineKeepEnable_AL2 = 0
+CustomAttackOfflineKeepEnable_AL3 = 0
+CustomAttackOfflineMaxTimeLimit_AL0 = 0
+CustomAttackOfflineMaxTimeLimit_AL1 = 0
+CustomAttackOfflineMaxTimeLimit_AL2 = 0
+CustomAttackOfflineMaxTimeLimit_AL3 = 0
+
+;==================================================
+; Custom Event Drop Settings
+;==================================================
+CustomEventDropSwitch = 0
+
+;==================================================
+; Custom Gift Settings
+;==================================================
+CustomGiftSwitch = 0
+
+;==================================================
+; Custom Luke Helper Settings
+;==================================================
+CustomLukeHelperSwitch = 0
+
+;==================================================
+; Custom Marriage Settings
+;==================================================
+CustomMarriageSwitch = 0
+CustomMarriageHomoSexual = 0
+CustomMarriageAnnounce = 1
+CustomMarriageMapZone = 2
+CustomMarriageStartX = 12
+CustomMarriageStartY = 25
+CustomMarriageEndX = 14
+CustomMarriageEndY = 26
+CustomMarriageTracePK = 0
+
+;==================================================
+; Custom Store Settings
+;==================================================
+CustomStoreSwitch = 0
+CustomStoreMapZone = -1
+CustomStoreCommandJoBSyntax = bless
+CustomStoreCommandJoSSyntax = soul
+CustomStoreCommandJoLSyntax = life
+CustomStoreCommandJoCSyntax = chaos
+CustomStoreCommandJCRSyntax = creation
+CustomStoreCommandJoGSyntax = guardian
+
+;==================================================
+; Custom Store Offline Settings
+;==================================================
+CustomStoreOfflineSwitch = 0
+CustomStoreOfflineCoinGain = 0
+CustomStoreOfflineMapZone = -1
+CustomStoreSkinChange = 26
+
+;==================================================
+; Custom Jewel Pack Settings
+;==================================================
+CustomJewelPackSwitch = 0
+CustomJewelPackCommandJoBSyntax = bless
+CustomJewelPackCommandJoSSyntax = soul
+CustomJewelPackCommandJoLSyntax = life
+CustomJewelPackCommandJCRSyntax = creation
+CustomJewelPackCommandJoGSyntax = guardian
+CustomJewelPackCommandJoCSyntax = chaos
+
+;==================================================
+; Custom Pick Settings
+;==================================================
+CustomPickSwitch = 1
+CustomPickMapZone = -1
+CustomPickMoneyPick = 1
+CustomPickJewelPick = 1
+CustomPickExcellentPick = 1
+CustomPickAncientPick = 1
+CustomPickMaxTime_AL0 = 0
+CustomPickMaxTime_AL1 = 0
+CustomPickMaxTime_AL2 = 0
+CustomPickMaxTime_AL3 = 0
+CustomPickRange = 5
+
+;===================================================
+; eZen Settings
+;===================================================
+eZentaxa = 1100000000
+eZenReward = 1000000000
+
+;===================================================
+; Enable Kill Level 1
+;===================================================
+EnableKillLevel1 = 1
+
+;==================================================
+; Infinity Potion Settings
+;==================================================			 
+InfinityPotion_AL0 = 0			 
+InfinityPotion_AL1 = 0			 
+InfinityPotion_AL2 = 0			 
+InfinityPotion_AL3 = 0	
+
+;==================================================
+; BlockSellItemExc LevelMax 10 ~ OptionEx ~ 3
+;==================================================
+BlockSellItemExc = 1

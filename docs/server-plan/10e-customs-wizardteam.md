@@ -1,0 +1,423 @@
+# 10e — Customs WizardTeam
+
+Sistemas próprios do emulador WizardTeam "Premium VS2026 OriX" que não existem no GameServer 97D/99z da Webzen: comandos extras do `CommandManager`, XShop, JewelBank, LuckyWheel, ataque/loja offline, reset e afins. Fonte: `GameServer.exe` (`.re/gs.c`), `Data/CommandManager.txt` e `GameServerInfo - Command.dat`.
+
+## Comandos (`FUN_00435400`)
+
+O despachante compara primeiro os comandos fixos (`/vendo`, `/compro`, `/attack`, `/minhainfo`, `/superdrop`, `/combo`, `/offline`, `/bau`, nessa ordem) e depois a tabela do `CommandManager.txt` (checagens de delay, GM, nível, reset e zen em `internal/game/command.go`). O `switch` por índice chama as funções abaixo. Cada handler recebe o texto após o nome do comando; o token 0 é o primeiro argumento (`FUN_004352a0` copia, `FUN_00435210` faz `atoi`). `FUN_00436c30` cobra `Money_AL` e grava o tick do delay.
+
+| Índice | Comando | Função | Estado |
+|---|---|---|---|
+| 0 | `/move` | `0x436dd0` | ✅ |
+| 1 | `/guildwar` | `0x436eb0` | ✅ (`guild_war.go`) |
+| 2 | `/guildsoccer` | `0x436f90` | ✅ (`guild_war.go`) |
+| 3 | `/request` | `0x437070` | ✅ (auto-party pendente, U-CUST-04) |
+| 4 | `/post` | `0x437280` | ✅ |
+| 5–9 | `/f /a /v /e /c` | `0x4375e0` (tipo 0–4), auto `0x4377c0` | ✅ |
+| 10 | `/pk` | `0x4379c0` | ✅ |
+| 11 | `/zen` | `0x437c20` | ✅ |
+| 12 | `/evo` | `0x437d50` | ✅ |
+| 13 | `/bau` | `0x438110` | ✅ (inalcançável: o `/bau` fixo vem antes) |
+| 14 | `/reset` | `0x4382d0` + DS `0x43d080` | ✅ |
+| 15 | `/mreset` | `0x438730` + DS `0x43dad0` | ✅ |
+| 16 | `/clearinv` | `0x438a90` | ✅ |
+| 17 | `/readd` | `0x438cc0` | ✅ |
+| 19 | `/rename` | `0x439040` + DS `0x43e540` | ✅ |
+| 20 | `/dcfriend` | `0x4392c0` | ✅ |
+| 21 | — (`/offline`) | `0x434920` + `0x4888e0` | ✅ (`offline.go`; inalcançável pelo arquivo original, que não tem a linha 21) |
+| 22 | `/open` | `0x43e990` | ✅ |
+| 23 | `/classe` | `0x43ea60` | ✅ |
+| 24 | `/ezen` | `0x43f050` | ✅ |
+| 25 | `/autopotion` | `0x43f240` + timer `0x448c80` | ✅ |
+| 26 | `/lock` | `0x43f2c0` | ✅ |
+| 27 | `/unlock` | `0x43f450` | ✅ |
+| 28 | `/resp` | `0x434af0` + `0x4578d0` (CustomQuiz) | ✅ |
+| 50 | `/store` | `0x434850` → `0x468d90` / `0x469140` | ✅ (`customstore.go`) |
+| 51 | `/offstore` | `0x469030` | ✅ (`customstore.go`, `offline.go`) |
+| 52 | `/attack` | `0x434630` → `0x445ab0` | ✅ (`customattack.go`; inalcançável pelo chat: o `/attack` fixo vem antes) |
+| 53 | `/offattack` | `0x445d90` | ✅ (`customattack.go`) |
+| 54 | `/gift` | `0x434710` → `0x463780` + DS `0x463a10` | ✅ (`command_custom.go`) |
+| 55 | `/marry` | `0x4347b0` → `0x465e70` | ✅ (`command_custom.go`) |
+| 56 | `/accept` | `0x466170` | ✅ |
+| 57 | `/divorce` | `0x466490` | ✅ |
+| 58 | `/trackmarry` | `0x466690` | ✅ |
+| 60 | `/buyvip` | `0x4346a0` → `0x449060` | ✅ (`command_custom.go`) |
+| 61 | `/pack4155` | `0x434780` → `0x44d150` / `0x44d930` | ✅ (`command_custom.go`) |
+| 62 | `/unpack` | `0x44d530` / `0x44dc50` | ✅ |
+| 63 | `/pick` | `0x434800` → `0x4560d0`, timer `0x455c80` | ✅ (`custompick.go`) |
+| 64 | `/pickset` | `0x456300` | ✅ |
+| 65 | `/pickclear` | `0x456510` | ✅ |
+| fixo | `/vendo`, `/compro` | `0x43f710`, repetição `0x43f810` | ✅ (`command_hardcoded.go`) |
+| fixo | `/attack` | `0x445a20` / `C1 04 F3 F6` | ✅ (`customattack.go`) |
+| fixo | `/minhainfo` | `0x4047e0` + DS `0x4048f0` | ✅ (`command_hardcoded.go`) |
+| fixo | `/superdrop` | `0x435400` + `0x434c30` | ✅ (`command_hardcoded.go`) |
+| fixo | `/combo` | `0x435400` + `0x4f8d10` | ✅ (`command_hardcoded.go`) |
+| fixo | `/offline` | `0x4888e0` | ✅ (`offline.go`) |
+| 100–135 | comandos de GM e eventos custom | `0x4394b0` … `0x43ca80`, `0x45fcd0`, `0x503330`, `0x45d9f0`, `0x4cf3a0`, `0x43f540`, `0x4e46a0` | ✅ (exceto 112 `/setcoin`, sem linha no arquivo) — ver [10f](10f-gm-eventos-custom.md) |
+
+### Pontos (`/f /a /v /e /c`, `0x4375e0`)
+
+- `/c` (liderança, tipo 4) só para o Dark Lord; outra classe recebe a mensagem 0x144 (324).
+- `/<x> auto N` (`0x4377c0`): guarda N em `obj+0x640 + tipo×4` e conta os tipos ativos em `obj+0x63c`; N < 1 desliga o tipo (msg 0x148), senão msg 0x147 com N. Cobra o comando nos dois casos. As chaves `CommandAddPointAutoEnable_AL*` são lidas para `CServerInfo+0x1424..0x1430`, mas nenhum código as testa.
+- `/<x> N`: exige 0 < N ≤ pontos livres (msg 0x145); `0x4c68f0` soma respeitando `MaxStatPoint_AL` (msg 0x10C); com sucesso manda `F3 E0` (`0x4dba70`), msg 0x146 (N, pontos restantes) e cobra o comando.
+- **Distribuição automática** (`0x435180` no timer 6, a cada segundo; `0x43cd20`): para jogadores em jogo, sem logout pendente, com tipos ativos e pontos livres ≠ 0. Para cada tipo ativo, em ordem: parcela = ⌈pontos / tipos restantes⌉, limitada à quantia do tipo e ao `MaxStatPoint_AL`; o tipo que atinge o máximo zera a quantia. Depois `CalcCharacter` e `F3 E0`.
+- Os campos auto (e outros de `obj+0x630..0x668`) não vão para o banco: `0x50ae50` os zera ao carregar o personagem e `0x4e1970` / `0x4e1ca0` os restauram do cache de reconexão (seção "Cache de reconexão").
+
+### `/pk` (`0x4379c0`)
+
+- PK < 4 → msg 0x149.
+- `CommandPKClearType = 0`: PK 3, `PKCount` e `PKTime` = 0, `C1 07 F3 08` ao jogador e ao viewport, msg 0x14A, cobra o comando.
+- Outro tipo: preço = `CommandPKClearMoney_AL × PKCount` (u32, no máximo 2.000.000.000). Sem zen → msg 0x132 (306). Com zen limpa igual, desconta e manda o zen, **sem** cobrar `Money_AL` nem gravar o delay.
+
+### `/zen` (`0x437c20`)
+
+- N < 1 zera o zen; senão soma até 2.000.000.000 (acima disso fica 2.000.000.000). Manda `C3 10 22 FE zen` e cobra o comando.
+
+### `/clearinv` (`0x438a90`)
+
+- Para cada slot 12..75 cujo item não é (13,19), (14,64) ou (14,223): apaga e manda `C1 05 28 slot`, **inclusive slots vazios**. Também remove o registro de item periódico (`0x4d3fd0`, ainda não reconstruído). Depois msg 0x16C e cobra o comando.
+
+### `/readd` (`0x438cc0`)
+
+- Força, agilidade, vitalidade e energia voltam aos valores do `DefaultClassInfo.txt`; a diferença volta aos pontos livres. A liderança só volta no Dark Lord.
+- Depois manda `F3 E0`, chama `0x475c30` (salva o personagem, DS `C2 30`) e `CalcCharacter`; msg 0x16D e cobra o comando.
+
+Implementação: `internal/game/command_player.go`.
+
+### `/guildwar` e `/guildsoccer` (`0x436eb0`, `0x436f90`)
+
+- Argumento 0 (até 8 caracteres) é o nome da guild inimiga; `strlen < 4` (`0x436ef6`) responde `C1 04 60 00`. Senão `0x485f40` (tipo 0 guerra, 1 soccer) e, se o pedido foi enviado, cobra o comando. Implementação em `guild_war.go` (o limite estava `< 3`, corrigido para `< 4`).
+
+### `/request` (`0x437070`)
+
+- `on`: `obj+0x434 = (x & ~4) | 3`, msg 0x140. `off`: `x & ~7`, msg 0x141. `auto`: `x | 7` e o argumento 1 (até 10 caracteres, `EBX = 1` no assembly) vira a senha de auto-party em `obj+0x630`, msg 0x142. Os três limpam `obj+0x630..0x63a` antes e cobram o comando; outra palavra não faz nada.
+- A senha só é usada pela auto-party (`0x4d2780`/`0x5121e0`: diferença de nível ≤ `PartyMaxGapLevel`, bit 2 do alvo e senha vazia ou igual), ainda não reconstruída (U-CUST-04).
+
+### `/evo` (`0x437d50`)
+
+- Nível de evolução = `obj+0xe4` (+1 para MG, DL e classe 6). Se `CommandChangeLimit_AL ≤ nível`: msg 0x14B.
+- Senão, para cada quest 0..3 (0..6 quando o nível ≠ 0) que não esteja concluída (estado ≠ 2), exceto a quest 3 fora do DK: estado 1, recompensas (`0x4df440`), estado 2. Depois `obj+0x5c0 = 0`, lista `A0` (`0x4dde70`), msg 0x14C e cobra o comando.
+- O `/evo` não lê o `Custom/CustomEvolution.txt`; essa tabela é do item 14,211 (veja [CustomEvolution](#customevolution)).
+
+### `/bau` (fixo em `0x435400` e índice 13 em `0x438110`)
+
+- O despachante compara `/bau` **antes** da tabela do `CommandManager.txt`, então com o arquivo original o índice 13 nunca roda. O `/bau N` fixo não tem delay, nível nem custo: com interface aberta, estado 0x20, morrendo, teleportando ou baú carregado (`obj+0x588`) manda o aviso custom (`C1 86 F3 E4` tipo 1 cor 2) "Feche a interface atual antes de trocar de bau."; `N` fora de 1..20 dá "Uso correto: /bau 1 ate /bau 20"; senão descarta o baú em memória (zen `obj+0x418`, mapa e 120 itens, bits de interface, `obj+0x588`), grava `obj+0x614 = N-1`, aviso "Bau %d selecionado." (tipo 1 cor 0) e, em zona segura, já abre o baú (`0x517f70`).
+- O índice 13 (`0x438110`) usa `0 ≤ N < CommandWareNumber_AL`: as quatro chaves são lidas e depois **sobrescritas com 20** em `0x4eeee0`. Ocupado: msg 0x14D; fora da faixa: 0x14E; sucesso: msg 0x14F (N) e cobra o comando.
+- O número não vai para o banco: `obj+0x614` começa em 0 a cada personagem e é enviado ao DataServer no pedido de baú.
+
+### `/reset` (`0x4382d0`, resposta DS `0x43d080`)
+
+- `/reset auto` (`0x438590`): `CommandResetAutoEnable_AL = 0` dá 0x158; senão alterna `obj+0x654`. Ao ligar guarda os argumentos 1..4 (e 5 para o DL) em `obj+0x658..0x668` (msg 0x159); ao desligar zera tudo (0x15A). Sem delay nem custo.
+- Pedido: ocupado (interface, estado 0x20, morrendo, teleportando, loja pessoal `obj+0x2468`, `obj+0x5d2`) → 0x150; nível < nível de reset → 0x151; zen < custo → 0x152; resets ≥ `CommandResetLimit_AL` → 0x156; `CommandResetCheckItem_AL` e algum item nos slots 0..11 → 0x157. Passando, se `obj+0x69c = 0` marca 1 e manda `C1 1C 0F 00 index conta[10] nome[10]` ao DataServer (`WZ_GetResetInfo`).
+- Nível, zen e pontos vêm de `Util/ResetTable.txt` (`CResetTable`, colunas MinReset MaxReset Level_AL0..3 Money_AL0..3 Point_AL0..3, linha cujo intervalo contém resets+1; -1 ou sem linha usa `CommandResetLevel/Money/Point_AL`). Os limites diário/semanal/mensal vêm de `Util/ResetLimit.txt` (`CResetLimit`) ou `CommandResetLimitDay/Wek/Mon_AL`. Os dois arquivos estão vazios nesta instalação.
+- Resposta (`0x43d080`): `obj+0x69c = 0`; contadores do dia/semana/mês ≥ limite → 0x15B/0x15C/0x15D. Personagem em evento custom (`obj+0x24f0` ou três tabelas por índice) → "Proibido usar o comando no evento." (U-CUST-07). Depois:
+  1. desconta o zen (`0x4da370`) e cobra o comando (`0x436c30` índice 14);
+  2. nível = `CommandResetStartLevel_AL` ou, se -1, nível − `CommandResetLevel_AL` (sempre do `.dat`, não da tabela), mínimo 1; EXP = piso do nível (`DAT_00771d8c`);
+  3. resets e os três contadores += `CommandResetCount_AL`; zera `obj+0x63c..0x650` (pontos automáticos);
+  4. `ClearQuest_AL`: classe sem evolução (`obj+0xe2 & 0xF0`, `obj+0xe4 = 0`), CharSet, `A3` recompensa 0xC9 com o byte de evolução, quests = 0xFF, lista `A0` (só se ainda não enviada);
+  5. `ClearSkill_AL`: zera `obj+0x5e4/0x5e8` e as 60 magias, reaprende as magias da classe (lista de `0x4cc730`) e as dos itens equipados com skill, `F3 11`, CalcCharacter;
+  6. `ClearParty_AL`: desfaz a party (`0x4d2500`);
+  7. `CommandResetType = 1`: pontos = `PointRate<classe>` × Σ(pontos de cada reset 1..N, `0x4e3f70`) / 100 + (nível−1) × `<Classe>LevelUpPoint_AL` + pontos de quest (`0x4dd790`) + bônus herói (quest 2 concluída e nível > `PlusStatMinLevel`: `PlusStatPoint` × diferença) + `FruitAddPoint` + `CommandMasterResetPoint_AL` × master resets; atributos voltam ao `DefaultClassInfo` salvo `CommandResetKeep*`. Com tipo 0 pontos e atributos ficam;
+  8. CalcCharacter, `F3 E0`, `0x475c30` (salvar personagem), `WZ_SetResetInfo` (`0x476a70`), msg 0x15E (resets);
+  9. `CommandResetMove_AL`: gate 17 (classes 0, 1, 3, 4, 6), 27 (elfa) ou 267 (classe 5);
+  10. os valores do `/reset auto` viram os pontos automáticos de `/f../c` e, se há pontos livres, são distribuídos (`0x43cd20`);
+  11. item bag `SpecialValue 0x17` na posição do jogador.
+- Reset automático (`0x43cf10`, no timer de 1 s `0x435180`): jogadores com `obj+0x654` e sem interface repetem as checagens do pedido em silêncio e mandam o mesmo `0F 00`.
+- `WZ_GetResetInfo`: cria a linha de `ResetData`; contador cujo período (dia, semana de domingo, mês) virou lê 0, sem tocar a data. `WZ_SetResetInfo`: data do período que virou = agora, grava os contadores e o `ResetCount`. Tabela `reset_data` (migração `0010_reset_data.sql`), `store.CommandStore`.
+
+### `/mreset` (`0x438730`, resposta DS `0x43dad0`)
+
+- Pedido: ocupado → 0x15F; nível < `CommandMasterResetLevel_AL` → 0x160; resets < `CommandMasterResetReset_AL` → 0x161; zen < `CommandMasterResetMoney_AL` → 0x162; Coin1..3 (`0x163c..0x166c`, sem chave, 0) → 0x163..0x165; master resets ≥ `Limit_AL` → 0x166; `CheckItem_AL` → 0x167. Depois `C1 1C 0F 01` (`WZ_GetMasterResetInfo`). Não usa as tabelas `Util/`.
+- Resposta: limites `CommandMasterResetLimitDay/Wek/Mon_AL` → 0x168/0x169/0x16A; mesmo bloqueio de evento; zen, cobrança (índice 15); nível = `StartLevel_AL` ou nível − `Level_AL` (mín. 1); resets = `StartReset_AL` ou resets − `Reset_AL` (mín. 0); master resets e contadores += `Count_AL`; `ClearQuest_AL` (só `obj+0xe2 & 0xF0`: `obj+0xe4` mantém a evolução antiga, que vai no `A3`), `ClearSkill_AL`, `ClearParty` (as quatro chaves `_AL0..3` leem `CommandMasterResetClearParty_AL0`). `CommandMasterResetType = 1`: `PointType` 0 = `PointRate` × `Point_AL` × MR / 100 + parte comum do reset; 1 = `Point_AL` × MR; 2 = `Point_AL`; outro = 0; atributos por `CommandMasterResetKeep*`. CalcCharacter, `F3 E0`, `WZ_SetMasterResetInfo` (`0x476b10`), msg 0x16B, `Move_AL` e item bag 0x16. Não mexe nos pontos automáticos.
+
+### `/rename` (`0x439040`, resposta DS `0x43e540`)
+
+- Em guild (`obj+0x2f8`) → 0x2C8; nome (argumento 0, até 10) com espaço, `"`, `%`, `'`, `/`, `\` ou `_` (`0x513850`) → 0x2D3; menos de 4 caracteres → 0x2B1; fora da zona segura → 0x2B2; ocupado → 0x2B3. Senão `C1 28 0F 04 index conta nome novo` (`WZ_RenameCharacter`).
+- Resposta: 0 → 0x2B5 (nome em uso); 2 → 0x2B4; senão troca o nome em memória, salva o personagem (`0x475c30`), cobra o comando (índice 19), msg 0x2B6 e, sem logout pendente, `obj+0x0a = 0x106` (volta à seleção de personagem em 6 s).
+- `WZ_RenameCharacter` troca o nome em `Character`, `AccountCharacter`, `Guild.G_Master`, `GuildMember`, `EventEntryCount`, `ResetData`, rankings e tabelas de amigos/mail; aqui: `characters`, `guilds.master`, `guild_members`, `event_entry_count`, `reset_data`, `friend_*` e `wait_friend`.
+
+### `/dcfriend` (`0x4392c0`)
+
+- Argumento 0 = personagem online (`0x50c6d0`, comparação exata), argumento 1 = senha da conta dele (`obj+0x85`, strcmp). Não encontrado → 0x2B8; senha errada → 0x2B9; senão `0x5102a0` põe `obj+0x0a = 6` (fecha o jogo em 6 s; modos offline fecham na hora), msg 0x2BA e cobra o comando. A reconstrução guarda só o hash da senha, então compara com `auth.CheckPassword`.
+
+### `/open` (`0x43e990`)
+
+- Só sem interface aberta; fora da zona segura manda o aviso custom (tipo 2 cor 6) "Utilize o Comando em Zona Segura"; interface 7, 1, 8 ou 6 não abre. Senão abre o baú como o Guardião (`obj+0x3d4 = 0x181`, `0x517f70`) e cobra o comando.
+
+### `/classe` (`0x43ea60`)
+
+- Argumento 0 (até 3 letras): `dw`, `dk`, `elf`, `mg`, `dl`. Vazio ou outra palavra → 0x38A; a classe atual → 0x38B; com `dl` a liderança vira 15 assim que a palavra casa (antes das demais checagens); item em algum slot 0..10 → 0x38C.
+- Sem interface aberta: classe nova, byte de classe `classe<<4` (sem evolução), CharSet, `A3` 0xC9, quests = 0xFF, lista `A0`, zera `obj+0x5e4..0x5f0` e **todas** as magias (sem reaprender), remove os efeitos temporários (`0x47a540`), `obj+0x0a = 0x101` (volta à seleção em 1 s) e cobra o comando. Não testa nível, `ExtClass` nem pontos.
+
+### `/ezen` (`0x43f050`)
+
+- Sem espaço na bolsa para (14,12) → aviso custom tipo 2 cor 2 com a msg 0x385; zen < `eZentaxa` (`Custom.dat`, `CServerInfo+0x1bb0`) → 0x386; senão cria (14,12) (`0x4753e0`), desconta `eZentaxa`, manda `C3 10 22 FE` e 0x387. Sem delay nem custo.
+
+### `/autopotion` (`0x43f240`, timer `0x448c80` — `CAUTOHP`)
+
+- Sem interface, teleporte ou morte: zera `obj+0x24ac` e alterna `obj+0x24ec`. Ligar: aviso "[AutoPotion] Ativado - HP 50% / Mana 30%" (tipo 2 cor 2) e cobra o comando; desligar: "[AutoPotion] Desativado" (tipo 2 cor 6), sem cobrança.
+- Timer de 1 s de eventos: para jogadores em jogo com a opção ligada, `0x4489a0` (vivo, vida ≤ 50% de vida máx.+adicional: usa (14,3), senão (14,2), senão (14,1)), `0x448ab0` (mana ≤ 30%: (14,6), (14,5), (14,4)) e `0x448bc0` (efeito 0x37 ativo: antídoto (14,8)). O item é o primeiro dos slots 0..75 e é usado pelo handler `26` com `C1 06 26 slot FF 00`; depois de cada uso espera 600 ms (`obj+0x24ac`), então no máximo um uso por segundo.
+
+### `/lock` e `/unlock` (`0x43f2c0`, `0x43f450`)
+
+- `/lock N`: já travado (`obj+0x24fc ≥ 1`) → 0x6EF; `N ≤ 0` nada; `N > 99.999.999` → 0x6EE; senão trava com N, msg 0x6ED e JS `C1 18 12 index conta[10] N` (`0x4a2b80`). `/unlock N`: só travado; `N ≤ 0` nada; `N ≥ 100.000.000` → 0x6EE; diferente → 0x6F1; igual → destrava, 0x6F0 e JS 0x12 com 0. Nenhum dos dois cobra o comando.
+- A trava é o `Lock` da conta (carregado em `obj+0x24fc` no login) e bloqueia as ações que testam `obj+0x24fc` (msg 0x6F2: loja pessoal, chaos box, drop, venda, deleção de personagem, saída de guild, trade).
+
+### `/resp` e CustomQuiz (`0x4578d0`; `CCustomQuiz` `0x456a60..0x457d90`)
+
+- `Custom/CustomQuiz.txt`: seção 0 agenda por índice, seção 1 `Index Name AlarmTime EventTime` (minutos), seção 2 `ID Money "Pergunta" "Resposta"` (`std::map` por ID). `CustomQuizSwitch` (`Event.dat`) liga os 50 slots na partida (`0x4baa20`).
+- Timer de 1 s (`0x4571a0`): EMPTY (`0x457230`) avisa "Começa em N minuto(s)" (0x44E) a cada minuto dentro de `AlarmTime`; no horário sorteia `rand % quantidade` e procura esse ID: achou → 0x44F e 0x450 (pergunta) para todos e pergunta ativa; passa a START com `EventTime` minutos. START (`0x4574f0`): sem pergunta ativa volta a EMPTY (próximo horário); a cada minuto cheio repete a pergunta; no fim 0x451 ("Não teve vencedor").
+- `/resp texto`: com pergunta ativa compara o argumento inteiro em minúsculas com a resposta. Errado → 0x454 só ao jogador. Certo → 0x452 (vencedor) e 0x453 (resposta em minúsculas) a todos; soma o `Money` da pergunta ao zen (jogador com zen 0 continua com 0; teto 2.000.000.000), item bag `SpecialValue 0x18`, encerra a pergunta e manda o fogo de artifício `C1 07 F3 40 00 x y` (`0x4dcb60`) ao jogador e ao viewport. Sem delay nem custo.
+
+### Modo offline (índice 21, `/offline`, `/offattack`, `/offstore`)
+
+Três flags mantêm um objeto de jogador no mundo depois que o socket fecha: `obj+0x2110` (`CHelperOffline`, `/offline`), `obj+0x20d9` (ataque automático offline, `/offattack`) e `obj+0x249e` (loja offline, `/offstore`: 1 aberta, 2 fechando). O original faz `closesocket`, põe `obj+0x14 = -1` e deixa o objeto em estado 3; todo envio a ele falha em silêncio.
+
+- **`/offline` e índice 21** (`0x434920` devolve o singleton `CHelperOffline`, `0x4888e0` liga): só jogador em jogo, com socket, sem nenhum dos três modos; com interface aberta, estado 0x20, morrendo ou teleportando → aviso custom (tipo 1 cor 2) "Feche as interfaces antes de usar /offline."; mapas 11..23 → "Nao e permitido usar /offline dentro de eventos.". Senão `obj+0x2110 = 1`, guarda X/Y (`obj+0x210c/0x210e`), tick (`0x2100`) e hora (`0x22b4`), zera o short `0x22b9`, renova `obj+0x5c` e fecha o socket. Sem delay, nível nem custo. O `/offline` fixo e o índice 21 chamam a mesma função; o `CommandManager.txt` original não tem a linha 21.
+- **Por segundo** (`0x510810`): `0x488890` (helper), `0x468820` (loja) e o ramo do ataque offline renovam `obj+0x5c`, então o timeout de 60 s nunca dispara; a loja no estado 2 decrementa `obj+0x249f` e, em 0, remove o objeto (`0x468880`).
+- **Remoção** (`0x488aa0`, `0x444d90`, `0x468880`): manda ao DataServer `C1 12 C0 01 nome[11] código` (apaga a linha do `ReconnectData`, conexão de `0x4e1000`) e chama `gObjDel` (`0x50c4a0`), que salva o personagem, desconecta a conta e, por `0x4c4b40`, grava um registro de reconexão novo. Só o `/offline` limpa a sua flag antes do `gObjDel`; o ataque (`obj+0x20d8`) e a loja (`obj+0x249e`) são limpos depois, então esse registro ainda os traz ligados. Acontece quando a conta loga de novo (`JGAccountAlreadyConnectedRecv`, `0x4a2490`: fecha o socket, que não existe, e encerra os modos offline), no `/dcfriend` (`0x5102a0`: objeto offline fecha na hora em vez da contagem de 6 s) e no fim da loja offline.
+- Os handlers de teleporte, gate e troca de mapa (`0x50e180`, `0x50fd50`, `0x510000`) ignoram objetos offline; o contador da janela (`0x50a470`) os soma à parte.
+- **Reconstrução** (`offline.go`): o objeto recebe um `conn` "destacado" (sem socket, `send` descartado, `close` sem efeito), então o resto do jogo continua a vê-lo como personagem em jogo; o `disconnected` do socket antigo é ignorado porque `o.conn` já não é ele. `KickAccount` e o `/dcfriend` removem objetos offline com `removePlayer` (salva e faz logout da sessão). O personagem offline **não é retomado** pela conexão nova: ele é removido e a conexão nova recebe o estado pelo cache de reconexão abaixo.
+
+### Cache de reconexão (`CReconnect`, `reconnect.go`)
+
+Singleton `0x4e1000` (`DAT_01241a08`): `std::map` nome → registro de 0x13C bytes. Só `ReconnectTime` (CServerInfo+0x1bc, arquivo 300) e `ReconnectOfflineSwitch` (+0x1c0, arquivo 0) são lidas; `ReconnectAttackSwitch`, `ReconnectCommandSwitch`, `ReconnectEventSwitch`, `ReconnectEventMaxTime`, `ReconnectPartySwitch`, `ReconnectPickSwitch` e `ReconnectStoreSwitch` estão no `Common.dat` mas o executável nem tem essas strings.
+
+- **Registro** (`0x4e1350`): `+0x00` conta, `+0x0b` senha, `+0x16` nome, `+0x21` IP (16), `+0x31` HWID (45), `+0x60` contagem (`ReconnectTime`), `+0x64` party (`obj+0x2f0`), `+0x68..0x94` `obj+0x63c..0x668` (pontos auto, reset auto e seus pontos), `+0x98` `obj+0x434`, `+0x9c` senha da auto-party (`obj+0x630`, 11), `+0xa7` ataque ligado (`0x20d8`), `+0xa8` ataque offline (`0x20d9`), `+0xac` buff, `+0xb0` skill u16, `+0xb2..0xb4` mapa/X/Y do ataque, `+0xb5` pick (`0x22bc`), `+0xb6` `0x20f8`, `+0xb7` `/offline` (`0x2110`), `+0xb8` loja aberta (`0x2468`), `+0xb9` loja offline (`0x249e`), `+0xba` tipo da CustomStore (`0x249d`), `+0xbc` os 32 preços (`CItem+0x84`) dos slots 76..107.
+- **Quando grava**: em todo `gObjCharacterLeave` (`0x4c4b40`: logout, volta à seleção, queda, `gObjDel`), **antes** de sair da party, e ao entrar em cada modo offline (`0x4888e0`, `0x445d90`, `0x469030`, antes de fechar o socket). Com `ReconnectOfflineSwitch`: ataque offline ou `/offline` em zona segura ⇒ **nenhum registro**; fora dela salva o personagem (DS `0x30`); loja offline também salva. O registro substitui o do mesmo nome e vai ao DataServer: `C2 01A8 C0 00 nome[11] ServerCode(u16) ReconnectTime(u32) dados[400]` (os 0x13C bytes e lixo de pilha).
+- **DataServer** (`0x41a4e0` / `0x41a760` / `0x41a7f0`): tabela `ReconnectData (Name, ServerCode, Data binary(400), Time)`. `C0 00` faz `SELECT Name ... WHERE Name` e, se houver linha, `UPDATE ... SET Data WHERE Name` (todas as linhas do nome, sem mudar ServerCode nem Time), senão `INSERT`; `C0 01` apaga por nome e ServerCode; quando um GameServer conecta, o DS reenvia todas as linhas do ServerCode dele como `C0 00`.
+- **Contagem** (`0x4e1260`, timer de 1 s `0x50a140`): cada registro perde 1; abaixo de 0 manda `C1 12 C0 01` e sai do mapa. Com 300 o registro dura 301 s — inclusive o de quem continua em modo offline.
+- **Restauração** (`0x4e1970`, chamada por `0x473a10` ao carregar o personagem): com registro do nome:
+  - party (`0x4e1bb0` / `0x4e1ae0`): número válido e (pelo menos dois registros com o mesmo número **ou** a party ainda existe); party sumida ⇒ recriada com o mesmo número e o personagem como líder (`C1 42`); existente ⇒ entra nela (`0x4d25b0`). Com `ReconnectTime ≥ 1` a saída mantém parties de um membro só (`0x4c4b40`), então quem cai volta para a party;
+  - `0x4e1ca0`: `obj+0x63c..0x668`, `0x434` e a senha `0x630`;
+  - `0x4e1d60`: com o ataque ligado no registro, liga `0x20d8`, `0x20d9` só se o objeto não tem socket (`obj+0x14 == -1`), buff, skill, mapa/X/Y e reinicia os ticks; sempre manda `C1 08 F3 EB` (`0x445940`). Assim quem relogar depois de um `/offattack` (que é removido no login) volta com o ataque automático ligado, online;
+  - pick ligado ⇒ `0x22bc = 1` e a hora em `0x2464`;
+  - objeto sem socket (`0x4e1e70`): loja aberta e offline = 1 ⇒ devolve os preços > 0 aos itens; com algum preço, `0x2468`, abre a CustomStore do tipo salvo (`0x469140`) e `0x249e = 1`;
+  - depois `C1 12 C0 01` e o registro sai do mapa. Registros nunca passam de um servidor a outro.
+- **Offline Reconnect** (`0x4e22e0` → `0x4e2020`): cada registro reenviado pelo DS entra no mapa e, com `ReconnectOfflineSwitch` e (`CustomAttackOfflineSwitch` ou `CustomStoreOfflineSwitch` ou CServerInfo+0x540, sem chave ⇒ 0), um registro em modo offline (ataque, loja < 2 ou `/offline`) com conta, senha, nome, IP e HWID cria um objeto sem socket (`0x50c260`/`0x50c3c0` com socket -1, verificado), faz o login no JoinServer (`0x4a26e0`, `C1 5A 01`) e pede o personagem ao DS (`0x475340`, `C1 1C 04`); a entrada roda `0x4e1970`, que religa o ataque offline e a loja offline. Log `[ObjectManager][%d] Offline Reconnect`. Só acontece se o servidor reiniciar dentro do `ReconnectTime` do registro.
+- **Reconstrução**: o "DataServer" é o store (`reconnect_data`, migração 0018; Memory e PostgreSQL com a mesma semântica de UPDATE por nome); as escritas rodam em ordem; o reenvio acontece no primeiro segundo do laço da instância. Desvios: a senha não entra no registro (o store só guarda o hash) e o login do Offline Reconnect usa `auth.LoginOffline` sem senha; um login de cliente com a senha certa ainda derruba essa sessão (comparada ao hash). O `ReconnectData` do banco original não é importado (linhas de no máximo 5 minutos).
+
+### CustomStore: `/store` (50) e `/offstore` (51)
+
+- `/store [palavra]` (`0x468d90`): `CustomStoreSwitch` e nenhuma interface aberta. Sem palavra fecha a loja pessoal (`0x4d4f00`, o mesmo do `3F 03`). Com a palavra de `CustomStoreCommandJoB/JoS/JoL/JoC/JCR/JoGSyntax` (tipos 0..5) chama `0x469140`. Não cobra.
+- `0x469140`: mapa sem loja pessoal (`MapManager` `PShopEnable` ou `PersonalShopSwitch`) → msg 0x326; fora de `CustomStoreMapZone` → 0x23E; fora da zona segura → 0x21D; loja não aberta (`obj+0x2468`) → 0x21C; loja vazia ou item sem preço (`0x4d4100`) → 0x21E; nível < 6 → `C1 05 3F 02 02`. Senão `obj+0x249c = 1`, `0x249d = tipo`, `0x249e = 0`, título = mensagem 0x21F+tipo (36 bytes, "`.::LOJA DE BLESS::.`" etc.) e `C1 34 3F 10 índice(BE) título[36] nome[10]` ao dono e ao viewport.
+- `/offstore` (`0x469030`): `CustomStoreOfflineSwitch` e sem interface; loja fechada → 0x21C; mapa fora de `CustomStoreOfflineMapZone` → 0x23E; fora da zona segura → 0x21D; Chaos Castle 18..23 → 0x23E. Senão `obj+0x249e = 1`, `CustomStoreSkinChange` ≠ 0 vira a skin (`obj+0x314`), fecha o socket e guarda no cache de reconexão. Não exige a loja custom; não cobra.
+- Ver a loja (`3F 05`, `0x4d4fc0`) de uma loja custom manda ao visitante a mensagem dourada 0x229+tipo ("Esta loja vende Itens para JEWEL OF BLESS").
+- Fechar a loja (`0x4d4f00`) ou vender o último item (`0x4694d0`) limpa `0x249c/0x249d` e uma loja offline aberta passa a fechando (`0x249e = 0x502`: estado 2, 5 segundos).
+- **Compra com joias** (`0x4695d0`, chamado por `0x4d5140` depois do limite de 2 s e antes do caminho de zen; devolve 0 se a loja não for custom): sete tipos de joia, na ordem JoB (14,13)/pack (12,30), JoS (14,14)/(12,31), JoL (14,16)/(12,136), JoC (12,15)/(12,141), JCr (14,22)/(12,137), JoG (14,31)/(12,138), JoH (14,42)/(12,140). O preço do item (`CItem+0x84`) é o número de joias do tipo da loja. Para cada tipo o comprador tem `singles + 10 × (pack0 + 2 pack1 + 3 pack2)` joias (packs de nível 0/1/2 = 10/20/30); o pagamento é guloso: packs de 30, 20, 10 e avulsas, e só vale se fechar exatamente. O vendedor recebe o preço como packs de 30/20/10 e avulsas (`0x4d41b0`) e precisa de uma célula livre do inventário para cada (`0x494a10`). Resultados do `C1 0F 3F 06` (registrador CL): 3 loja fechada, 4 venda em andamento, 5 slot inválido, 6 transação de chaos / nome / item / sem preço, 7 joias insuficientes, sem troco exato ou sem espaço no vendedor, 8 sem espaço para o item, 1 comprado. Sucesso: item no inventário do comprador, remove as joias do plano (`0x4d4230`), salva, cria as joias do vendedor no inventário (`0x4d44d0`), `C1 0F 3F 08 slot comprador` ao vendedor, apaga o item, salva e fecha a loja se ficou vazia. Tipos 7..9 não fazem nada.
+
+Implementação: `internal/game/customstore.go` (ganchos em `pshop.go`: `pshopClose`, `pshopView`, `pshopBuy`).
+
+### CustomAttack: `/attack` fixo, índices 52 e 53, `F3 0A`, `F3 0B`, cabeçalho `04`
+
+- `Custom/CustomAttack.txt`: seção 0 `SkillIndex MinDexterity MaxDexterity MinCharSpeed MaxCharSpeed AttackDelay BaseSpeed MainSpeed` (vetor, a primeira linha que casa vale); seção 1 `Index Group Value DW DK FE MG DL` (`std::map`, índice 0..213, a primeira linha vence). Grupo 0 = buff (Value 0 só em si, senão também na party), 1 = alvo único (`19`), 2 = magia de área com alvos (`1E` + `10`), 3 = área (`1E`), 4 = alvo único especial.
+- Atraso entre usos (`0x4457f0`): velocidade = `MagicSpeed` (classes 0 e 5) ou `AttackSpeed`; a primeira linha da seção 0 cujo skill, destreza e velocidade casam dá `AttackDelay` ou, se -1, `BaseSpeed − MainSpeed × velocidade`; sem linha, `(375 − velocidade) × 4`. No arquivo original: 1500 − 4 × velocidade.
+- `/attack` fixo (`0x435400`): qualquer argumento diferente de "off" com o ataque desligado manda `C1 04 F3 F6` (o cliente abre o helper e responde com `F3 0A` ou `F3 0B`); senão para (`0x445a20`). Por isso o índice 52 nunca roda pelo chat.
+- Parar (`0x445a20`, também o cabeçalho `04` do cliente): zera o modo manual (`obj+0x124`) e, com o ataque ligado, mensagem 0x23C (aviso custom tipo 1 cor 2, `0x4dc920`), desliga e manda o status `C1 08 F3 EB ativo u32` (`0x445940`).
+- Índice 52 (`0x445ab0`): `CustomAttackSwitch`; `obj+0x20f8` (nunca escrito, U-CUST-17) → 0x23D; fora de `CustomAttackMapZone` ou em zona segura → 0x23E; ligado → desliga. Sem argumento usa `CustomAttackBuffEnable_AL` e a primeira skill da tabela que o personagem tem (`0x4458e0`); senão argumentos 0 (buff) e 1 (skill). Sem buff nem skill, skill fora da tabela/classe, não aprendida ou sem a arma (`0x4f8800`; 0x29..0x2B com item na mão direita; 0x18, 0x33, 0x34 com arcos nas duas mãos) → 0x23F. Liga sem cobrar.
+- `F3 0A skill(u16)` (`0x447380`, o helper do cliente): mesmas condições de mapa (em silêncio), mais todas as checagens do `CommandManager` do índice 52 (delay, GM, nível, reset, zen e moedas, mensagens 300 e 0x12D..0x135). Desligado: buff de `CustomAttackBuffEnable_AL`, skill do pacote (só 0x29 exige a mão direita), liga e cobra como índice 52; ligado: desliga. Sempre manda `F3 EB`.
+- `F3 0B skill(u32)` (tamanho 8, `0x447800`): -1 ou ataque ligado → para. Sem ataque offline, interface, morte ou teleporte: em zona segura "Use /attack fora da cidade, perto dos monstros."; skill 1..213 do `SkillList` que o personagem tem → modo manual (`obj+0x124 = 1`, sem buffs) e "Attack: %s. Use /attack off para parar."; senão "A magia selecionada nao esta na lista do personagem. Selecione uma habilidade disponivel.".
+- Índice 53 `/offattack` (`0x445d90`): no modo manual "Use /attack off antes de ativar o modo offline."; com `CustomAttackOfflineSwitch` exige o ataque ligado (0x241); com `CommandResetMove_AL` desliga o reset automático; liga `obj+0x20d9`, reinicia a hora de início e fecha o socket. Não cobra.
+- **Robô a cada 100 ms** (timer 0, `0x4c48b0` → `0x444b10`): manual → `0x447a40`. Online: sem buff nem skill → para; `CustomAttackMaxTimeLimit_AL` > 0 e esgotado → 0x242 e desliga; fora do mapa permitido, em zona segura ou a mais de 5 células da posição inicial (`0x513bf0`) → para. Offline: sem buff nem skill ou `CustomAttackOfflineMaxTimeLimit_AL` esgotado → remove o objeto; `CustomAttackOfflineKeepEnable_AL` mantém sempre; senão continua só no mapa permitido fora da zona segura (com contagem de Summon Party em curso, `obj+0x5d2`, testaria 10 células), senão remove. Ações, nessa ordem:
+  1. poções (`0x445e60`): com `CustomAttackPotion_AL` e o atraso vencido, dez rodadas: vida < `CustomAttackPotionRate1` % bebe (14,3), (14,2), (14,1) ou a maçã (14,0); mana < `Rate2` (14,6), (14,5), (14,4), pelo handler `26`; o slot achado primeiro é reaproveitado no resto das rodadas (também para a mana); cada uso adia `CustomAttackPotionDelay_AL` ms;
+  2. reparo (`0x4461e0`): com `CustomAttackRepair_AL`, cada item equipado abaixo da durabilidade é reparado e pago (`0x497260`), `C1 08 34 zen` e CalcCharacter;
+  3. flechas (`0x446350`): sem os efeitos 6 e 0x8F, besta na mão direita recarrega virotes (4,7) na esquerda e arco na esquerda recarrega flechas (4,15) na direita pelo handler `24`;
+  4. buffs (`0x446560`): com `CustomAttackBuffEnable_AL` (ou o offline) e a flag de buff, cada skill do grupo 0 permitida e aprendida, com mana e BP, é lançada em si (Value 0) ou em cada membro da party vivo no mapa dentro do alcance, quando o alvo não tem o efeito; nenhuma skill de buff zera a flag;
+  5. ataque (`0x446890`): skill fora da tabela ou não aprendida é zerada; com o atraso vencido, mana e BP, o monstro mais próximo do VP2 atacável (`0x4f8440`), a menos de 100, dentro do alcance ou do raio da skill (`0x4469a0`) vira alvo (`obj+0x20f4`).
+- Lançar (`0x446c10`): Heal (0x1A) só se o alvo estiver com até 50 % de vida; o pacote do grupo vai para os handlers: grupo 2 `C1 0C 1E skill x y ângulo 0 ângulo alvo(BE) 0` seguido de `C1 len 10 skill x y 0 n` com até 10 monstros do VP2 no raio; grupo 3 só o `1E`; demais `C1 07 19 skill alvo(BE)`. O próximo uso espera o `Delay` do `SkillList` ou a fórmula de velocidade. No modo manual (`0x447a40`) o ataque para ao morrer, teleportar, abrir interface, mudar de mapa, entrar em zona segura ou perder a skill, e o atraso mínimo é 150 ms.
+- Experiência (`0x4c5a30` e `0x4c5ea0`): com `CustomAttackSwitch` e o ataque ligado multiplica por `CustomAttackExperienceRate_AL` (online) ou `CustomAttackOfflineExperienceRate_AL` (offline) / 100.
+
+Implementação: `internal/game/customattack.go`, `internal/gamedata/customcmd.go` (ganchos em `combat.go` e `levelup.go`).
+
+### `/gift` (54)
+
+- `Custom/CustomGift.txt`: seção 0 `GiftIndex Class AL0..AL3 MinLevel MaxLevel MinReset MaxReset MaxCount LevelUpPoint Money "Code"` (as três moedas do registro não têm coluna); seção 1 `GiftIndex ItemIndex ItemLevel Durability Skill Luck Option Excellent SetOption Duration`.
+- `/gift código` (`0x463780`): só com `CustomGiftSwitch`; a primeira linha com o código (strcmp), `Class` -1 ou a classe e `Switch_AL` ligado; nenhuma → 0x25D. Nível/reset fora → 0x25E..0x261. Senão `C1 18 0F 03 índice nome[10] gift(u16) maxCount(u32)` ao DataServer, sem delay nem custo.
+- DataServer (`0x408a70`, tabela `GiftData`): cria a linha (`Count` 0) se não existe; se `MaxCount = -1` ou `Count < MaxCount`, grava `Count+1` e responde 1, senão 0 (`C1 16 0F 03`).
+- Resposta (`0x463a10`): 0 → 0x263. 1 → `LevelUpPoint` (`F3 E0` e save), zen (acima de `MaxMoney` vira 2.000.000.000), moedas (msg 0xB7, sempre 0 aqui), os itens no chão perto do jogador (`0x50c860`, 10 tentativas) com dono e duração, fogos `C1 07 F3 40 00 x y` ao jogador e ao viewport e 0x264.
+
+### Casamento: `/marry` (55), `/accept` (56), `/divorce` (57), `/trackmarry` (58)
+
+- `Custom/CustomMarriage.txt`: seção 0 `Enable ItemIndex ItemLevel ItemCount` (exigência para casar), seção 1 a mesma coisa para o divórcio, seção 2 os itens de presente (formato do `CustomGift`). `Custom.dat`: `CustomMarriageSwitch`, `HomoSexual`, `Announce`, `MapZone`, `StartX/Y`, `EndX/Y`, `TracePK`. Estado no personagem: `Married` (`obj+0xd2c`) e `MarryCouple` (`obj+0xd2e`, colunas do `Character`); pedido pendente em `obj+0xd39` (proponente `0xd3c`, tick `0xd40`).
+- `/marry nome` (`0x465e70`): alvo fora → 0x171; si mesmo → 0x28A; interface aberta em qualquer um → 0x28B; já casado → 0x28C (com o par) / 0x28D (alvo); mesmo gênero (classes 2 e 5 são femininas) sem `HomoSexual` → 0x28E; os dois fora do retângulo do altar → 0x28F; item da seção 0 faltando em qualquer um → 0x290 (quantidade, nome do item). Senão o alvo recebe o pedido (0x292 com o nome), o proponente 0x291 e o comando é cobrado.
+- `/accept` (`0x466170`): só com pedido; depois de 60 s (`0xea61` ms) → 0x293 e cancela; interface → 0x28B; proponente sumido → 0x294; altar → 0x28F; itens → 0x290. Cada um: casado com o outro, perde o item da seção 0 **com a quantidade da seção 1** (o original lê `+0x44`), recebe os itens da seção 2 no inventário (`0x4669e0`) e é salvo. Dez fogos ao redor de quem aceitou (`x/y = pos − 4 + (rand%5)×2`), 0x295 dourada a cada um com o nome do outro e, com `Announce`, 0x296 a todos. Cobra quem aceitou.
+- `/divorce` (`0x466490`): só casado; interface → 0x297; item da seção 1 faltando → 0x298. Par online: descasa, salva e 0x299 dourada; offline: DS `C1 14 0F 02 nome` ("UPDATE Character SET Married=0, MarryCouple=NULL"). Depois descasa, remove o item, salva, 0x299 e cobra.
+- `/trackmarry` (`0x466690`): só casado (e `obj+0x20b0` zero, U-CUST-21); par offline → 0x29A; com interface ou par no mapa da CustomArena, Kalima 24..29/36, Devil Square 9/32, Blood Castle 11..17 ou Chaos Castle 18..23 → 0x29B; Icarus exige asas ou Dinorant/Fenrir (0x29B); PK ≥ 5 com `TracePK` → 0x29C. Senão vai até o par (`0x50fd50`) e cobra.
+
+### `/buyvip` (60)
+
+- `Custom/CustomBuyVip.txt`: `AccountLevel NewAccountLevel Days Money "Code"` (`std::map` por código; as três moedas do registro não têm coluna).
+- `/buyvip código` (`0x449060`): código inexistente → 0x2A2; `AccountLevel` ≠ -1 e maior que o nível da conta → 0x2A3; zen < `Money` → 0x2A4. Senão desconta o zen, JS `0x11` (`0x4a2a80`: nível novo por `Days × 86400` s; mesmo nível estende) e JS `0x05` (`0x4a29a0`, recarrega), mensagem 0x2A8 e cobra.
+
+### `/pack4155` (61) e `/unpack` (62) — `CCustomJewelPack`
+
+- `Custom.dat`: `CustomJewelPackSwitch` e as palavras `CustomJewelPackCommandJoB/JoS/JoL/JCR/JoG/JoCSyntax`. Dez tipos: 0 JoB (14,13)/(12,30), 1 JoS (14,14)/(12,31), 2 JoL (14,16)/(12,136), 3 JCr (14,22)/(12,137), 4 JoG (14,31)/(12,138), 5 JoH (14,42)/(12,140), 6 JoC (12,15)/(12,141), 7 (14,41)/(12,139), 8 (14,43)/(12,142), 9 (14,44)/(12,143); os tipos 5, 7, 8 e 9 não têm chave, então nunca casam.
+- `/pack4155 tipo n` (`0x44d150` → `0x44d930`): interface aberta ou morto → 0x183; sem palavra → 0x184; palavra desconhecida nada; `n` (token 1) fora de 10, 20, .., 60 → 0x185; nenhuma joia avulsa de nível 0 → 0x186; menos que `n` → 0x187. Senão apaga `n` avulsas e cria o pack de nível `n/10 − 1` no inventário; cobra o índice 61.
+- `/unpack tipo n` (`0x44d530` → `0x44dc50`): sem o pack de nível `n/10 − 1` → 0x186; menos de `n` células livres no 8×8 → 0x188; apaga um pack e cria `n` avulsas; cobra o índice 62.
+
+### CustomPick: `/pick` (63), `/pickset` (64), `/pickclear` (65)
+
+- `Custom/CustomPick.txt`: `ItemIndex ItemLevel AccountLevel` — itens que o pick nunca pega para contas de nível ≤ `AccountLevel` (-1 todas; nível -1 qualquer). `Custom.dat`: `CustomPickSwitch`, `MapZone`, `MoneyPick`, `JewelPick`, `ExcellentPick`, `AncientPick`, `MaxTime_AL`, `Range`.
+- Estado: ligado `obj+0x22bc`, quantidade de filtros `0x22bd`, 20 filtros de 20 bytes em `0x22be`, chaves zen `0x245c`, joia `0x2450`, excelente `0x2458`, set `0x2454`, início `0x2464`, carregado `0x24a0`. DS `C1 1C 13 00` ao entrar no mundo (`0x456890`, resposta `0x456730` conta os filtros não vazios) e `C2 01C0 13 30` a cada save do personagem (`0x456930`, chamado por `0x475c30`); tabela `CustomPick` (`CustomPickList` varbinary(400), `Money`, `Jewel`, `ItemExc`, `ItemSet`).
+- `/pick [zen joia exc set]` (`0x4560d0`): ligado → desliga (0x1C5, sem custo); zona segura → 0x1C2; mapa fora da lista → 0x23E; argumentos 0..3 gravam as chaves; sem filtro nem chave → 0x1C3; senão liga, 0x1C4 (quantidade e chaves) e cobra o índice 63.
+- `/pickset texto` (`0x456300`): sem texto → 0x1C6; menos de 3 caracteres → 0x1CB; 20 filtros → 0x1CC; senão grava o texto (até 19, em minúsculas, `0x5137d0`), 0x1C7 (posição, texto) e cobra o índice 64.
+- `/pickclear` (`0x456510`): desliga (0x1C5 se estava ligado), zera filtros e chaves, 0x1C8 e cobra o índice 65.
+- A cada 100 ms (`0x455c80`): `MaxTime_AL` esgotado → 0x1CA e desliga. Fora da zona segura e no mapa permitido, cada item do mapa vivo, com mais de 1 s, não bloqueado e a até `CustomPickRange` células é pego (`C1 05 22 número` pelo handler `22`) quando é joia (`JewelPick` + chave; `0x496bf0`: (12,15), (14,13), (14,14), (14,16), (14,22), (14,31), (14,41..44), (14,160), (14,161) e a tabela `CustomJewel`), excelente (`ExcellentPick`, exceto Dinorant/Fenrir), set (`AncientPick`), zen (`MoneyPick`) ou quando o nome em minúsculas (`0x494a40`: o nome do `ItemLevel.txt` para o índice e nível, senão o do `Item.txt`) com " +nível" (só quando o nível > 0 não tem linha no `ItemLevel`), " +skill", " +luck", " +option" contém algum filtro de 2+ caracteres.
+
+### Comandos fixos `/vendo`, `/compro`, `/minhainfo`, `/superdrop`, `/combo`
+
+- `/vendo texto` e `/compro texto` (`0x43f710`): "off" zera o anúncio (`obj+0x125`, texto `obj+0x130`), manda o texto vazio e avisa "Anuncio acima do personagem desativado."; texto de até 49 (`/vendo`) ou 51 (`/compro`) caracteres vira "`[ VENDO %s ]`" ou "`COMPRO: %s`" e é mostrado na hora; senão "Use %s mensagem (ate %d caracteres), ou %s off.". O anúncio é `C1 tam 01 índice(BE) texto\0` (até 59 caracteres, `0x4d9c60`) ao dono e aos jogadores do seu VP (estado 1 ou 2), repetido a cada 3 s pelo laço de 1 s (`0x43f810`).
+- `/minhainfo` (`0x4047e0`): no máximo a cada 3 s, `C1 12 0F 23 índice conta` ao DataServer (`0x401740`: conta só com `[0-9A-Za-z_-]`; `MEMB_INFO.Credits`, `MEMB_STAT.OnlineHours` e os segundos da sessão atual). Resposta (`0x4048f0`): falha → "Minha info: banco indisponivel. Tente novamente."; senão "[Minha info] %s | Saldo: %u creditos", "Assinatura: %s" (mensagem 0x2EA + nível da conta), "Validade VIP: %.19s" (só com nível > 0) e "Online acumulado: %I64u h %u min" (horas acumuladas + segundos/3600, minutos da sessão).
+- `/superdrop`: só `Authority` 4 ou 8 (`obj+0x250`), senão "/superdrop: comando exclusivo para Game Master."; alterna `DAT_00772d7c`, manda `C1 05 F3 FA flag` a todos (`0x434c30`) e "SuperDrop ATIVADO." / "SuperDrop DESATIVADO.". Ligado, o drop `23` (`0x4988f0`) ignora o item periódico, a trava da conta, o `ItemMove.txt`, os itens +5, excelentes e de set, e a coleta (`0x4adcc0`) ignora `ItemLoot` e o dono.
+- `/combo` e `/combo off`: segunda palavra ou primeira diferente de "off" → "Use apenas /combo ou /combo off."; "off" zera `obj+0xcc..0xdc` ("Combo DESATIVADO."). Sem palavras exige Twisting Slash (41) e Death Stab (43) ("Aprenda Twisting Slash e Death Stab para ativar /combo."), aprende Cyclone (22) se faltar (`0x4f8b60` + `F3 11`; falha → "Nao foi possivel adicionar Cyclone: ..."), arma a sequência 22, 41, 43 (`obj+0xcc = 0x30001`), manda `C1 04 F3 F8` e "Combo ATIVADO: 1-Cyclone 2-Twisting Slash 3-Death Stab. Uso manual.". A cada skill (`0x4f8d10`, chamado pelo uso de skill `0x4f8dd0`/`0x4f92d0`): passo vencido (3 s) recomeça; a skill esperada avança e a terceira completa o combo; a primeira da sequência volta ao passo 1; outra zera. Com o combo ligado Cyclone não exige arma (`0x4f8800`), assim como a skill do ataque manual.
+
+Implementação: `internal/game/offline.go`, `reconnect.go` (+ `internal/store/reconnect.go`, `0018_reconnect.sql`, `internal/auth/offline.go`), `command_custom.go`, `customstore.go`, `customattack.go`, `custompick.go`, `command_hardcoded.go`, `internal/gamedata/customcmd.go`, `internal/store/custom.go` (+ `0013_custom_commands.sql`: `gift_data`, `custom_pick`).
+
+Implementação: `internal/game/command_player2.go`, `internal/game/customquiz.go`, `internal/gamedata/customquiz.go`, `internal/store/command.go` (+ `0010_reset_data.sql`).
+
+## CustomXShop (`CCustomXShop`, `0x401fd0..0x405960`)
+
+Loja de créditos do cliente WizardTeam. A moeda é `MEMB_INFO.Credits` (`accounts.credits`), que só o DataServer altera. Os pacotes do cliente usam o head privado `FA` (só C1; o despachante `0x4d6690` exige `tamanho > 3` e o tamanho exato de cada sub). O HackPacketCheck não é aplicado ao `FA`.
+
+| Pacote | Função | Tamanho | Resposta |
+|---|---|---|---|
+| `FA 05` preço do GM | `0x403660` | 0x0C | `C1 0C FA 06 resultado` (`0x403860`) |
+| `FA 07` compra | `0x4032c0` | 0x10 | `FA 04` (depois do DS `0x0F 0x21`) |
+| `FA 08` página da lista | `0x402e20` | 0x06 | `FA 09` + `FA 03` (créditos) |
+| `FA 0E` dados da recarga | `0x404a60` | 0x04 | 48 × `FA 0F` |
+| `FA 10` envio da recarga (GM) | `0x405030` | 0xC6 | `C1 05 FA 11` |
+
+- **Preços** (`Custom/CustomXShop.txt`, `0x4026e0`): seção 0 `Categoria Preço` (16 categorias, `index >> 9`), seção 1 `Type Index Preço` (`std::map` em `+0x78`, índice `Type*512 + Index` sem checar `Index`). Preço negativo vira 0. Sem o arquivo todas as categorias custam 25 ("Usando preco padrao 25"). Preço do item (`0x402990`): o override ou a categoria (limitada a 0..15). Preço 0 tira o item da loja.
+- **Opções permitidas** (`0x402c30`, byte de flags de cada item): só "equipamento" (`0x4029f0`: categorias 0..11 com `HaveOption`; categoria 12 com `Slot 7` e `HaveOption`, acima de 12,6 só `CustomWing`). CustomWing → 1. Senão um item de teste (skill, luck e option 1, excelente 0x3f) precisa casar as regras 1 e 2 do `ItemOption.txt` (`0x49d390`) → 1; com `Skill` no `Item.txt` e a regra 0 → 3; as regras 3..8 todas, categoria ≤ 11 e índice fora de {0x13, 0x40d, 0x812, 0xa0a, 0xa24} → `| 4`. Bit 0 = nível/luck/option, bit 1 = skill, bit 2 = excelente.
+- **`FA 08`** `[4] categoria (< 16) [5] página`: no máximo a cada 120 ms. Lista os índices 0..0x1FFF da categoria que existem no `Item.txt` e têm preço; 8 por página; a página é limitada a `0..páginas−1`. Resposta `C1 68 FA 09 categoria página páginas(0xFF se ≥ 256) quantidade` + 8 entradas de 12 bytes: `item(u16) pad[2] preço(u32) flags pad[3]` (`0x402ed0`). Depois manda `C1 12 0F 20 índice conta[11]` ao DataServer (`0x403250`); a resposta (`0x404350`) vira `C1 08 FA 03 créditos(u32)` (0 se a consulta falhou).
+- **`FA 07`** `[4] item(u16) [6] nível skill luck option excelente [12] preço(u32)`. Ordem dos resultados (`C1 10 FA 04 resultado pad[3] créditos(u32) item(u16) pad[2]`, `0x404720`, créditos em ECX e item em DX): item inexistente ou preço 0 → 3; opções inválidas para as flags (`0x401000`: nível < 16, skill/luck < 2, option < 8, excelente < 0x40; sem bit 0 tudo zero, sem bit 1 sem skill, sem bit 2 sem excelente) ou preço > 2.000.000.000 → 6; preço do pacote ≠ preço + 4 (só com nível 15) → 7; interface aberta ou morrendo (`obj+0x286`) → 5; compra pendente da mesma conta há ≤ 15 s → 5 (pendência mais velha é descartada); menos de 500 ms desde a última → 5; sem espaço para o item (`0x4952a0`) → 2. Nos erros locais créditos = 0. Senão grava o registro pendente (conta, item, preço, tick, sequência `+0x1c8` que pula 0, nome, opções) por índice e manda `C1 1C 0F 21 índice conta[11] item(u16) preço(u32) seq(u32)`.
+- **DataServer** (`ds.c`): `0x0F 0x20` (`0x401040`) "SELECT ISNULL(Credits,0)" → `C1 18 0F 20 índice conta ok[0x11] créditos[0x14]`; `0x0F 0x21` (`0x401300`) "UPDATE ... Credits=Credits-%u OUTPUT inserted.Credits ... AND Credits>=%u" (sem débito relê o saldo) → `C1 24 0F 21 ... item[0x12] preço[0x14] ok[0x18] saldo[0x1c] seq[0x20]`; `0x0F 0x22` (`0x401610`) "UPDATE ... Credits+%u" (estorno, log "[CustomXShop] Refund"). Conta só com `[0-9A-Za-z_-]` e preço ≠ 0. Aqui: `store.CreditStore`.
+- **Resposta da compra** (`0x404400`): o registro pendente precisa casar conta, item, preço e sequência (senão, com débito feito, estorna). Sem débito → `FA 04` 1 com o saldo. Com débito: jogador fora → estorna; mesmo nome, sem interface e com espaço → `CreateItem` no inventário (mapa 0xEB) com nível/skill/luck/option/excelente do pedido, durabilidade `0x494500` (0..255) e o parâmetro 14 = 0x40 quando `0x402b20` aceita (nível 8..15, não joia, categorias 0..11, asa `Slot 7` ou categoria 13 com slot 0..11) → `FA 04` 0 com o saldo e log "[CustomXShop][%s][%s] Item:%d Price:%u"; senão estorna e `FA 04` 2 com saldo + preço.
+- **`FA 05`** `[4] item(u16) [8] preço(u32)`: só `Authority` 8 (senão `FA 06` 1, log DENIED); 300 ms → 2; item inexistente ou preço > 2.000.000.000 → 2; reescrita do arquivo falhou → 3; sucesso → override em memória e 0. A reescrita (`0x403920`) lê o arquivo linha a linha: na seção 1 a linha `Type Index Preço` do item vira `"%d   %d   %lu"` (mantendo o comentário `//`); sem linha, `"%d   %d   %lu   // alterado/criado ingame por GM"` entra antes do `end`; sem seção 1, acrescenta `""`, `"1"`, a linha e `"end"`. Grava em `<arquivo>.tmp` e troca (`MoveFileExA`).
+
+### Recarga (`Custom/CustomXShopRecharge.txt`)
+
+Bloco de 0x23F3 bytes: `[0] Ativo`, `[1] Titular[0x60]`, `[0x61] ChavePix[0x80]`, `[0xE1] CopiaECola[0x200]`, `[0x2E1] lado(u16 ≤ 256)`, `[0x2E3] matriz lado×lado bits (0x2000)`, `[0x22E3] ImagemURL[0x100]`, `[0x23E3] Valor[0x10]`.
+
+- **`FA 0E`** (`0x404a60`): no máximo a cada 3 s; lê `[Recarga]` do arquivo ao lado do `CustomXShop.txt` (`Ativo` = 1, `Titular`, `ChavePix`, `CopiaECola`, `ImagemURL`, `ImagemBMP`). `ImagemBMP` sem `\` nem `/` é relativo à pasta. A imagem (`0x401bf0`, GDI+, até 8192×8192) é reduzida para lado = min(maior lado, 256), centrada; pixel com R+G+B (sobre branco, pelo alfa) < 0x180 liga o bit. Imagem ausente/ruim → log "Cache local invalido/ausente" e o original tenta baixar `ImagemURL` (http/https, "MuOriX-ShopX/2026"). Depois valida (`0x401140`: `Ativo` < 2; textos terminados em NUL no campo, sem caracteres < 0x20 nem `"`; lado ≤ 256; refaz `Valor` com a tag EMV `54` de `CopiaECola` (`0x401080`: campos `tag(2) tamanho(2 dígitos) valor`; malformado, tag 54 repetida ou ≥ 16 bytes falham) quando ela tem o formato `dígitos.dd`). Inválido → `Ativo` 0. Envia `C1 C6 FA 0F offset(u16) dados[0xC0]` para os offsets 0, 0xC0, … (48 pacotes, o último completado com zeros).
+- **`FA 10`** `[4] offset(u16) [6] dados[0xC0]` (`0x405030`): sem `Authority` 8 só responde `FA 11`. Offset 0 abre um envio novo (no máximo a cada 3 s; senão `FA 11`). Os pedaços seguintes precisam ser da mesma conta, em ordem e em até 10 s; quebra → descarta e `FA 11`. Pedaço aceito no meio não tem resposta. Completo: valida e salva (`0x405350`): matriz em um BMP novo `pixXXXX.tmp.bmp` (32 bits, de cima para baixo, `0x00000000` para bit ligado e `0x00FFFFFF` desligado; os antigos ficam na pasta) e o arquivo reescrito por um temporário: `"; Configurado pelo GM no X Shop. Credito manual.\r\n[Recarga]\r\nAtivo=%u\r\nTitular=%s\r\nChavePix=%s\r\nCopiaECola=%s\r\nImagemURL=%s\r\nImagemBMP=%s\r\nValor=%s\r\n"`; log "[RECHARGE][SAVED]" e `FA 11`.
+- **Desvio deliberado**: este servidor nunca faz requisições de rede; sem BMP local a matriz fica vazia e o pulo do download é registrado em log (U-XSHOP-03).
+
+Implementação: `internal/game/xshop.go`, `xshop_recharge.go`, `internal/gamedata/customshop.go`, `internal/store/cashshop.go`.
+
+## CustomJewel (`CCustomJewel`, `0x464b40..0x465810`; uso `0x4c8000`)
+
+- `Custom/CustomJewel.txt` (`0x464b70`): 50 registros de 0x98 bytes indexados por `JewelIndex` (iniciados com -1; índice ≥ 50 ignorado; linha posterior sobrescreve). Seção 0 `JewelIndex ItemIndex(cc,iii) EnableSlotWeapon EnableSlotArmor EnableSlotWing Rate_AL0..3 SalePrice`; seção 1 `JewelIndex MinItemLevel MaxItemLevel ItemWithSkill ItemWithLuck ItemMinAditional ItemMaxAditional MinItemExcellent MaxItemExcellent MaxItemSetOption` (`*` = -1); seções 2 (sucesso) e 3 (falha) `JewelIndex ItemLevel SkillSwitch LuckSwitch Aditional Excellent SetOption`. O arquivo original só tem linhas de demonstração comentadas.
+- **Busca** (`0x4650b0`): registro cujo `JewelIndex` é a própria posição e `ItemIndex` é o item. Também entra no teste de joia `0x496bf0` (pick, XShop), antes da lista fixa (U-CUST-22 resolvida), e no preço (`0x48c7a0`: valor = `SalePrice`).
+- **Uso** (head `26`, `0x499a20`): depois de todos os itens fixos do handler; origem joia custom → `0x4c8000`. Origem e destino < 0x4C, destino válido e não periódico (`CItem+0xb7`). Requisitos (`0x4650e0`): não flechas/virotes (0x807/0x80f); acima de 12,6 só asas (12,0..6, 12,36..43, 12,49, 12,50, 12,262..265, 13,30) ou `CustomWing`; `EnableSlotWeapon` 0 recusa 0..5, `EnableSlotArmor` 0 recusa 6..11, `EnableSlotWing` 0 recusa asas e `CustomWing`; nível entre Min/Max; skill e luck ≤ `ItemWith*`; option entre Min/Max; excelentes ≥ `MinItemExcellent`; `MaxItemExcellent` < 10 é o máximo de opções, > 10 é a máscara proibida (`valor − 10`); `MaxItemSetOption` ≠ -1 exige item não ancient e, nos bits 0/1, que o `SetItemType` tenha a tier 1/2. Os dois dwords seguintes (`+0x50`/`+0x54`) não têm coluna e sempre passam.
+- Sorteio `rand % 100 < Rate_AL<nível da conta>` (`obj+0x618`). **Sucesso** (seção 2): nível += (máx. `MaxItemLevel`), skill/luck += (máx. 1), option += (máx. `MaxItemOption`), `Excellent` opções novas pelo `ExcellentOptionRate` (`0x4655c0` modo 1, até o máximo do item: 3 para 13,3/13,37, `WingOption`, 4 para `CustomWing`, senão 6), `SetOption` como máscara (`0x465810`: bits 0/1 oferecem as tiers que o item tem, uma ao acaso quando as duas servem; bit 2 = +5, bit 3 = +10; item já ancient mantém a tier). **Falha** (seção 3): subtrai nível/skill/luck/option (mínimo 0); remove `Excellent` opções ao acaso (todas quando o item tem essa quantidade ou menos); `SetOption` > 0 apaga o ancient. Os dois casos reescalam a durabilidade, recalculam o item e o CharSet e consomem a joia (`C1 05 28 origem 01` e `C1 0C F3 14 destino`). Requisito recusado não consome nada.
+
+Implementação: `internal/game/customjewel.go` (ganchos em `itemuse.go`, `itemcalc.go`, `custompick.go`).
+
+## CustomJewelBank (`CCustomJewelBank`, `0x44c2e0..0x44ced0`)
+
+- Dez contadores por conta (`obj+0x24c4..0x24e8`; tabela `CustomJewelBank`: `Chaos Life Soul Bless Creation Guardian Harmony GemStone LowStone HighStone`), na ordem da tabela de saltos `0x44c5e4`: (12,15), (14,16), (14,14), (14,13), (14,22), (14,31), (14,42), (14,41), (14,43), (14,44).
+- Carga ao entrar no jogo (`0x4cc730` → `C1 12 F7 05 índice conta` → DS `0x410510`, linha ausente = zeros → `C1 30 F7 05 índice pad contadores[10]` → `0x44ce20`) e `C1 2C F3 F5` + 10 × u32 ao cliente (`0x44ced0`).
+- **Depósito `F3 F5 tipo(u32)`** (`0x44c610`): jogador em jogo sem interface aberta e sem mix em andamento (`obj+0x430`); tipo < 0x4C (o original também lê o slot de mesmo número e não usa o resultado); com alguma joia do tipo de nível 0 no inventário (`0x4948f0`) soma 1, apaga uma joia (`0x496ee0`), manda `C1 18 F7 04 índice conta[11] tipo(u16) delta(i32)` (+1) e o `F3 F5`.
+- **Saque `F3 F6 tipo(u32) quantidade(u32)`** (`0x44c830`): mesmas condições e uma célula livre ao menos (`0x49bb80`). Quantidade 99 = células livres; se o contador tiver menos, saca tudo. Senão o contador precisa ter a quantidade. Tipos 0 e 1 com quantidade ≠ 99 criam **um** item: com 10/20/30 o pack de nível 0/1/2 da tabela `0x4a1144` indexada pelo tipo (por isso 10 Chaos viram um Bless pack 12,30 e 10 Life um Soul pack 12,31), com outra quantidade uma joia só (inclusive com quantidade 0). Os demais criam `quantidade` joias de nível 0 (mapa 0xEB). DS `F7 04` com −quantidade e `F3 F5`.
+- DataServer (`0x410280`): `SELECT`; linha existente → `UPDATE ... Coluna+=delta`; senão `INSERT` com o delta. Aqui `store.JewelBankStore`, tabela `custom_jewel_bank` (migração `0016_custom_shop.sql`).
+
+Implementação: `internal/game/jewelbank.go`.
+
+## LuckyWheel (`CLuckyWheel`, `0x44e080..0x44eac0`)
+
+- `Custom/CustomLuckyWheel.txt` (`0x44e3a0`): tabela `IndexWheel Type Index Level Skill Luck Option Excellent` (`std::map` por `IndexWheel`, a primeira linha vence); o registro guarda Luck antes de Skill.
+- Ao entrar no jogo (`0x473a10`): `C2 tam FB FB quantidade` + 32 bytes por posição em ordem de chave (`IndexWheel Type Index Level Luck Skill Option Excellent`, u32 cada; `0x44e860`) e `C1 08 FB FC preço(u32)` (`0x44ea00`). O carregador de dados (`0x4e8a50`) também os manda a todos os jogadores (na partida não há nenhum; a recarga com o servidor rodando não foi reconstruída).
+- **Giro `FB 16`** (`0x44e570`, sem checar estado nem tamanho): Coin1 (`obj+0xd20`) < `LuckyWheelCustValue` (`Custom.dat`, `CServerInfo+0x1c7c`) → mensagem 0x38D com o preço. Senão `rand() % 12`, `Sleep(3000)`, `srand(time)`, a recompensa da posição (posição sem linha lê um registro zerado: item 0,0) vai para o inventário (`CreateItem` mapa 0xEB, `Type*512 + Index`, nível, skill, luck, option, excelente) e responde `C1 08 FB 16 posição(u32)`. No original o giro não cobra (o Coin1 nunca é carregado); aqui o preço é debitado dos créditos (U-LW-01 corrigido).
+- **Desvio deliberado**: o `Sleep(3000)` congela o GameServer inteiro; aqui o giro espera numa fila por jogador verificada a cada 100 ms, e giros seguidos esperam 3 s cada (U-LW-02).
+
+Implementação: `internal/game/luckywheel.go`.
+
+## Itens periódicos (`CPeriodicItem`, `0x4d36b0`..`0x4d3fd0`)
+
+Um item com `CItem+0xb7` (bit 1 do byte 9 do item de 16 bytes; `item.Flag1`) some quando a hora Unix em `+0xbc` passa. `+0xb8` marca que a hora já é conhecida.
+
+- **Criação:** `CreateItem` (`0x4753e0`) recebe no último parâmetro `time + duração` (ou 0); a resposta de serial do DataServer (`0x4742b0`, campo `+0x2c`) liga `+0xb7`/`+0xb8` e grava `+0xbc`. Se o item vai para o inventário, sai `D5 01` com origem `0xFFFF`. A duração vem da coluna 10 do `ItemDrop.txt`/item bags (`Duration`) e do `/make` (`0x439c60`). Caminho direto sem DataServer: `0x48e400` faz o mesmo.
+- **Login:** a carga do personagem (`0x473a10`) chama `0x4d3a70`, que manda `C2 size 2A 00` ao DS com (slot, serial) de cada item com `+0xb7`. O DS (`0x4189b0`) faz `SELECT Time FROM PeriodicItem WHERE ItemSerial`; se a linha não existe, faz `INSERT (serial, 0)` e responde 0. A resposta (`0x4d38e0`, entradas de 12 bytes: slot, serial, time) só vale para o item que ainda tem o mesmo serial, tem `+0xb7` e ainda não está ativo. Ele é ativado e recebe `D5 01` (`0xFFFF`, slot, time). Item com time 0 expira na checagem seguinte.
+- **Save:** o salvamento do personagem (`0x475c30`) chama `0x4d3c00` (`C2 2A 30`): (serial, time) de cada item com `+0xb7` e `+0xb8`. O DS (`0x418d30`) faz `UPDATE` ou `INSERT`.
+- **Expiração:** o timer 6 (1 s, `0x50a140`) chama `0x4d36e0`, que olha jogadores em jogo (`+4 == 3`, tipo 1), sem logout pendente (`obj+0x0a < 1`) e com `obj+0x964 == 0` (não identificado, U-PER-01). Para cada um dos 108 slots com `+0xb7`, `+0xb8` e `+0xbc <= agora`, chama `0x495880` (apaga), manda `C1 05 28 slot 1`, chama `0x496de0` (atualiza equipamento) e manda `C1 05 D5 02 slot`.
+- **Pacotes:** `D5 01` = `C1 0C D5 01 from(u16) slot(u16) time(u32)` (`0x4d3f00`); `D5 02` = `C1 05 D5 02 slot` (`0x4d3fd0`).
+- **Quem manda `D5 01`:** criação no inventário, login, coleta do chão (`0x4982e0`, origem `0xFFFF`, lendo `+0xb7`/`+0xbc` da cópia do item em `ebp-0x55`/`ebp-0x50`), e todo movimento bem-sucedido com destino no inventário (`0x499410`, origem = slot de origem).
+- **`/clearinv`:** manda `D5 02` para cada slot apagado (U-CUST-03 resolvida).
+
+Implementação: `internal/game/periodic.go` (ganchos de entrada, save e timer), campos `item.PeriodicActive`/`Expire`, `internal/store/periodic.go` (migração `0012_periodic_item.sql`), importação de `PeriodicItem` no migrate.
+
+## CustomEvolution
+
+`Custom/CustomEvolution.txt` (`CCustomEvo`, `DAT_015bbf00`, leitor `0x44aff0`, getter `0x4c3660`): `Index ItemTarget(cc,iii) ItemResult(cc,iii)` num `std::map` por `Index`. O único uso é `0x4ce0b0`, chamado pelo uso de item (`0x499a20`, `26 [3] origem [4] alvo`) quando a origem é o item 14,211 (`0x1cd3`):
+
+- Os dois slots < 0x4c com item; o alvo não pode ser periódico (`CItem+0xb7`).
+- Primeira linha (ordem de `Index`) cujo `ItemTarget` é o índice do alvo: sem espaço para `ItemResult` (`0x4952a0`) → texto azul "You do not have space  to use the Item!" e `C1 0C 26 FD`; senão cria `ItemResult` no inventário (`0x4753e0`, CL = 0xEB em `0x4ce2ff`) com nível, durabilidade, skill, luck, option, excelente e set do alvo, apaga a origem e o alvo (`C1 05 28` de cada).
+- Nenhuma linha: alvo de tipo 0..7 (`0x4944b0`) só tem a durabilidade reescalada para o máximo recalculado (`0x494500`, `0x48aed0`) e o charset refeito, e o item 14,211 é consumido; outro alvo encerra sem nada.
+- Com sucesso o chamador apaga a origem de novo (outro `C1 05 28`) e manda `C1 0C F3 14` do slot do alvo.
+
+O arquivo distribuído tem uma linha (Kris 0,0 → Short Sword 0,1), mas o 14,211 não existe no `Item.txt`, então nada acontece no jogo. Implementação: `customevo.go`.
+
+## GHRS (`CastleSiege.exe`)
+
+`Custom/CustomGHRS.ini` só é lido pelo `CastleSiege.exe` (`0x442c10` na partida, `0x4e2250`): `[WEEK] Monday..Sunday` (`0x8eb6c0..0x8eb6d4`, domingo em `0x8eb6bc`) e `[TIMEUPDATE] Hour/Min/Sec` (`0x8eb6d8..0x8eb6e0`). É um teto diário de resets (os textos são em vietnamita: "[GHRS] Cap nhat GHRS hom nay: %d (Top 1 00h duoc reset +%d)", "GHRS:TOP %d + %d(Ngay)" na barra de status):
+
+- O dia GHRS é `gmtime(agora + 7 h)`; antes do horário de `[TIMEUPDATE]` vale `gmtime(agora − 17 h)` (o dia anterior).
+- A thread `0x442ed0` espera a conexão com o DataServer (`0x8eb6a4`) e, a cada 10 s, enquanto a data guardada (`0x8eb6a0`) é anterior, manda `C1 08 F8 AAAAMMDD` (`0x442cf0`).
+- A resposta `F8` (`0x442dc0`, despachante `0x46aa36`) traz a data e o reset do top 1: teto (`0x8eb698`) = top + `Week[dia da semana]`.
+- `/reset` (`0x42f79d`, antes das checagens de interface e nível) e o reset automático (`0x434470`, depois de interface/nível/zen) recusam com a mensagem 0x3DF (resets, teto) dourada quando resets (`obj+0x680`) ≥ teto. Depois de um reset a resposta (`0x4357a3`) manda a 0x5F (resets, teto) azul antes da mensagem de sucesso.
+
+O `DataServer.exe` desta instalação não trata o head `F8` (despachante `0x40a5a0`), então a resposta nunca chega e o teto fica no valor inicial 0 (`.bss`): no servidor CastleSiege todo `/reset` e reset automático é recusado com 0x3DF. As mensagens 0x3DF e 0x5F são do `CastleSiege.exe`, cuja numeração difere da do GameServer. Implementação: `ghrs.go` (`ServerType = 1`; `ghrsReply` reproduz `0x442dc0` para quando houver resposta).
+
+## Incógnitas
+
+| ID | Questão |
+|---|---|
+| U-CUST-01 | **Resolvida**: `0x475c30` é o salvamento do personagem no DataServer (`C2 30`, doc 02; também manda o save dos itens periódicos `0x4d3c00` e dos pets). `/readd`, `/reset`, `/mreset` e `/rename` chamam `saveCharacter` |
+| U-CUST-02 | O 5º byte do `C1 05 28` do `/clearinv` vem de uma variável não inicializada; aqui é 1 |
+| U-CUST-03 | **Resolvida**: itens periódicos implementados (seção acima); o `/clearinv` manda `D5 02` por slot |
+| U-CUST-04 | Auto-party por senha (`0x4d2780` / `0x5121e0`) não reconstruída: `/request auto` só grava o bit 2 e a senha |
+| U-CUST-05 | **Resolvida** (agente Q): `obj+0x5d2` é a contagem do Summon Party (doc 08c). `/reset`, `/mreset`, `/rename` e o reset automático tratam a contagem em curso como ocupado (0x150) |
+| U-CUST-06 | **Resolvida** (`offline.go`): objeto com `conn` destacado; `/dcfriend` e o login da mesma conta removem objetos offline na hora |
+| U-CUST-07 | O bloqueio "Proibido usar o comando no evento." das respostas de reset (`obj+0x24f0` e as tabelas `DAT_0104e8b4`, `DAT_007742b8`, `DAT_00ff4420` por índice) depende dos eventos custom ainda inexistentes; há só o gancho `commandEventBlockHook` |
+| U-CUST-08 | O script de `ResetData` não mostra valores padrão; linhas novas começam com contadores 0 e datas = agora |
+| U-CUST-09 | `0x448bc0` também usa o antídoto quando `0x478ec0` acha um segundo efeito cujo índice vai em registrador; só o efeito 0x37 é testado |
+| U-CUST-10 | O sorteio do quiz usa `0x5138d0(DAT_0076af78, DAT_0076af7c)`; aqui é o `monsterRand` |
+| U-CUST-11 | No `/mreset` com ClearQuest o original mantém `obj+0xe4` (evolução) em memória até o próximo login; aqui a evolução some na hora (só o valor do `A3` usa a antiga) |
+| U-CUST-12 | Índices de argumento passados em registrador: `/request auto` (1) e `/dcfriend` (0, 1) conferidos no assembly; `/reset auto` (1..5) e `/resp` (argumento inteiro em ECX) assumidos |
+| U-CUST-13 | Os campos `obj+0x5e4..0x5f0` zerados pelo ClearSkill e pelo `/classe` não foram identificados |
+| U-PER-01 | `obj+0x964`, que precisa ser 0 para os itens periódicos expirarem (`0x4d36e0`), não foi identificado; não é checado |
+| U-CUST-14 | Desvios deliberados: `/rename` move também a entrada do mapa de online (DS 0x70/0x71) para o nome novo; `/dcfriend` confere a senha pelo hash |
+| U-CUST-15 | **Resolvida** (seção "Cache de reconexão", `reconnect.go`): o personagem offline não é retomado pela conexão nova; ele é removido e o registro de reconexão devolve party, pontos/reset auto, flags/senha da party, ataque automático e pick ao próximo login (dentro do `ReconnectTime`). O `ReconnectData` do DS recria os personagens offline quando o servidor reinicia (`ReconnectOfflineSwitch`) |
+| U-CUST-29 | O `/offline` (`obj+0x2110`) entra no teste do Offline Reconnect mas nunca é restaurado (`0x4e1970` não o lê): o objeto recriado fica sem modo. O destino dele no original (timeout do `obj+0x5c` com socket -1) não foi seguido; aqui é removido depois do timeout de 60 s do cliente |
+| U-CUST-30 | CServerInfo+0x540, terceira chave do teste do Offline Reconnect, não é carregada por nenhuma chave (0); e o DS grava como `Time` o `ReconnectTime` enviado, que o GameServer ignora no reenvio |
+| U-CUST-31 | Desvio deliberado: a senha (`+0x0b`) não é guardada no registro nem na tabela; o Offline Reconnect pula o teste de senha não vazia e loga sem senha (`auth.LoginOffline`) |
+| U-CUST-16 | `0x488890` e `0x468820` renovam `obj+0x6d8` quando `CServerInfo+0x544[AL]` é 0; nem a chave nem o campo foram identificados |
+| U-CUST-17 | `obj+0x20f8` (mensagem 0x23D, "ajuda ativa") e `obj+0x400` (testado antes de todo comando) nunca são escritos no código decompilado; tratados como 0 |
+| U-CUST-18 | O teste `CItem+8` da recarga de flechas (`0x446350`: 0 na mão direita, 1 na esquerda) não foi identificado; não é checado |
+| U-CUST-19 | Os dois ângulos do `1E` montado por `0x447070` vêm de `atan2` com entradas em registrador; aqui os dois usam o ângulo atacante → alvo em 1/255 de volta |
+| U-CUST-20 | O grupo 4 da `CustomAttack.txt` (`0x4472d0`) trata a skill 0x107 à parte (ramo ilegível); aqui é sempre alvo único (`19`) |
+| U-CUST-21 | `obj+0x20b0`, testado por `/trackmarry` e `/move`, nunca é escrito no código decompilado; não é checado |
+| U-CUST-22 | **Resolvida**: o teste de joia `0x496bf0` consulta primeiro a tabela `CustomJewel.txt` (`w.jewelItem`, `customjewel.go`) |
+| U-CUST-23 | **Resolvida** (`itemlevel.go`): `0x494a40` devolve o nome do `ItemLevel.txt` (índice e nível), senão o do `Item.txt`, senão `"Unknown"`; as mensagens 0x290/0x298 passam o nível da linha do `CustomMarriage` e o pick só acrescenta " +nível" quando o nível não tem nome próprio |
+| U-CUST-24 | Raio do sorteio de célula dos itens do `/gift` (`0x50c860`, argumentos em registrador): assumidos 2×2 e 10 tentativas, como as item bags |
+| U-CUST-25 | Desvios deliberados: o `/accept` exige o proponente ainda em jogo (0x294; o original lê o slot sem checar); a remoção de objetos offline usa `removePlayer` (save + logout da sessão) |
+| U-CUST-26 | Bug mantido: o `/accept` apaga o item de casamento com a quantidade da seção 1 (`+0x44`); o presente (13,42) do arquivo original não existe no `Item.txt` e nunca é criado |
+| U-CUST-27 | `/minhainfo`: `Credits` vem de `accounts.credits` e as horas de `account_sessions`; o store em memória não guarda tempo de sessão (0) |
+| U-CUST-28 | O byte `+0xe7` do item no mapa (`!= 1` no pick e na coleta) foi mapeado para o pedido de serial em andamento (`Looting`) |
+| U-XSHOP-01 | O parâmetro 14 do `CreateItem` (0x40 nas compras +8..+15, `0x402b20`) foi mapeado para `CItem+0xd2` (`item.OptionEx`) pela ordem dos argumentos do `Convert`; o efeito no cliente não foi conferido |
+| U-XSHOP-02 | Os bytes 5..7 e 14..15 do `FA 04` e 5..11 do `FA 06` vêm da pilha sem inicialização; aqui são zero |
+| U-XSHOP-03 | Desvio deliberado: o download de `ImagemURL` (WinHTTP, PNG/JPG/GIF/BMP) não é feito; sem BMP local a matriz do QR vai vazia |
+| U-XSHOP-04 | A leitura da imagem usa um leitor próprio de BMP 24/32 bits sem compressão (o original usa GDI+, que lê qualquer formato); outros formatos caem em "Cache local invalido" |
+| U-XSHOP-05 | Os mapas de tick (`0x405cd0`) do original são do singleton por índice de objeto e sobrevivem à troca de personagem; aqui ficam no jogador |
+| U-XSHOP-06 | O retorno de `0x401140` (validação) e `0x405350` (gravação) está em registrador; assumido verdadeiro no fim normal e falso nos desvios |
+| U-JWL-01 | A semântica das colunas `+0x50`/`+0x54` do registro (testadas por `0x465520`, sem coluna no arquivo) não foi identificada; com 0 sempre passam |
+| U-JWL-02 | O sorteio de remoção de excelente (`rand % máximo`) e da tier usam `0x5138d0`; aqui `chaosRand`. Os laços do original não têm limite; aqui param em 1000 tentativas |
+| U-JWL-03 | **Corrigido** (era bug do original: o pack do saque de Chaos/Life vinha da tabela do `CCustomJewelPack` indexada pelo tipo do banco, entregando pack de Bless/Soul). Agora Chaos sai como pack (12,141) e Life como pack (12,136), níveis 0/1/2 para 10/20/30 |
+| U-JWL-04 | **Corrigido** (era bug do original: Chaos/Life com quantidade fora de 10/20/30/99 criava uma joia só; quantidade 0 dava uma de graça). Agora quantidade 0 é recusada, qualquer outra cria a quantidade pedida, e quantidade maior que as células livres é recusada antes de descontar |
+| U-JWL-05 | O teste do item no slot de mesmo número do tipo no depósito (`0x44c6c2`: `(index == 0) == 0x1c2c`) nunca recusa; não é reproduzido |
+| U-LW-01 | **Corrigido** (o original compara o preço com o Coin1 `obj+0xd20`, nunca carregado: 0 = grátis, > 0 = sempre recusado). Agora o preço é debitado dos créditos da conta (`MEMB_INFO.Credits`, a moeda do XShop) antes do sorteio; sem saldo → 0x38D |
+| U-LW-02 | Desvio deliberado: o `Sleep(3000)` do giro vira uma espera por jogador; giros pedidos durante a espera entram na fila |
+| U-LW-03 | **Corrigido**: a mensagem 909 (0x38D) foi acrescentada à cópia do `Message.txt` em `apps/server/data` (Eng/Por/Spn) |
+| U-GHRS-01 | **Corrigido** (no original o DataServer não responde ao `F8`, o teto fica 0 e todo reset no GS-CS é recusado). Agora o próprio serviço responde: a cada 10 s, enquanto a data guardada é anterior ao dia GHRS, lê o maior `ResetCount` (`store.GHRSStore.TopResets`) e aplica `top + Week[dia]`; antes da primeira resposta não há teto. As mensagens 991 (teto, no lugar da 0x3DF inexistente) e 992 (depois do reset, no lugar da 0x5F que tem outro texto) foram acrescentadas ao `Message.txt` |
+| U-EVO-01 | O ramo sem linha da `CustomEvolution` consome o item 14,211 sem mudar o alvo; parece sobra de outro uso de joia, mantido como está |

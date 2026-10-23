@@ -1,0 +1,30 @@
+// -----------------------------------------------------------------------------------------------------------
+// [00,000]    [0~13]      [0~255]      [0-1]         [0-1]        [0~7]       [0~63]      [Index]
+// ItemIndex   ItemLevel   Durability   SkillSwitch   LuckSwitch   Aditional   Excellent   SetOption   Comment
+// -----------------------------------------------------------------------------------------------------------
+   14,000      0           050          0             0            0           0           0           //Apple
+   14,008      0           255          0             0            0           0           0           //Antidote
+   14,001      0           50           0             0            0           0           0                     //Small Healing Potion
+   14,002      0           50           0             0            0           0           0                     //Healing Potion
+//   14,003      0           50           0             0            0           0           0                     //Large Healing Potion
+   14,004      0           50           0             0            0           0           0                     //Small Mana Potion
+   14,005      0           50           0             0            0           0           0                     //Mana Potion
+   14,006      0           50           0             0            0           0           0                     //Large Mana Potion
+   07,010      0           36           0             1            0           0           0           //Vine Helm
+   08,010      0           36           0             1            0           0           0           //Vine Armor
+   09,010      0           36           0             1            0           0           0           //Vine Pants
+   10,010      0           36           0             1            0           0           0           //Vine Gloves
+   11,010      0           36           0             1            0           0           0           //Vine Boots
+   04,007      0           255          0             0            0           0           0           //Bolts
+   04,015      0           255          0             0            0           0           0           //Arrows
+   12,008      0           1            0             0            0           0           0           //Healing Orb
+   12,009      0           1            0             0            0           0           0           //Orb of Greater Fortitude
+   12,010      0           1            0             0            0           0           0           //Orb of Greater Damage
+   12,011      0           1            0             0            0           0           0           //Orb of Summoning
+   12,011      1           1            0             0            0           0           0           //Orb of Summoning
+   12,011      2           1            0             0            0           0           0           //Orb of Summoning
+   12,011      3           1            0             0            0           0           0           //Orb of Summoning
+   12,011      4           1            0             0            0           0           0           //Orb of Summoning
+   12,017      4           1            0             0            0           0           0           //Orb of Penetration
+   12,018      4           1            0             0            0           0           0           //Orb of Ice Arrow
+end

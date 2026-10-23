@@ -1,0 +1,37 @@
+// =============================================================================
+// # WizarD TeaM Emulator
+// # https://www.wzteam.com.br/
+// # https://www.facebook.com/WizardTeamDev
+// # https://www.youtube.com/@wizardteam9953
+// =============================================================================
+// # © 2008 - 2025 WizarD TeaM Development
+// # This file is part of the WzTeaM MuOnline Server files.
+// =============================================================================
+
+// ---------------------------------------------------------------------------------------------------------------------
+// [Ref: ItemOptionRate.txt]   [Level]   [Skill]   [Luck]    [JoL]     [Exc]     [Set]
+// ---------------------------------------------------------------------------------------------------------------------
+// [00,000]    [0~4]           [*/N]     [*/N]     [*/N]     [*/N]     [*/N]     [*/N]     [InSec]    [0~10000]
+// ItemIndex   RewardGroup     Option0   Option1   Option2   Option3   Option4   Option5   Duration   DropRate   Comment
+// ---------------------------------------------------------------------------------------------------------------------
+   12,015      0               *         *         *         *         *         *         0          1000       // Jewel of Chaos
+   14,013      0               *         *         *         *         *         *         0          100        // Jewel of Bless
+   14,013      0               *         *         *         *         *         *         0          100        // Jewel of Soul
+   14,016      0               *         *         *         *         *         *         0          100        // Jewel of Life
+   12,015      1               *         *         *         *         *         *         0          1000       // Jewel of Chaos
+   14,013      1               *         *         *         *         *         *         0          300        // Jewel of Bless
+   14,013      1               *         *         *         *         *         *         0          300        // Jewel of Soul
+   14,016      1               *         *         *         *         *         *         0          300        // Jewel of Life
+   12,015      2               *         *         *         *         *         *         0          1000       // Jewel of Chaos
+   14,013      2               *         *         *         *         *         *         0          500        // Jewel of Bless
+   14,013      2               *         *         *         *         *         *         0          500        // Jewel of Soul
+   14,016      2               *         *         *         *         *         *         0          500        // Jewel of Life
+   12,015      3               *         *         *         *         *         *         0          1000       // Jewel of Chaos
+   14,013      3               *         *         *         *         *         *         0          700        // Jewel of Bless
+   14,013      3               *         *         *         *         *         *         0          700        // Jewel of Soul
+   14,016      3               *         *         *         *         *         *         0          700        // Jewel of Life
+   12,015      4               *         *         *         *         *         *         0          1000       // Jewel of Chaos
+   14,013      4               *         *         *         *         *         *         0          1000       // Jewel of Bless
+   14,013      4               *         *         *         *         *         *         0          1000       // Jewel of Soul
+   14,016      4               *         *         *         *         *         *         0          1000       // Jewel of Life
+end

@@ -1,0 +1,361 @@
+// =====================================================================
+//# - WzTeam Server Files Premium , All Rights Reserved.
+//# - https://www.wizardteam.com.br/
+//# - © 2008~2024 WIZARD TEAM EMULADOR
+// =====================================================================
+
+0
+// --------------------------------------------------------------
+//                [0~30]        [1~255]     [1~255]     [*/0~8]
+// MonsterIndex   SpawnRadius   LocationX   LocationY   Direction
+// --------------------------------------------------------------
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+   240            0             200         078         2
+   
+end
+
+1
+// ----------------------------------------------------------------------------------------------------------
+//                [0~30]        [1~255]       [1~255]       [1~255]     [1~255]     [*/0~8]     [1~1000]
+// MonsterIndex   SpawnRadius   RangeStartX   RangeStartY   RangeEndX   RangeEndY   Direction   MaxSpawnCount
+// ----------------------------------------------------------------------------------------------------------
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+// Uplevel: ordinary spawn moved to validated groups below.
+   35             5             053           091           053         091         *           10               // Death Gorgon
+   35             5             029           103           029         103         *           10               // Death Gorgon
+   35             5             014           102           014         120         *           10               // Death Gorgon
+   35             5             054           116           054         116         *           10               // Death Gorgon
+end
+
+2
+// --------------------------------------------------------------
+//                [0~30]        [1~255]     [1~255]     [*/0~8]
+// MonsterIndex   SpawnRadius   LocationX   LocationY   Direction
+// --------------------------------------------------------------
+end
+
+// UPLEVEL: random birth areas, moving groups, at most 8 monsters per group.
+1
+// Monster Radius X Y TX TY Dir Count
+103 5 1 171 10 180 -1 1 // "Meteorite"
+103 5 2 171 11 180 -1 1 // "Meteorite"
+103 5 1 171 9 180 -1 1 // "Meteorite"
+103 5 11 168 20 177 -1 1 // "Meteorite"
+103 5 11 169 20 178 -1 1 // "Meteorite"
+103 5 11 170 20 179 -1 1 // "Meteorite"
+103 5 10 203 19 212 -1 1 // "Meteorite"
+103 5 1 190 9 199 -1 1 // "Meteorite"
+103 5 1 190 10 199 -1 1 // "Meteorite"
+103 5 2 190 11 199 -1 1 // "Meteorite"
+103 5 10 204 19 213 -1 1 // "Meteorite"
+103 5 1 233 10 242 -1 1 // "Meteorite"
+103 5 2 233 11 242 -1 1 // "Meteorite"
+103 5 3 233 12 242 -1 1 // "Meteorite"
+103 5 22 100 31 109 -1 1 // "Meteorite"
+103 5 22 99 31 108 -1 1 // "Meteorite"
+103 5 22 98 31 107 -1 1 // "Meteorite"
+103 5 22 97 31 106 -1 1 // "Meteorite"
+103 5 26 97 35 106 -1 1 // "Meteorite"
+103 5 26 96 35 105 -1 1 // "Meteorite"
+103 5 26 95 35 104 -1 1 // "Meteorite"
+103 5 25 121 34 130 -1 1 // "Meteorite"
+103 5 24 121 33 130 -1 1 // "Meteorite"
+103 5 23 121 32 130 -1 1 // "Meteorite"
+103 5 22 121 31 130 -1 1 // "Meteorite"
+103 5 23 124 32 133 -1 1 // "Meteorite"
+103 5 23 125 32 134 -1 1 // "Meteorite"
+103 5 23 126 32 135 -1 1 // "Meteorite"
+103 5 17 239 26 248 -1 1 // "Meteorite"
+103 5 18 239 27 248 -1 1 // "Meteorite"
+103 5 19 239 28 248 -1 1 // "Meteorite"
+103 5 41 106 50 115 -1 1 // "Meteorite"
+103 5 41 106 50 115 -1 1 // "Meteorite"
+103 5 41 106 50 115 -1 1 // "Meteorite"
+103 5 41 105 50 114 -1 1 // "Meteorite"
+103 5 41 104 50 113 -1 1 // "Meteorite"
+103 5 34 106 43 115 -1 1 // "Meteorite"
+103 5 34 105 43 114 -1 1 // "Meteorite"
+103 5 34 104 43 113 -1 1 // "Meteorite"
+103 5 31 121 40 130 -1 1 // "Meteorite"
+103 5 30 121 39 130 -1 1 // "Meteorite"
+103 5 29 121 38 130 -1 1 // "Meteorite"
+103 5 32 121 41 130 -1 1 // "Meteorite"
+103 5 33 115 42 124 -1 1 // "Meteorite"
+103 5 33 116 42 125 -1 1 // "Meteorite"
+103 5 30 124 39 133 -1 1 // "Meteorite"
+103 5 30 125 39 134 -1 1 // "Meteorite"
+103 5 30 126 39 135 -1 1 // "Meteorite"
+103 5 43 127 52 136 -1 1 // "Meteorite"
+103 5 43 128 52 137 -1 1 // "Meteorite"
+103 5 37 128 46 137 -1 1 // "Meteorite"
+103 5 37 129 46 138 -1 1 // "Meteorite"
+103 5 32 129 41 138 -1 1 // "Meteorite"
+103 5 32 130 41 139 -1 1 // "Meteorite"
+103 5 42 165 51 174 -1 1 // "Meteorite"
+103 5 42 166 51 175 -1 1 // "Meteorite"
+103 5 42 167 51 176 -1 1 // "Meteorite"
+103 5 42 168 51 177 -1 1 // "Meteorite"
+103 5 38 241 47 250 -1 1 // "Meteorite"
+103 5 38 242 47 251 -1 1 // "Meteorite"
+103 5 48 110 57 119 -1 1 // "Meteorite"
+103 5 49 110 58 119 -1 1 // "Meteorite"
+103 5 50 110 59 119 -1 1 // "Meteorite"
+103 5 49 174 58 183 -1 1 // "Meteorite"
+103 5 50 174 59 183 -1 1 // "Meteorite"
+103 5 48 174 57 183 -1 1 // "Meteorite"
+103 5 47 194 56 203 -1 1 // "Meteorite"
+103 5 47 195 56 204 -1 1 // "Meteorite"
+103 5 47 196 56 205 -1 1 // "Meteorite"
+103 5 47 197 56 206 -1 1 // "Meteorite"
+103 5 81 116 90 125 -1 1 // "Meteorite"
+103 5 82 116 91 125 -1 1 // "Meteorite"
+103 5 80 116 89 125 -1 1 // "Meteorite"
+103 5 89 127 98 136 -1 1 // "Meteorite"
+103 5 89 126 98 135 -1 1 // "Meteorite"
+103 5 89 128 98 137 -1 1 // "Meteorite"
+103 5 78 171 87 180 -1 1 // "Meteorite"
+103 5 79 171 88 180 -1 1 // "Meteorite"
+103 5 80 171 89 180 -1 1 // "Meteorite"
+103 5 81 171 90 180 -1 1 // "Meteorite"
+103 5 78 180 87 189 -1 1 // "Meteorite"
+103 5 79 180 88 189 -1 1 // "Meteorite"
+103 5 80 180 89 189 -1 1 // "Meteorite"
+103 5 78 197 87 206 -1 1 // "Meteorite"
+103 5 79 197 88 206 -1 1 // "Meteorite"
+103 5 80 197 89 206 -1 1 // "Meteorite"
+103 5 89 239 98 248 -1 1 // "Meteorite"
+103 5 89 240 98 249 -1 1 // "Meteorite"
+103 5 89 241 98 250 -1 1 // "Meteorite"
+103 5 89 242 98 251 -1 1 // "Meteorite"
+103 5 96 181 105 190 -1 1 // "Meteorite"
+103 5 97 181 106 190 -1 1 // "Meteorite"
+103 5 98 181 107 190 -1 1 // "Meteorite"
+103 5 99 181 108 190 -1 1 // "Meteorite"
+103 5 94 221 103 230 -1 1 // "Meteorite"
+103 5 95 221 104 230 -1 1 // "Meteorite"
+103 5 96 221 105 230 -1 1 // "Meteorite"
+103 5 97 221 106 230 -1 1 // "Meteorite"
+103 5 107 223 116 232 -1 1 // "Meteorite"
+103 5 106 223 115 232 -1 1 // "Meteorite"
+103 5 103 238 112 247 -1 1 // "Meteorite"
+103 5 103 239 112 248 -1 1 // "Meteorite"
+103 5 103 240 112 249 -1 1 // "Meteorite"
+103 5 122 100 131 109 -1 1 // "Meteorite"
+103 5 122 101 131 110 -1 1 // "Meteorite"
+103 5 122 102 131 111 -1 1 // "Meteorite"
+103 5 122 103 131 112 -1 1 // "Meteorite"
+103 5 122 111 131 120 -1 1 // "Meteorite"
+103 5 123 111 132 120 -1 1 // "Meteorite"
+103 5 121 111 130 120 -1 1 // "Meteorite"
+103 5 119 131 128 140 -1 1 // "Meteorite"
+103 5 119 130 128 139 -1 1 // "Meteorite"
+103 5 119 129 128 138 -1 1 // "Meteorite"
+103 5 119 128 128 137 -1 1 // "Meteorite"
+103 5 117 204 126 213 -1 1 // "Meteorite"
+103 5 118 204 127 213 -1 1 // "Meteorite"
+103 5 116 204 125 213 -1 1 // "Meteorite"
+103 5 108 223 117 232 -1 1 // "Meteorite"
+103 5 109 223 118 232 -1 1 // "Meteorite"
+103 5 128 122 137 131 -1 1 // "Meteorite"
+103 5 129 122 138 131 -1 1 // "Meteorite"
+103 5 130 122 139 131 -1 1 // "Meteorite"
+103 5 128 174 137 183 -1 1 // "Meteorite"
+103 5 129 174 138 183 -1 1 // "Meteorite"
+103 5 124 217 133 226 -1 1 // "Meteorite"
+103 5 125 217 134 226 -1 1 // "Meteorite"
+103 5 126 217 135 226 -1 1 // "Meteorite"
+103 5 198 41 207 50 -1 1 // "Meteorite"
+103 5 198 42 207 51 -1 1 // "Meteorite"
+103 5 198 43 207 52 -1 1 // "Meteorite"
+103 5 192 58 201 67 -1 1 // "Meteorite"
+103 5 194 58 203 67 -1 1 // "Meteorite"
+103 5 193 58 202 67 -1 1 // "Meteorite"
+103 5 195 58 204 67 -1 1 // "Meteorite"
+103 5 192 54 201 63 -1 1 // "Meteorite"
+103 5 192 53 201 62 -1 1 // "Meteorite"
+103 5 192 52 201 61 -1 1 // "Meteorite"
+103 5 198 44 207 53 -1 1 // "Meteorite"
+103 5 215 230 224 239 -1 1 // "Meteorite"
+103 5 215 231 224 240 -1 1 // "Meteorite"
+103 5 215 232 224 241 -1 1 // "Meteorite"
+103 5 215 233 224 242 -1 1 // "Meteorite"
+103 5 222 111 231 120 -1 1 // "Meteorite"
+103 5 222 112 231 121 -1 1 // "Meteorite"
+103 5 222 113 231 122 -1 1 // "Meteorite"
+103 5 222 229 231 238 -1 1 // "Meteorite"
+103 5 223 229 232 238 -1 1 // "Meteorite"
+103 5 224 229 233 238 -1 1 // "Meteorite"
+36 5 206 87 215 96 -1 8 // "Shadow"
+36 5 206 107 215 116 -1 8 // "Shadow"
+36 5 191 101 200 110 -1 8 // "Shadow"
+39 5 232 236 241 245 -1 8 // "Poison Shadow"
+39 5 230 244 239 253 -1 8 // "Poison Shadow"
+41 5 92 167 101 176 -1 8 // "Death Cow"
+41 5 79 182 88 191 -1 8 // "Death Cow"
+34 5 82 91 91 100 -1 8 // "Cursed Wizard"
+34 5 82 111 91 120 -1 8 // "Cursed Wizard"
+34 5 82 131 91 140 -1 8 // "Cursed Wizard"
+37 5 125 43 134 52 -1 8 // "Devil"
+37 5 125 22 134 31 -1 8 // "Devil"
+40 5 50 46 59 55 -1 8 // "Death Knight"
+40 5 33 44 42 53 -1 8 // "Death Knight"
+end
