@@ -29,6 +29,11 @@ Derivadas dos opcodes do servidor ([../server-plan/02 §7](../server-plan/02-pro
 ## 4. Opções e persistência local
 
 - Registro do Windows `HKCU\Software\Webzen\Mu\Config`: `ID` (lembrar conta), `Resolution`, `WindowMode`, `ScreenWidth/Height`, `FullScreen`, `MusicOnOff` (e outros a levantar — U-UI-01). Na reescrita: arquivo de configuração por usuário (XDG/AppData/Library).
+- Tela (evidência: Capstone no `Main.exe`/`Main.dll` deste cliente, 2026-10-24):
+  - `Main.exe` 0x4b3960 lê de `SOFTWARE\Webzen\Mu\Config` os valores `Resolution` (global 0x5750320) e `ColorDepth` (global 0x5750344); um valor ausente vira 0.
+  - `Main.dll` 0x1001f2b0 converte o índice `Resolution` em largura/altura (globais 0x6c4158/0x6c415c): 0=640×480, 1=800×600, 2=1024×768, 3=1280×1024, 4=1360×768, 5=1440×900, 6=1600×900, 7=1680×1050, 8=1920×1080.
+  - O modo vem de `Data\Custom\ClientButtons.txt [Window] Mode` (1 = janela, padrão; 0 = tela cheia). `Main.dll` 0x10025030 lê o arquivo e 0x10024fc0 copia o valor para o registro `WindowMode`; o `ClientButtons.txt` da raiz do cliente não é lido.
+  - Tela cheia (`Main.dll` 0x1000e2c5): janela `WS_POPUP` em (0,0) com o tamanho da resolução, e 0x1001afa0 chama `ChangeDisplaySettingsA` só se `EnumDisplaySettings` listar um modo com exatamente essa largura, altura e bpp (`ColorDepth` 0 → 16 bpp; 1 → 24 ou 32 bpp). Sem `ColorDepth`=1, GPUs atuais não oferecem 16 bpp e o resultado é uma janela sem borda no canto da tela.
 - `Config.ini [FontInfo]`: `ChangeFontSwitch`, `FontName`, `FontSize`, `FontCharSet`.
 - `Data\Macro.txt`: macros.
 - Screenshots: `ScreenShots\Screen(%02d_%02d-%02d-%02d)-%04d.jpg`.
