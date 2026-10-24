@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/rand/v2"
-	"sync"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
@@ -119,16 +118,9 @@ type chaosData struct {
 	sets  *gamedata.SetItemTypes
 }
 
-// chaosTables maps each World to its tables (worlds of the same process
-// load them independently).
-var chaosTables sync.Map
-
-func (w *World) chaosData() *chaosData {
-	if d, ok := chaosTables.Load(w); ok {
-		return d.(*chaosData)
-	}
-	return nil
-}
+// chaosData returns the World's tables (worlds of the same process load
+// them independently).
+func (w *World) chaosData() *chaosData { return w.chaos }
 
 func init() {
 	npcTalkHooks[chaosGoblin] = func(w *World, o, npc *Object) bool {
@@ -168,7 +160,7 @@ func loadChaosData(w *World) error {
 	if d.sets, err = gamedata.LoadSetItemType(w.dataDir); err != nil {
 		return err
 	}
-	chaosTables.Store(w, d)
+	w.chaos = d
 	return nil
 }
 

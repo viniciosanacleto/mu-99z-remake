@@ -17,6 +17,7 @@
    14,039      0           255           0             0            0           0           0                     //AG Potion
    14,040      0           255           0             0            0           0           0                     //Large AG
    //14,011      12          255           0             0            0           0           0                     //Box of Kundun +5
+   14,013      0          255           0             0            0           0           0                 //Jewel Of Bless
    // CLASS EVOLUTION QUEST ITEMS - LORENCIA BAR
    14,023      0           1            0             0            0           0           0           //Scroll of Emperor
    14,024      0           1            0             0            0           0           0           //Broken Sword
@@ -29,7 +30,7 @@
    12,000      5           255          0             0            0           0           0           //Scroll of Blood +5
    12,001      5           255          0             0            0           0           0           //Scroll of Blood +5
    12,002      5           255          0             0            0           0           0           //Scroll of Blood +5
-   13,030      5           255          0             0            0           0           0           //Scroll of Blood +5   
+   13,030      5           255          0             0            0           0           0           //Scroll of Blood +5
 //  14,010      0           1            0             0            0           0           0           //VALE GOLD 50
 
 // ===========================================================================================================

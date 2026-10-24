@@ -85,13 +85,19 @@ type guildManager struct {
 	owner  map[string]*guildRecord // lower(member name)
 }
 
-var guildManagers sync.Map // *Hub -> *guildManager
+func newGuildManager() *guildManager {
+	return &guildManager{byNum: map[int]*guildRecord{}, byName: map[string]*guildRecord{}, owner: map[string]*guildRecord{}}
+}
+
+// noHubGuilds is the guild manager shared by Worlds built without a hub.
+var noHubGuilds = newGuildManager()
 
 // guildMgr returns the process-wide guild manager of the hub.
 func (w *World) guildMgr() *guildManager {
-	v, _ := guildManagers.LoadOrStore(w.hub, &guildManager{byNum: map[int]*guildRecord{},
-		byName: map[string]*guildRecord{}, owner: map[string]*guildRecord{}})
-	return v.(*guildManager)
+	if w.hub == nil {
+		return noHubGuilds
+	}
+	return w.hub.guilds
 }
 
 // load is the DataServer start-up (FUN_00415b90): every guild and member in

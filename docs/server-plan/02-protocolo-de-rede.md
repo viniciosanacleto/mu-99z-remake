@@ -189,9 +189,26 @@ Resultado `F1 01` (resposta do JS tratada em `0x4a18d0`; o código vai em `CL` p
 - `F3 02` (`0x4d9780`): exige estado 2 e `obj+0x0c ≠ 0` (na tela de seleção). `CharacterDeleteSwitch` desligado, código pessoal (`PersonalCodeCheck`: 7 caracteres a partir do 7º de `sno__numb`) errado ou conta com `Lock > 0` (mensagem 0x6F2) ⇒ `C1 05 F3 02 02`; senão DS `WZ_DeleteCharacter` ⇒ 1 (ok) / 0. O limite `CharacterDeleteMaxLevel` é enviado ao cliente no `DE 00` (o GS não o verifica).
 - `F3 03` (`0x4d98a0`): exige estado 2; zera `obj+0x0c` e pede a carga do personagem (DS `0x04`). Personagem inexistente ou com `CtlCode & 1` ⇒ desconecta.
 
-### `C3 74 F3 03` — dados do personagem ao entrar (GS → cliente), builder `0x473a10`
+### `C3 B0 F3 03` — dados do personagem ao entrar (GS → cliente), builder `0x473a10`
 
-Tamanho total 116 bytes (`0x74`). Valores > 65000 são truncados para 65000 nos campos u16 e repetidos em u32 no final.
+**Corrigido em 2026-10-24 pelo cliente (U-PROTO-09).** A leitura do builder `0x473a10` dava 116 bytes (`0x74`), com o bloco u32 em 60 e o nível em 108. O `Main.dll` da WizardTeam (`PATCH CLIENTE/Path/Main.dll`, handler `0x1001d640`, caso 03 da tabela de subcódigos `F3` em `0x1001d08c`/`0x1001d0e0`) lê **176 bytes (`0xB0`)**. Com o pacote de 116 bytes o cliente mostrou resets = LevelUpPoint, nível 0 e atributos com lixo (observado). Os bytes 0–55 são a parte 97D lida pelo `main.exe` e não mudaram. Valores > 65000 são truncados para 65000 nos campos u16 e repetidos em u32 no final.
+
+Parte lida pelo `Main.dll` (offset → variável global do cliente):
+
+| Off | Tipo | Campo |
+|---|---|---|
+| 56 (`0x38`) | u16 | classe (`0x1002d038`, a mesma do `F3 E0` [46]) |
+| 60 (`0x3c`) | u32 | ResetCount (`0x1027178c`, painel "Resetes") |
+| 64 (`0x40`) | u32 | MasterResetCount (`0x10271790`) |
+| 68 (`0x44`) | u32 | AccountLevel (`0x10271794`) |
+| 72 (`0x48`) | 30 bytes | custom não identificado (`0x10164b20`; mesmos campos do `F3 E0` [60..89]); enviado 0 |
+| 102 (`0x66`) | u32 ×5 | custom não identificado (`0x101644cc..dc`; `F3 E0` [90..109]); enviado 0 |
+| 124 (`0x7c`) | u32 | autoridade de GM (`0x10271798`; `F3 E0` [112]) |
+| 128..172 (`0x80..0xac`) | u32 ×12 | LevelUpPoint, Vida, Vida máx., Mana, Mana máx., BP, BP máx., Força, Agilidade, Vitalidade, Energia, Liderança (`0x1027179c..0x102717d4`) |
+
+O nível e a EXP da janela de personagem do `Main.dll` (`0x10271788`, `0x102717bc`/`0x102717c0`) **não** vêm do `F3 03`: só o `F3 05` (level up, `0x1001d780`) e o `F3 E0` (`0x1001d820`) os gravam. Por isso o servidor manda um `F3 E0` logo depois da entrada no mundo (**inferido** do cliente: não se sabe em que ponto o GS original o envia). A Patente (`obj+0x2500`) saiu do `F3 03`.
+
+Leitura antiga do builder, mantida como referência (offsets ≥ 56 substituídos pela tabela acima):
 
 | Off | Tipo | Campo |
 |---|---|---|

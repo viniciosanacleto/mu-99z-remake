@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MU Editor</title>
+<style>
+:root {
+  --bg: #14110d; --panel: #1e1a14; --panel2: #27211a; --line: #3a3127;
+  --text: #e9e1d3; --muted: #a39682; --gold: #d9a94a; --exc: #4fd17a;
+  --danger: #e0604f; --cell: #2c251c; --cellhover: #3a3024; --sel: #5f4a22;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, "Segoe UI", sans-serif; }
+header { padding: 12px 20px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 16px; }
+header h1 { margin: 0; font-size: 18px; color: var(--gold); letter-spacing: .5px; }
+main { display: grid; grid-template-columns: 260px 1fr 340px; gap: 16px; padding: 16px; align-items: start; }
+@media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 0 0 10px; }
+h3 { font-size: 13px; color: var(--gold); margin: 14px 0 8px; }
+input, select, button { font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; }
+input[type=checkbox] { padding: 0; }
+button { cursor: pointer; background: #3b2f1c; border-color: #6b5326; }
+button:hover:not(:disabled) { background: #4a3a20; }
+button:disabled { opacity: .5; cursor: default; }
+button.danger { background: #4a2019; border-color: #7a3328; }
+.w100 { width: 100%; }
+#results { list-style: none; margin: 10px 0 0; padding: 0; max-height: 70vh; overflow: auto; }
+#results li { padding: 7px 8px; border-radius: 5px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
+#results li:hover, #results li.active { background: var(--panel2); }
+.sub { color: var(--muted); font-size: 12px; }
+.badge { font-size: 11px; padding: 1px 6px; border-radius: 9px; background: #2d4a2d; color: #9fe39f; }
+.banner { padding: 8px 10px; border-radius: 6px; background: #4a3519; border: 1px solid #7a5a26; margin-bottom: 10px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.stats label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+.containers { display: flex; flex-wrap: wrap; gap: 20px; }
+.grid { display: grid; grid-template-columns: repeat(8, 40px); grid-auto-rows: 40px; gap: 2px; position: relative; }
+.cell { background: var(--cell); border-radius: 3px; cursor: pointer; }
+.cell:hover { background: var(--cellhover); }
+.cell.target { outline: 2px solid var(--gold); }
+.item { background: #3a2d1a; border: 1px solid #7a5f2e; border-radius: 4px; padding: 2px 3px; font-size: 10px; line-height: 1.15; overflow: hidden; cursor: pointer; z-index: 1; }
+.item.exc { border-color: var(--exc); color: #bff5cf; }
+.item.selected { box-shadow: 0 0 0 2px var(--gold); }
+.equip { display: grid; grid-template-columns: repeat(3, 100px); gap: 6px; }
+.eslot { min-height: 44px; background: var(--cell); border-radius: 4px; padding: 4px 6px; font-size: 11px; cursor: pointer; }
+.eslot .sub { font-size: 10px; }
+.eslot.filled { background: #3a2d1a; border: 1px solid #7a5f2e; }
+.eslot.target { outline: 2px solid var(--gold); }
+.detail { margin-top: 12px; padding: 10px; background: var(--panel2); border-radius: 6px; }
+.exc-list { color: var(--exc); font-size: 12px; margin: 4px 0 0; padding-left: 16px; }
+.row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+.row > label { color: var(--muted); font-size: 12px; min-width: 70px; }
+#itemList { width: 100%; height: 180px; }
+.checks label { display: flex; gap: 6px; align-items: flex-start; margin: 4px 0; font-size: 12px; }
+#toast { position: fixed; bottom: 18px; right: 18px; padding: 10px 14px; border-radius: 6px; background: var(--panel2); border: 1px solid var(--line); display: none; max-width: 360px; }
+#toast.err { border-color: var(--danger); color: #ffb3a8; }
+.empty { color: var(--muted); padding: 40px; text-align: center; }
+</style>
+</head>
+<body>
+<header><h1>MU Editor</h1><span class="sub">Edição direta no banco: o personagem precisa estar deslogado.</span></header>
+<main>
+  <section>
+    <h2>Personagens</h2>
+    <input id="q" class="w100" placeholder="Buscar por nome ou login" autocomplete="off">
+    <ul id="results"></ul>
+  </section>
+
+  <section id="charPanel"><div class="empty">Selecione um personagem.</div></section>
+
+  <section>
+    <h2>Adicionar item</h2>
+    <div class="row"><label>Categoria</label><select id="cat" class="w100"></select></div>
+    <input id="itemFilter" class="w100" placeholder="Filtrar itens" autocomplete="off" style="margin-bottom:6px">
+    <select id="itemList" size="8"></select>
+    <div class="row" style="margin-top:8px"><label>Nível</label><select id="lvl"></select></div>
+    <div class="checks">
+      <label><input type="checkbox" id="skill"> Skill</label>
+      <label><input type="checkbox" id="luck"> Luck</label>
+    </div>
+    <div class="row"><label>Opção</label><select id="opt"></select></div>
+    <div id="optLabel" class="sub" style="margin:-4px 0 8px"></div>
+    <div id="excBox" class="checks"></div>
+    <div class="row"><label id="durLabel">Durabilidade</label><input id="dur" type="number" min="0" max="255" value="0" style="width:90px"><span class="sub">0 = máxima</span></div>
+    <div class="row"><label>Destino</label>
+      <select id="dest"><option value="inventory">Inventário</option><option value="vault">Baú</option></select>
+    </div>
+    <div class="row"><label>Posição</label><span id="slotInfo" class="sub">automática (clique numa célula vazia para escolher)</span></div>
+    <button id="addBtn" class="w100" disabled>Adicionar</button>
+  </section>
+</main>
+<div id="toast"></div>
+
+<script>
+const CLASSES = {0:"Dark Wizard",1:"Soul Master",16:"Dark Knight",17:"Blade Knight",32:"Fairy Elf",33:"Muse Elf",48:"Magic Gladiator",64:"Dark Lord"};
+const EQUIP = ["Arma (direita)","Arma/escudo (esquerda)","Elmo","Armadura","Calça","Luvas","Botas","Asas","Pet","Pendente","Anel 1","Anel 2"];
+const $ = id => document.getElementById(id);
+let catalog = null, byIndex = {}, current = null, target = null, selected = null;
+
+function className(c) { return CLASSES[c] || ("Classe " + c); }
+function esc(s) { return String(s).replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch])); }
+function toast(msg, err) {
+  const t = $("toast"); t.textContent = msg; t.className = err ? "err" : ""; t.style.display = "block";
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = "none", 4000);
+}
+async function api(method, url, body) {
+  const r = await fetch(url, { method, headers: body ? {"Content-Type": "application/json"} : {}, body: body ? JSON.stringify(body) : undefined });
+  if (r.status === 204) return null;
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || ("HTTP " + r.status));
+  return data;
+}
+
+// ---------- search ----------
+let searchTimer;
+$("q").addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(search, 250); });
+async function search() {
+  try {
+    const rows = await api("GET", "/api/characters?q=" + encodeURIComponent($("q").value));
+    $("results").innerHTML = rows.map(r => `<li data-name="${esc(r.name)}" class="${current && current.name === r.name ? "active" : ""}">
+      <span><b>${esc(r.name)}</b><br><span class="sub">${esc(r.login)} · ${className(r.class)} · nv ${r.level}${r.resets ? " · " + r.resets + " resets" : ""}</span></span>
+      ${r.online ? '<span class="badge">online</span>' : ""}</li>`).join("") || '<li class="sub">Nenhum personagem.</li>';
+    $("results").querySelectorAll("li[data-name]").forEach(li => li.onclick = () => openChar(li.dataset.name));
+  } catch (e) { toast(e.message, true); }
+}
+
+// ---------- character ----------
+async function openChar(name) {
+  try {
+    current = await api("GET", "/api/characters/" + encodeURIComponent(name));
+    target = null; selected = null;
+    renderChar(); updateAddButton(); search();
+  } catch (e) { toast(e.message, true); }
+}
+function statInput(key, label) {
+  const max = {level: current.maxLevel, str: current.maxStat, dex: current.maxStat, vit: current.maxStat,
+    ene: current.maxStat, cmd: current.maxStat}[key];
+  const attr = max ? ` max="${max}" title="máximo ${max}"` : "";
+  return `<label>${label}<input type="number" data-stat="${key}" value="${current[key]}"${attr}></label>`;
+}
+function renderChar() {
+  const c = current;
+  const ro = c.online;
+  $("charPanel").innerHTML = `
+    <h2>${esc(c.name)} <span class="sub">· ${className(c.class)} · mapa ${c.map} (${c.x}, ${c.y})</span></h2>
+    ${ro ? '<div class="banner">A conta está online. Deslogue o personagem para editar (o jogo sobrescreveria as mudanças ao sair).</div>' : ""}
+    <div class="stats">
+      ${statInput("level","Nível")}${statInput("points","Pontos livres")}${statInput("resets","Resets")}
+      ${statInput("str","Força")}${statInput("dex","Agilidade")}${statInput("vit","Vitalidade")}
+      ${statInput("ene","Energia")}${statInput("cmd","Comando")}${statInput("zen","Zen")}
+    </div>
+    <div style="margin-top:10px"><button id="saveStats" ${ro ? "disabled" : ""}>Salvar atributos</button>
+      <button id="reload">Recarregar</button></div>
+    <div class="containers">
+      <div><h3>Equipamento</h3><div class="equip" id="equip"></div></div>
+      <div><h3>Inventário</h3><div class="grid" id="invGrid"></div></div>
+      ${ro ? "" : `<div><h3>Baú <span class="sub">(${Number(c.vaultZen).toLocaleString("pt-BR")} zen)</span></h3><div class="grid" id="vaultGrid"></div></div>`}
+    </div>
+    <div id="detail"></div>`;
+  $("saveStats").onclick = saveStats;
+  $("reload").onclick = () => openChar(c.name);
+  renderEquip();
+  renderGrid("invGrid", "inventory", c.inventory.filter(i => i.slot >= 12), 12, 8);
+  if (!ro) renderGrid("vaultGrid", "vault", c.vault, 0, 15);
+  renderDetail();
+}
+function renderEquip() {
+  const box = $("equip");
+  box.innerHTML = EQUIP.map((n, s) => {
+    const it = current.inventory.find(i => i.slot === s);
+    const isTarget = target && target.container === "inventory" && target.slot === s;
+    return `<div class="eslot ${it ? "filled" : ""} ${isTarget ? "target" : ""}" data-slot="${s}">
+      <div class="sub">${n}</div>${it ? `<span class="${it.excellent ? "exc" : ""}">${esc(itemTitle(it))}</span>` : ""}</div>`;
+  }).join("");
+  box.querySelectorAll(".eslot").forEach(el => el.onclick = () => {
+    const s = +el.dataset.slot, it = current.inventory.find(i => i.slot === s);
+    if (it) selectItem("inventory", it); else setTarget("inventory", s);
+  });
+}
+function itemTitle(it) {
+  return it.name + (it.level ? " +" + it.level : "") + (it.option ? " +" + it.option * 4 : "");
+}
+function renderGrid(id, container, items, start, rows) {
+  const g = $(id); g.innerHTML = "";
+  for (let s = start; s < start + rows * 8; s++) {
+    const cell = document.createElement("div"); cell.className = "cell";
+    const x = (s - start) % 8, y = Math.floor((s - start) / 8);
+    cell.style.gridColumn = (x + 1); cell.style.gridRow = (y + 1);
+    if (target && target.container === container && target.slot === s) cell.classList.add("target");
+    cell.onclick = () => setTarget(container, s);
+    g.appendChild(cell);
+  }
+  for (const it of items) {
+    const el = document.createElement("div");
+    const x = (it.slot - start) % 8, y = Math.floor((it.slot - start) / 8);
+    el.className = "item" + (it.excellent ? " exc" : "") + (selected && selected.container === container && selected.slot === it.slot ? " selected" : "");
+    el.style.gridColumn = `${x + 1} / span ${Math.min(it.w, 8 - x)}`;
+    el.style.gridRow = `${y + 1} / span ${Math.min(it.h, rows - y)}`;
+    el.textContent = itemTitle(it);
+    el.title = itemTitle(it);
+    el.onclick = ev => { ev.stopPropagation(); selectItem(container, it); };
+    g.appendChild(el);
+  }
+}
+function setTarget(container, slot) {
+  if (current.online) return;
+  target = (target && target.container === container && target.slot === slot) ? null : { container, slot };
+  if (target) $("dest").value = container;
+  selected = null;
+  renderChar(); updateSlotInfo();
+}
+function selectItem(container, it) {
+  selected = { container, slot: it.slot, it };
+  renderChar();
+}
+function renderDetail() {
+  const d = $("detail");
+  if (!selected) { d.innerHTML = ""; return; }
+  const it = selected.it;
+  d.innerHTML = `<div class="detail">
+    <b>${esc(itemTitle(it))}</b> <span class="sub">(${Math.floor(it.index / 512)},${it.index % 512} · ${selected.container === "vault" ? "baú" : "slot"} ${it.slot})</span><br>
+    <span class="sub">${it.skill ? "Skill · " : ""}${it.luck ? "Luck · " : ""}${byIndex[it.index] && byIndex[it.index].stack ? "Quantidade" : "Durabilidade"} ${it.dur}${it.serial ? " · serial " + it.serial : ""}</span>
+    ${it.excLabels && it.excLabels.length ? `<ul class="exc-list">${it.excLabels.map(l => `<li>${esc(l)}</li>`).join("")}</ul>` : ""}
+    <div style="margin-top:8px"><button class="danger" id="rmBtn" ${current.online ? "disabled" : ""}>Remover item</button></div></div>`;
+  $("rmBtn").onclick = removeSelected;
+}
+async function saveStats() {
+  const body = {};
+  document.querySelectorAll("[data-stat]").forEach(i => body[i.dataset.stat] = Number(i.value));
+  try { await api("PUT", `/api/characters/${encodeURIComponent(current.name)}/stats`, body); toast("Atributos salvos."); openChar(current.name); }
+  catch (e) { toast(e.message, true); }
+}
+async function removeSelected() {
+  if (!confirm("Remover " + itemTitle(selected.it) + "?")) return;
+  try {
+    await api("DELETE", `/api/characters/${encodeURIComponent(current.name)}/items/${selected.container}/${selected.slot}`);
+    toast("Item removido."); openChar(current.name);
+  } catch (e) { toast(e.message, true); }
+}
+
+// ---------- add item ----------
+async function loadCatalog() {
+  catalog = await api("GET", "/api/items");
+  catalog.items.forEach(i => byIndex[i.index] = i);
+  $("cat").innerHTML = catalog.categories.map((n, i) => `<option value="${i}">${i} · ${esc(n)}</option>`).join("");
+  $("lvl").innerHTML = Array.from({length: 16}, (_, i) => `<option value="${i}">+${i}</option>`).join("");
+  fillItems();
+}
+function fillItems() {
+  const cat = +$("cat").value, f = $("itemFilter").value.toLowerCase();
+  const list = catalog.items.filter(i => i.cat === cat && i.name.toLowerCase().includes(f));
+  $("itemList").innerHTML = list.map(i => `<option value="${i.index}">${i.type} · ${esc(i.name)} (${i.w}x${i.h})</option>`).join("");
+  $("itemList").selectedIndex = list.length ? 0 : -1;
+  fillOptions();
+}
+function selectedCatalogItem() { const v = $("itemList").value; return v === "" ? null : byIndex[+v]; }
+function fillOptions() {
+  const it = selectedCatalogItem();
+  $("skill").disabled = !(it && it.skill); if ($("skill").disabled) $("skill").checked = false;
+  $("luck").disabled = !(it && it.luck); if ($("luck").disabled) $("luck").checked = false;
+  const hasOpt = it && it.option;
+  $("opt").innerHTML = hasOpt ? Array.from({length: 8}, (_, i) => `<option value="${i}">${i ? "+" + i * 4 + " (nível " + i + ")" : "Nenhuma"}</option>`).join("") : '<option value="0">Nenhuma</option>';
+  $("opt").disabled = !hasOpt;
+  $("optLabel").textContent = hasOpt ? it.option : "";
+  $("excBox").innerHTML = it && it.exc ? '<div class="sub">Opções excelentes</div>' + it.exc.map(x =>
+    `<label><input type="checkbox" class="excBit" value="${x.bit}"> ${esc(x.label)}</label>`).join("") : "";
+  $("durLabel").textContent = it && it.stack ? "Quantidade" : "Durabilidade";
+  updateAddButton();
+}
+function updateSlotInfo() {
+  $("slotInfo").textContent = target ? `${target.container === "vault" ? "baú" : "inventário"}, slot ${target.slot}` + (target.slot < 12 && target.container === "inventory" ? " (" + EQUIP[target.slot] + ")" : "") : "automática (clique numa célula vazia para escolher)";
+}
+function updateAddButton() { $("addBtn").disabled = !(current && !current.online && selectedCatalogItem()); }
+$("cat").onchange = fillItems;
+$("itemFilter").oninput = fillItems;
+$("itemList").onchange = fillOptions;
+$("dest").onchange = () => { if (target && target.container !== $("dest").value) { target = null; updateSlotInfo(); if (current) renderChar(); } };
+$("addBtn").onclick = async () => {
+  const it = selectedCatalogItem();
+  let exc = 0; document.querySelectorAll(".excBit:checked").forEach(c => exc |= +c.value);
+  const body = {
+    container: $("dest").value, slot: target ? target.slot : -1, index: it.index,
+    level: +$("lvl").value, skill: $("skill").checked, luck: $("luck").checked,
+    option: +$("opt").value, excellent: exc, dur: +$("dur").value,
+  };
+  try {
+    const r = await api("POST", `/api/characters/${encodeURIComponent(current.name)}/items`, body);
+    toast(`${it.name} adicionado (slot ${r.slot}).`);
+    target = null; updateSlotInfo(); openChar(current.name);
+  } catch (e) { toast(e.message, true); }
+};
+
+loadCatalog().catch(e => toast(e.message, true));
+search();
+</script>
+</body>
+</html>

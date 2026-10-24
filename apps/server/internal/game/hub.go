@@ -13,6 +13,9 @@ type Hub struct {
 	mu     sync.Mutex
 	worlds map[int]*World
 	online map[string]OnlineChar // lower(name)
+
+	castle *castleSync   // castlesiege_tax.go: CCastleSiegeSync
+	guilds *guildManager // guild_ds.go: DataServer guild manager
 }
 
 // OnlineChar is an entry of the online map.
@@ -24,7 +27,8 @@ type OnlineChar struct {
 }
 
 func NewHub() *Hub {
-	return &Hub{worlds: map[int]*World{}, online: map[string]OnlineChar{}}
+	return &Hub{worlds: map[int]*World{}, online: map[string]OnlineChar{},
+		castle: newCastleSync(), guilds: newGuildManager()}
 }
 
 func (h *Hub) register(w *World) {

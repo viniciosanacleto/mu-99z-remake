@@ -103,6 +103,11 @@ type World struct {
 	du       *dataUses                // datauses.go: freebies, CommandRequirement, MonsterMove/Schedule, BlackList...
 	lua      *luaScripts              // lua.go: ScriptMain.lua / CalcCharacter.lua states and the bridge
 
+	chaos      *chaosData                   // chaos.go: EventItemBag, ItemOptionRate, ExcellentOptionRate, SetItemType
+	petExp     [petMaxTableLevel + 1]uint32 // pet.go: DAT_00770de8
+	petExpOnce sync.Once
+	csLocal    *castleSync // castlesiege_tax.go: castle sync of a World without hub
+
 	events chan func()
 	ctx    context.Context
 	wg     sync.WaitGroup

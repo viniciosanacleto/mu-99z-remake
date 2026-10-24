@@ -440,11 +440,6 @@ func TestPatenteCommand(t *testing.T) {
 	if _, ok := mv(gm).CommandTicks[134]; ok {
 		t.Fatal("/patente charged")
 	}
-	// F3 03 carries it at the next selection.
-	ch := *c.P.Char
-	if info := b.charInfo(c); info.Extra != uint32(ch.Patente) {
-		t.Fatalf("extra %d", info.Extra)
-	}
 }
 
 func TestPairEvent(t *testing.T) {

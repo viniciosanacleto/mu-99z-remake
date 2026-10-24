@@ -41,6 +41,7 @@ Legenda: `[x]` feito e testado · `[~]` em andamento/parcial · `[ ]` a fazer.
 - [x] `money.go` — `C3 10 22 FE` (zen, big-endian)
 - [x] Ferramenta de migração MSSQL → PostgreSQL (`cmd/migrate`, doc [14](14-migracao.md))
 - [x] Coluna `Patente` (u32 em `F3 03` [112]) e demais colunas custom (agentes N e P; migração 0015)
+- [x] Editor web de personagens offline (`cmd/mueditor`, `internal/editor`, `store/admin.go`): atributos, zen, inserção/remoção de itens no inventário e no baú 0 com as opções do `ItemOption.txt`; atributos limitados ao `MaxStatPoint_AL<nível da conta>` e EXP levada ao início do nível quando o nível muda (como o `/edit`); contas online só leitura; uso no README do servidor
 
 ## Fases 2–6 (4 subagentes paralelos, concluídos)
 
@@ -69,6 +70,7 @@ Briefing comum em `.re/AGENT_BRIEF.md`. Pontos de extensão em `internal/game/ex
   - `samePartyHook`: direito de loot compartilhado na party;
   - `equipmentChanged` não chama mais `recalcHook` duas vezes (`rebuildCharSet` já recalcula, como `0x4c6ba0`).
 - **Ambiente local:** o `BlackList.txt` original lista `127.0.0.1`, então o ConnectServer recusa conexões do próprio host. Para testar com o cliente na mesma máquina, remova a linha de `apps/server/data/1.ConnectServer/BlackList.txt` ou aponte `-blacklist` para um arquivo sem entradas.
+- **Bloco 14, primeiro contato (2026-10-24):** o `Main.exe` original recebeu a lista de servidores do `muserver` (PostgreSQL local, `-public-ip 192.168.18.5`). O cliente ignora `127.0.0.1` no `License.wzt` (não abre socket), então use o IP da máquina na rede; procedimento no README do servidor e em `docs/client-plan/03-rede-e-protocolo.md`. Login e entrada no jogo funcionam. A janela C (tecla C) mostrava nível 0, resets = pontos livres e atributos com lixo: o `F3 03` tinha 116 bytes e o `Main.dll` lê 176 (corrigido, U-PROTO-09). Os textos `MuOriX`/`MuOrix`/`MuReaper` da cópia de `data/` viraram `MuJogatina` (Message 990, Notice, Quiz, Lua, XShopRecharge). Os `.txt` em Latin-1 (`Message.txt`, `CustomQuiz.txt`) precisam ser editados num editor que preserve essa codificação: ao salvar como UTF-8, os acentos viraram U+FFFD e foram restaurados a partir do git.
 
 Pendentes sem dono: guild (50..66, E1..EB, protocolo DS), quests (A0/A2), Chaos Machine (86–88), loja pessoal (3F), duelo (AA–AC), eventos (BC, DS, CC, Kalima, Golden Archer, invasões), Castle Siege, customs WizardTeam (XShop, JewelBank, LuckyWheel, attack/offline, reset).
 
@@ -130,6 +132,7 @@ Já refletidas em [02](02-protocolo-de-rede.md) e [03](03-connect-server.md):
 | 2026-10-22 | GameServer | `0x515510` | Entrada `C2 13` de 16 bytes (**resolve U-PROTO-05**). |
 | 2026-10-22 | GameServer | `0x4bbc70`, `0x4baa20` | Spawn: arquivos lidos como fluxo de tokens; seção 1 expande por Quantity, seção 2 ganha ±3, seção 5 ignorada, dir -1 → rand&7; linhas com colunas extras nas seções 3/4 são mal lidas como no original. Índices `0..0x5013` round-robin com reaproveitamento após 10 s (**resolve U-WORLD-01**). |
 | 2026-10-22 | GameServer | `0x4c5a30`, `0x4b7290` | EXP por monstro (fatia por dano, base `(L+25)·L/3`, ×1,25 × taxas) e drop (ItemDropRate_AL, item L-2..L+4, zen = MoneyAmountDropRate_AL × EXP / 100). |
+| 2026-10-24 | Main.dll (cliente) | `0x1001d640`, `0x1001d820`, `0x1001d780`, `0x1001d7c0`, tabela `0x1001d08c` | `F3 03` tem **176 bytes** no cliente (era 116 no servidor): classe u16 em 56, resets 60, master resets 64, AccountLevel 68, 30 bytes + 5 u32 custom, autoridade 124, 12 u32 a partir de 128. Nível e EXP da janela C só vêm do `F3 05`/`F3 E0`, e o servidor passou a mandar `F3 E0` na entrada. Análise feita com Capstone (REA indisponível no Windows). U-PROTO-09 |
 | 2026-10-22 | GameServer | `0x4d8b80`, `0x4c4480` | D3 e andador: ver resumo do agente A acima; F3 12 = "cliente pronto após teleport"; chat cortado no offset 0x48; CommandManager com registro de 0x23 ints (custos Coin1–3, msgs 307–309). |
 
 ## Mapa do código
@@ -165,6 +168,8 @@ Dados copiados dos originais em `apps/server/data/`, com os caminhos originais: 
 | 2026-10-22 | `MU_TEST_DATABASE_URL=... go test -p 2 -count=1 ./...` com rankings, itens periódicos, saves de comando e importações `ResetData`/`Ranking*`/`PeriodicItem` (agentes M e N ainda rodando) | 17 pacotes `ok`; corrigido o sufixo de nomes do `TestPostgresCommandStore`, que colidia a cada 10 s no banco compartilhado |
 | 2026-10-23 | `go vet ./... && gofmt -l . && MU_TEST_DATABASE_URL=... go test -p 2 -count=1 ./...` após a rodada 4 inteira (M–U) | 19 pacotes, todos `ok` (`internal/game` 83 s); migrações 0001–0018 (0003 e 0014 vagas); sessão REA fechada |
 | 2026-10-23 | idem, após corrigir os bugs do original no JewelBank (U-JWL-03/04), LuckyWheel (U-LW-01/03) e GHRS (U-GHRS-01) | 19 pacotes, todos `ok`; `TestLuaAPIBasics` passou a usar a mensagem 993 como exemplo de inexistente (a 991 agora existe) |
+| 2026-10-24 | `go vet ./... && go test -p 2 -count=1 ./...` (Windows, sem `MU_TEST_DATABASE_URL`) após o editor e o vazamento de memória | 21 pacotes, todos `ok` (`internal/game` 96 s). Antes, `internal/game` caía com `fatal error: out of memory` (VirtualAlloc errno 1455): `chaosTables`, `petTables`, `castleSyncs` e `guildManagers` eram `sync.Map` globais com chave `*World`/`*Hub` e retinham cerca de 152 MB por World de teste. Agora ficam no `World` e no `Hub` (`hub_gc_test.go`) |
+| 2026-10-24 | idem, após o limite de atributos do editor e o `F3 03` de 176 bytes (U-PROTO-09) | 21 pacotes, todos `ok` |
 
 ## Bugs do original ainda reproduzidos (não corrigidos)
 

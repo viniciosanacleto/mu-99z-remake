@@ -31,6 +31,7 @@ Paralelamente: observabilidade, testes de carga (1000 conexões por instância, 
 | ~~U-PROTO-05~~ | Resolvida: bytes 4–7 = `obj+0x274` u32 LE (ver doc 02) | `0x515510` | — |
 | U-PROTO-06 | Heads "a confirmar" em [02 §7](02-protocolo-de-rede.md#7-tabela-de-opcodes-cliente--gameserver-observado) (04, 06, 19, 1B, 91, A7, A9, B0, B1, F2 05, F3 06/12/30/F7, FB 02) | Handlers localizados | Decompilar handlers + capturas |
 | U-PROTO-07 | Layout campo a campo dos pacotes do catálogo S→C | Só headers coletados | Fase 2–5 |
+| U-PROTO-09 | `F3 03`: o builder `0x473a10` foi lido como 116 bytes, mas o `Main.dll` lê 176 (layout no doc 02). Falta reler o builder (há um hook custom que estende o pacote?), saber onde o GS original manda o `F3 E0` na entrada, identificar os 30 bytes + 5 u32 custom (os mesmos do `F3 E0`) e onde o cliente recebe a Patente | `Main.dll` `0x1001d640`, `0x1001d820`; observado com o cliente em 2026-10-24 | Reabrir `0x473a10` no REA; captura com o servidor original |
 | U-CS-01 | Timeout de heartbeat UDP no ConnectServer | — | Ler timer do CS |
 | U-AUTH-01 | Como a conta entra no MD5 da senha (`MD5Encryption=1`) | `FUN_00406710(senha, conta…)` | Decompilar `FUN_00406710` |
 | U-AUTH-02 | Offsets da resposta `C1 3C 01` JS→GS | struct local em `FUN_00404a50` | Ler struct |
@@ -61,7 +62,7 @@ Paralelamente: observabilidade, testes de carga (1000 conexões por instância, 
 | ID | Resolução |
 |---|---|
 | U-PROTO-02 | `F1 00` montado em `0x4db050`: `C1 0E F1 00 01 idx(BE) versão[5] ServerCode(u16 LE)`. (2026-10-22) |
-| U-PROTO-03 | Bloco final de `F3 03`: ResetCount, 12 u32 (LUP, vida, …, liderança), nível u16 em 108, Patente u32 em 112. (2026-10-22) |
+| U-PROTO-03 | Bloco final de `F3 03`: ResetCount, 12 u32 (LUP, vida, …, liderança), nível u16 em 108, Patente u32 em 112. (2026-10-22) **Substituída por U-PROTO-09** (o cliente lê outro layout). |
 | U-PROTO-04 | Bytes 22–23 e 41–43 da entrada `C2 12` são padding de alinhamento; ViewSkillState em 24, nome em 28. (2026-10-22) |
 | U-AUTH-03 | Tradução em `0x4a18d0` (códigos 1/2/5/6/8/10 + resultado do JS); ver 02 §4. (2026-10-22) |
 | U-ITEM-03 | CharSet reconstruído (`0x4c6ba0`/`0x472d00`); ver 09 §2.4. (2026-10-22) |

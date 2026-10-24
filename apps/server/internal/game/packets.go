@@ -148,13 +148,25 @@ type charInfo struct {
 	FruitAdd, MaxFruit  int
 	Leadership          int
 	FruitSub, MaxFruitS int
+	Class               int
 	Resets              uint32
-	Level               int
-	Extra               uint32 // obj+0x2500
+	MasterResets        uint32
+	AccountLevel        uint32
+	Authority           uint32 // GameMaster.txt level
 }
 
+// packetCharInfo is C3 B0 F3 03. Bytes 0..55 are the 97D structure read by
+// main.exe; the rest is the layout the WizardTeam Main.dll reads in its
+// F3 03 handler (0x1001d640): class u16 at 56, resets 60, master resets 64,
+// account level 68, 30 custom bytes at 72 and 5 custom u32 at 102 (the
+// same unidentified fields F3 E0 carries, sent as 0), GM authority 124 and
+// the 12 u32 values from 128. The server builder (0x473a10) was read as a
+// 0x74-byte packet with the u32 block at 60 and the level at 108; the
+// client reads past that, so this follows the client (U-PROTO-09). The
+// level and experience of the Main.dll character window are not in F3 03:
+// enterWorld sends F3 E0 after it.
 func packetCharInfo(c charInfo) []byte {
-	p := newPacket(frame.C3, 0xF3, 0x03, 0x74)
+	p := newPacket(frame.C3, 0xF3, 0x03, 0xB0)
 	p[4], p[5], p[6], p[7] = byte(c.X), byte(c.Y), byte(c.Map), byte(c.Dir)
 	u32le(p[8:], c.Exp)
 	u32le(p[12:], c.NextExp)
@@ -170,13 +182,15 @@ func packetCharInfo(c charInfo) []byte {
 	u16le(p[50:], clamp65000(c.Leadership))
 	u16le(p[52:], c.FruitSub)
 	u16le(p[54:], c.MaxFruitS)
-	u32le(p[56:], c.Resets)
+	u16le(p[56:], c.Class)
+	u32le(p[60:], c.Resets)
+	u32le(p[64:], c.MasterResets)
+	u32le(p[68:], c.AccountLevel)
+	u32le(p[124:], c.Authority)
 	for i, v := range []int{c.LevelUpPoints, c.Life, c.MaxLife, c.Mana, c.MaxMana, c.BP, c.MaxBP,
 		c.Str, c.Agi, c.Vit, c.Ene, c.Leadership} {
-		u32le(p[60+4*i:], uint32(v))
+		u32le(p[128+4*i:], uint32(v))
 	}
-	u16le(p[108:], c.Level)
-	u32le(p[112:], c.Extra)
 	return p
 }
 

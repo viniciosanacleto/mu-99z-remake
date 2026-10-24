@@ -29,15 +29,19 @@ type castleSync struct {
 	flushed                     map[*World]time.Time
 }
 
-var castleSyncs sync.Map // *Hub (or *World without hub) -> *castleSync
+func newCastleSync() *castleSync {
+	return &castleSync{acc: map[*World]int64{}, flushed: map[*World]time.Time{}}
+}
 
+// csSync returns the hub's castle sync (a World without hub gets its own).
 func (w *World) csSync() *castleSync {
-	var key any = w.hub
-	if w.hub == nil {
-		key = w
+	if w.hub != nil {
+		return w.hub.castle
 	}
-	v, _ := castleSyncs.LoadOrStore(key, &castleSync{acc: map[*World]int64{}, flushed: map[*World]time.Time{}})
-	return v.(*castleSync)
+	if w.csLocal == nil {
+		w.csLocal = newCastleSync()
+	}
+	return w.csLocal
 }
 
 // csPublishSync is FUN_00425c90 -> DataServer 0x80 0x17 -> FUN_00424640.

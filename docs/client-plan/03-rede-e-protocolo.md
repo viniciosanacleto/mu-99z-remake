@@ -5,6 +5,8 @@ O contrato de fio completo está em [../server-plan/02-protocolo-de-rede.md](../
 ## 1. Endereços e identidade (observado)
 
 - O `Main.exe` traz hosts de fábrica (`connect.muonline.co.kr`, `connect.muonline.com`, `connection.muonline.com.tw`, `connect.muchina.com`, `connect.muonline.com.ph`); o `Main.dll` substitui pelo `IpAddress`/`IpAddressPort` de `MainInfo.ini` (via `License.wzt`). Padrão atual: `192.168.1.1:44405`.
+- `License.wzt` não é cifrado no início: `CustomerName` no offset 0, `LauncherMutex` em 0x21, `IpAddress` em 0x41 (campo de 32 bytes com zeros), `IpAddressPort` u16 LE em 0x61, seguidos de `ClientVersion`, `ClientSerial` e `WindowName` (observado no arquivo gerado pelo `GetMainInfo.exe`; o resto do formato segue em U-LIC-01).
+- **Observado (2026-10-24):** com `IpAddress = 127.0.0.1` o `Main.exe` não abre nenhum socket (nem SYN). Com `192.168.1.1` ou o IP da máquina na rede ele conecta. Não se sabe se o filtro de loopback está no `Main.dll` ou no `Main.exe`.
 - Versão e serial enviados no `F1 01`: `ClientVersion = 1.00.00`, `ClientSerial = A9kT3wX5rBz7fQ1u`. O `Main.exe` tem embutido em `0x6b7248` o valor codificado `32 32 34 38 3B` (decodifica, com `b[i]-(i+1)`, para `"10146"`) e o serial de fábrica `dlgurwocjswozizi`; ambos são sobrescritos pelo `Main.dll` (**inferido**: a substituição em memória não foi rastreada — U-NET-01).
 - Logs de depuração do original: `[Connect to Server] ip address = %s, port = %d`, `[Virtual Connection] Connect IP : %s, Port : %d`, `[ReceiveServerConnect]`, `Failed to connect.`, `Connectting error.`, `Version dismatch - Join server.`.
 
