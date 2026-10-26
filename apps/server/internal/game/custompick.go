@@ -11,7 +11,7 @@ import (
 )
 
 // CustomPick (CCustomPick, getter FUN_00434800; docs/server-plan/
-// 10e-customs-wizardteam.md): an auto loot. /pick (index 63,
+// 10e-customs.md): an auto loot. /pick (index 63,
 // FUN_004560d0) turns it on or off, /pickset (64, FUN_00456300) adds a
 // text filter and /pickclear (65, FUN_00456510) resets them. Every 100 ms
 // (FUN_004c48b0 -> FUN_00455c80) the items around the player are taken

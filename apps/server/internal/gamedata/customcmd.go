@@ -7,8 +7,8 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
-// Data files of the WizardTeam commands 50..65 (docs/server-plan/
-// 10e-customs-wizardteam.md): Custom/CustomAttack.txt, CustomGift.txt,
+// Data files of the custom commands 50..65 (docs/server-plan/
+// 10e-customs.md): Custom/CustomAttack.txt, CustomGift.txt,
 // CustomMarriage.txt, CustomBuyVip.txt and CustomPick.txt.
 
 // AttackSpeedRow is a section 0 row of CustomAttack.txt (CCustomAttack

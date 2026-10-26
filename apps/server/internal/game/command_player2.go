@@ -13,7 +13,7 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
-// WizardTeam player commands of FUN_00435400 (CommandManager indexes 3,
+// Custom player commands of FUN_00435400 (CommandManager indexes 3,
 // 12..15, 19, 20, 22..28) and the hard-coded /bau. /guildwar and
 // /guildsoccer (1, 2) live in guild_war.go; index 21 and /offline
 // (CHelperOffline, FUN_004888e0) are pending.
@@ -162,7 +162,7 @@ func (w *World) commandFinish(o *Object, c command) {
 	w.commandDone(o, c)
 }
 
-// customNotice is FUN_004dc890: the WizardTeam C1 86 F3 E4 text with
+// customNotice is FUN_004dc890: the custom C1 86 F3 E4 text with
 // printf formatting.
 func (w *World) customNotice(o *Object, typ, color byte, format string, args ...any) {
 	text := format
@@ -541,7 +541,7 @@ func (w *World) requestReset(o *Object, c command, master bool) {
 	})
 }
 
-// commandEventBlockHook reports the WizardTeam event flags tested by both
+// commandEventBlockHook reports the custom event flags tested by both
 // DS replies (obj+0x24f0 and three per-index event tables) that make them
 // answer "Proibido usar o comando no evento."; those events do not exist
 // yet (U-CUST-07).

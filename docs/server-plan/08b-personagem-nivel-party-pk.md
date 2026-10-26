@@ -29,7 +29,7 @@ Ordem:
 18. **BP máximo (`FUN_004c9410`)**, truncado:
     DW `.2Str+.4Dex+.3Vit+.2Ene`; DK `.15Str+.2Dex+.3Vit+Ene`; FE `.3Str+.2Dex+.3Vit+.2Ene`; MG `.2Str+.25Dex+.3Vit+.15Ene`; DL `.3Str+.2Dex+.1Vit+.15Ene+.3Cmd`.
 19. CustomAttribute.txt (`FUN_00448070`) para todo item equipado.
-20. Reaplica as razões do passo 1 (com teto no máximo) e envia **`C1 CC F3 E1`** (`FUN_004dc150`) e **`C1 3C F3 E3`** (`FUN_004dcc20`), pacotes WizardTeam com os atributos (layouts em `stats.go`).
+20. Reaplica as razões do passo 1 (com teto no máximo) e envia **`C1 CC F3 E1`** (`FUN_004dc150`) e **`C1 3C F3 E3`** (`FUN_004dcc20`), pacotes custom com os atributos (layouts em `stats.go`).
 
 Os pontos de `CItem::Convert` (`0x48aed0`) usados aqui estão em `convertItem`: excelente `dano*25/NívelItem + 5` (o máximo usa o dano mínimo original), ancient `(Nível+30)/40 + 10 + ...`, `+3/nível` e `(l-9)(l-8)/2` acima de +9, defesa de asas por `WingOption.txt DefenseConstA` (ou CustomWing), escudo `+nível`, fator de durabilidade (1 / .8 / .7 / .6 / .5 / 0 abaixo de 50/40/30/20% da máxima) e o ItemOption.txt (chave = slot de opção 0..13, vale a última regra que casa).
 
@@ -68,6 +68,6 @@ Cliente `C1 05 F3 06 tipo` (0..4 = for/agi/vit/ene/cmd; o comando vale para qual
 | U-STATS-01 | Opções de set ancient (`FUN_004f2f70`, `FUN_004f30f0`, SetItemOption.txt) não reproduzidas. |
 | U-STATS-02 | Campos de efeitos/buffs/master skill do CalcCharacter e do `F3 E1` (`+0x2a0`, `+0x298`, `+0x710..+0x800`, `FUN_004fe430/500/630`) ficam 0 até existir o módulo de efeitos. |
 | U-STATS-03 | Nível de pet (`CItem+0xc4`) vem do DataServer (PetItemInfo) e não é persistido ⇒ 0. |
-| U-PARTY-01 | Auto-party por senha (`FUN_004d2780`, `obj+0x434` bit 2, comandos WizardTeam). |
+| U-PARTY-01 | Auto-party por senha (`FUN_004d2780`, `obj+0x434` bit 2, comandos custom). |
 | U-PARTY-02 | Restauração da party ao reconectar (`FUN_004e1bb0`). |
 | U-PK-01 | Duelo, guerra de guilds e regras completas de Castle Siege na morte por jogador. |

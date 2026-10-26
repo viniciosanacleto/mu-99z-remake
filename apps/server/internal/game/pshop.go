@@ -279,7 +279,7 @@ func (w *World) pshopOpenReq(o *Object, p []byte) {
 		w.broadcast(o, packetPShopTitle(o.Index, ps.Title[:], o.P.Char.Name))
 	}
 	w.send(o, packetPShopOpen(1))
-	// The "/command" titles of the WizardTeam CustomStore (FUN_00469140)
+	// The "/command" titles of the CustomStore (FUN_00469140)
 	// are not reconstructed.
 }
 

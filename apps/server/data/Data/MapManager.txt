@@ -1,13 +1,3 @@
-// #############################################################################
-// # SSeMU MU Online Emulator
-// # https://www.ssemu.com.ar
-// # https://www.facebook.com/ssemuemulator
-// # https://www.youtube.com/@ssemu
-// # ---------------------------------------------------------------------------
-// # © 2024 SetecSoft Development
-// # This file is part of the SSeMU MuOnline Server files.
-// #############################################################################
-
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //             [*/0~3] [10~15]     [0~10000]        [0~10000]      [0~10000]       [0~1000000]       [0~1000000]       [0-1]      [0-1]        [*/0~1]        [*/0~1]       [*/0~1]       [0-1]        [0~1]         [0~1]        [0~1]            [*/0/N]     [*/0/N]       [Max 32 Char]
 // MapNumber   NonPK   ViewRange   ExperienceRate   ItemDropRate   MoneyDropRate   ExcItemDropRate   SetItemDropRate   ItemDrop   PKItemDrop   MonsterHPBar   TradeEnable   PShopEnable   ChatEnable   PartyEnable   DuelEnable   GuildWarEnable   SpawnGate   RespawnGate   Name

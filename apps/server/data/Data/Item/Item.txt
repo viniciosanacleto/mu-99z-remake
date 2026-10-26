@@ -1,13 +1,3 @@
-// #############################################################################
-// # SSeMU MU Online Emulator
-// # https://www.ssemu.com.ar
-// # https://www.facebook.com/ssemuemulator
-// # https://www.youtube.com/@ssemu
-// # ---------------------------------------------------------------------------
-// # © 2024 SetecSoft Development
-// # This file is part of the SSeMU MuOnline Server files.
-// #############################################################################
-
 0
 // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //Type   Slot   Skill   Width   Height   HaveSerial   HaveOption   DropItem   Name                                 Level   DamageMin   DamageMax   AttackSpeed   Durability   MagicDurability   MagicDamageRate   ReqLevel   ReqStrength   ReqDexterity   ReqEnergy   ReqVitality   ReqLeadership   Attr   DW      DK      FE      MG      DL

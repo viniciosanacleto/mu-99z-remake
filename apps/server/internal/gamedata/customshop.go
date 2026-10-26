@@ -11,8 +11,8 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
-// Data files of the last WizardTeam customs (docs/server-plan/
-// 10e-customs-wizardteam.md): Custom/CustomJewel.txt (CCustomJewel),
+// Data files of the last emulator customs (docs/server-plan/
+// 10e-customs.md): Custom/CustomJewel.txt (CCustomJewel),
 // Custom/CustomLuckyWheel.txt (CLuckyWheel) and Custom/CustomXShop.txt
 // (CCustomXShop, with the in-game GM price writer).
 

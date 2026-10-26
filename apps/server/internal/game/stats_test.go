@@ -316,7 +316,7 @@ func TestStatAddPacket(t *testing.T) {
 	}
 }
 
-// CalcCharacter ends with the WizardTeam C1 CC F3 E1 and C1 3C F3 E3.
+// CalcCharacter ends with the custom C1 CC F3 E1 and C1 3C F3 E3.
 func TestCharStatsPackets(t *testing.T) {
 	b := newBareWorld(t)
 	o := statsPlayer(b, PlayerStart, 1, 1)

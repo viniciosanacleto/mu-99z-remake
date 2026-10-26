@@ -8,7 +8,7 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
-// WizardTeam GM commands of FUN_00435400 (CommandManager indexes 100..129).
+// Custom GM commands of FUN_00435400 (CommandManager indexes 100..129).
 // The GM level, delay, level, reset and zen checks are the common part of
 // runCommand (CommandManager.txt gives 8 or 32 to every row). Each handler
 // receives the text after the command; token n is commandToken(arg, n).
@@ -56,7 +56,7 @@ func init() {
 }
 
 // gmState holds the per-player fields used by the GM commands and the
-// WizardTeam custom events.
+// Custom events.
 type gmState struct {
 	Skin      int  // obj+0x314 (Change): -1 none
 	InEvent   bool // obj+0x24f0: in a Sobre / Duel / Pair event

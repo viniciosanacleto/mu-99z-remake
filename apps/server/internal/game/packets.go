@@ -88,7 +88,7 @@ func packetCharList(classFlag, moveCnt byte, entries []charListEntry) []byte {
 	return p
 }
 
-// packetCharEquipment is the WizardTeam C1 32 F3 F9 slot + 45 bytes (the
+// packetCharEquipment is the custom C1 32 F3 F9 slot + 45 bytes (the
 // first nine 5-byte equipment records sent by the DataServer).
 func packetCharEquipment(slot byte, summary []byte) []byte {
 	p := newPacket(frame.C1, 0xF3, 0xF9, 0x32)
@@ -156,7 +156,7 @@ type charInfo struct {
 }
 
 // packetCharInfo is C3 B0 F3 03. Bytes 0..55 are the 97D structure read by
-// main.exe; the rest is the layout the WizardTeam Main.dll reads in its
+// main.exe; the rest is the layout the original client's Main.dll reads in its
 // F3 03 handler (0x1001d640): class u16 at 56, resets 60, master resets 64,
 // account level 68, 30 custom bytes at 72 and 5 custom u32 at 102 (the
 // same unidentified fields F3 E0 carries, sent as 0), GM authority 124 and

@@ -19,7 +19,7 @@ import (
 // a GM (Authority 8) replaces it with FA 10 uploads.
 //
 // Deliberate deviation: when ImagemBMP is missing or unreadable the
-// original downloads ImagemURL (http/https, user agent "MuJogatina-ShopX/2026")
+// original downloads ImagemURL (http/https, with its own user agent)
 // and converts the PNG/JPG/GIF/BMP. This server never makes network
 // requests: the matrix stays empty and the skip is logged (U-XSHOP-03).
 

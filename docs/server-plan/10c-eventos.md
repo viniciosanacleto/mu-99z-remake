@@ -71,7 +71,7 @@ Com o limite diário (`MaxEntryCount`) atingido, o jogador recebe o aviso custom
 |---|---|
 | U-EVT-01 | `0x4b0540` na entrada (resultado 2) não identificado. |
 | ~~U-EVT-02~~ | Resolvida: `obj+0x2098..` são as colunas de `EventEntryCount` (BC, CC, DS, DG, IT, IG). O DataServer as carrega com o personagem (`WZ_GetEventEntryInfo`, `0x40c4c0`), zerando no primeiro acesso de um novo dia (o `UPDATE` do procedure mantém o ITCount na tabela por usar `@ITCount=@ITCount`), e as grava com o personagem (`WZ_SetEventEntryInfo`, `0x40e9c0`). Implementado em `store/event_entry.go` (migração `0007_event_entry.sql`) e `game/event_entry.go`. |
-| U-EVT-03 | Significado do `C1 07 F3 40 01 xx 00` (pacote WizardTeam) no cliente. |
+| U-EVT-03 | Significado do `C1 07 F3 40 01 xx 00` (pacote custom) no cliente. |
 
 ## Blood Castle (`CBloodCastle`, `0x4137b0` … `0x417b20`)
 

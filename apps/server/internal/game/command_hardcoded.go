@@ -309,7 +309,7 @@ func (w *World) customComboCheck(o *Object, num int) bool {
 	return false
 }
 
-// customWeaponSkillBypass is the WizardTeam prefix of FUN_004f8800: with
+// customWeaponSkillBypass is the custom prefix of FUN_004f8800: with
 // /combo on, Cyclone needs no weapon; the manual auto attack's skill
 // neither.
 func customWeaponSkillBypass(o *Object, num int) bool {

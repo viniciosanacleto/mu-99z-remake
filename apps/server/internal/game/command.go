@@ -385,7 +385,7 @@ func packetPostChat(name string, msg []byte) []byte {
 	return p
 }
 
-// packetCustomNotice is the WizardTeam C1 86 F3 E4 type color text[128]
+// packetCustomNotice is the custom C1 86 F3 E4 type color text[128]
 // (FUN_004dc890).
 func packetCustomNotice(typ, color byte, text string) []byte {
 	p := newPacket(0xC1, 0xF3, 0xE4, 0x86)

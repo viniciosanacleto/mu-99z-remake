@@ -1,6 +1,6 @@
 # MU Server (Go)
 
-Serviço único que substitui os processos do emulador original WizardTeam 97D/99z: ConnectServer, JoinServer, DataServer, GameServer e GameServerCS (Castle Siege). O protocolo do cliente original foi mantido, então o `Main.exe` original conecta sem mudanças. Os dados ficam em PostgreSQL.
+Serviço único que substitui os processos do emulador original 97D/99z: ConnectServer, JoinServer, DataServer, GameServer e GameServerCS (Castle Siege). O protocolo do cliente original foi mantido, então o `Main.exe` original conecta sem mudanças. Os dados ficam em PostgreSQL.
 
 As especificações de engenharia reversa estão em [`docs/server-plan/`](../../docs/server-plan/). O progresso e o próximo passo estão em [`13-progresso.md`](../../docs/server-plan/13-progresso.md).
 
@@ -8,7 +8,7 @@ As especificações de engenharia reversa estão em [`docs/server-plan/`](../../
 
 - Go 1.27.2 ou mais novo (versão do `go.mod`).
 - PostgreSQL 13 ou mais novo, com a extensão `citext` (vem no pacote padrão). Opcional: sem banco o servidor usa um store em memória.
-- O cliente original (`Cliente/` do pacote WizardTeam), para jogar.
+- O cliente original (`Cliente/` do pacote original), para jogar.
 
 Todos os comandos abaixo rodam a partir de `apps/server`.
 
@@ -115,7 +115,7 @@ O servidor lê os mesmos arquivos do emulador original, copiados para `data/` co
 | `Data/MapServerInfo.txt` | Que servidor atende cada mapa (troca de servidor de mapa) |
 | `Data/Util/GameMaster.txt` | GMs: `"conta" "personagem" nível` |
 | `Data/CommandManager.txt`, `Data/CommandRequirement.txt` | Comandos de chat e seus requisitos |
-| `Data/Custom/*` | Sistemas WizardTeam (XShop, LuckyWheel, Marriage, Arena, GHRS, Pick etc.) |
+| `Data/Custom/*` | Sistemas custom do emulador (XShop, LuckyWheel, Marriage, Arena, GHRS, Pick etc.) |
 | `Data/Event/*`, `Data/EventItemBag/*` | Eventos e seus drops |
 | `Data/Monster/*`, `Data/Item/*`, `Data/Shop/*`, `Data/Move/*`, `Data/Quest/*`, `Data/Skill/*`, `Data/Terrain/*` | Monstros e spawns, itens, lojas, gates/moves, quests, skills, terreno |
 | `Data/Lang/{Eng,Por,Spn}/Message.txt` | Textos enviados ao jogador |

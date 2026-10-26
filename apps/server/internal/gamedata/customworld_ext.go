@@ -11,7 +11,7 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
-// The remaining WizardTeam world customs of Data/Custom (block 12, doc
+// The remaining emulator world customs of Data/Custom (block 12, doc
 // 10f): CustomArena, CustomEventDrop, CustomLukeHelper, CustomHealthBar,
 // CustomMonsterKillCount, SummonScroll, CreationGold, DailyReward and
 // CustomPatente. The sectioned files are read by the standard reader

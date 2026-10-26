@@ -10,11 +10,11 @@ import (
 	"strings"
 )
 
-// WizardTeam custom events of Data/Custom/Event (loaders called from
+// Custom events of Data/Custom/Event (loaders called from
 // FUN_004e8390's start-up list: DuelEvent FUN_0045d1f0, DeathEvent
 // FUN_0045b890, RoletaEvent FUN_004e42e0, RaffleEvent FUN_004e0350,
 // PairEvent FUN_004cebf0, SobreEvent FUN_00502c70, TheftEvent
-// FUN_00505fa0). The files are read by the WizardTeam script reader
+// FUN_00505fa0). The files are read by the custom script reader
 // (FUN_00409600 / FUN_00451390): numbered sections closed by "end", ';'
 // and "//" comments, quoted strings. A missing cell reads as -1 for the
 // integer fields and 0xFF for the byte fields (map, x, y).
@@ -25,7 +25,7 @@ type EventSection struct {
 	Rows  [][]string
 }
 
-// LoadEventScript reads a WizardTeam script file.
+// LoadEventScript reads a custom script file.
 func LoadEventScript(path string) ([]EventSection, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

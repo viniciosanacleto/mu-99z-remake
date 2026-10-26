@@ -1,9 +1,9 @@
 ; Configurado pelo GM no X Shop. Credito manual.
 [Recarga]
-Ativo=1
-Titular=MATEUS DE SOUZA FERMINO
-ChavePix=+5522997264959
-CopiaECola=5544999066491
-ImagemURL=https://MuJogatina.com.br/pixdanilo/25.png
-ImagemBMP=pixFE31.tmp.bmp
+Ativo=0
+Titular=
+ChavePix=
+CopiaECola=
+ImagemURL=
+ImagemBMP=
 Valor=

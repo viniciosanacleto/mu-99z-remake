@@ -73,7 +73,7 @@ Formato dos `.dat` de evento: texto com seções numeradas (mesma convenção do
 
 Estado persistido em `MuCastle_*` (DS `80–89`). Componentes: coroa e interruptores (`CCastleSiegeCrown*`), armas de cerco (`B7`), guardiões, torres, portões, NPCs compráveis/reparáveis/atualizáveis (`B2 03/04/05/07`), impostos (`B2 09`, `TAX_RATE_CHAOS/STORE`, `TAX_HUNT_ZONE`), registro de guilds e marcas (`B2 10`, `REG_MARKS`), cronograma (`WZ_CS_ModifyCastleSchedule`). Roda no servidor de código 19 (`CastleSiege.exe`).
 
-## 6. Customizações WizardTeam (observado)
+## 6. Customizações do emulador (observado)
 
 | Sistema | Evidência | Notas |
 |---|---|---|

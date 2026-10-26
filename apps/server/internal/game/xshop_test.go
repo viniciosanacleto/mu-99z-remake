@@ -352,23 +352,12 @@ func TestXShopRechargeFromOriginalFiles(t *testing.T) {
 	o := b.player(PlayerStart, "Buyer", 0, 130, 130)
 	b.xshopRecharge(o, []byte{0xC1, 4, 0xFA, 0x0E})
 	d := rechargeChunks(t, b.drain(o))
-	if d[rcActive] != 1 || fieldText(d[rcHolder:rcHolder+0x60]) != "MATEUS DE SOUZA FERMINO" ||
-		fieldText(d[rcKey:rcKey+0x80]) != "+5522997264959" || fieldText(d[rcCopy:rcCopy+0x200]) != "5544999066491" ||
-		fieldText(d[rcURL:rcURL+0x100]) != "https://MuJogatina.com.br/pixdanilo/25.png" {
-		t.Fatalf("fields %q %q", d[rcHolder:rcHolder+30], d[rcKey:rcKey+20])
-	}
-	// pixFE31.tmp.bmp is a 256x256 QR code; the copy text is not EMV.
-	if side := binary.LittleEndian.Uint16(d[rcQRSize:]); side != 256 {
-		t.Fatalf("side %d", side)
-	}
-	set := 0
-	for _, c := range d[rcQRBits : rcQRBits+0x2000] {
-		for ; c != 0; c &= c - 1 {
-			set++
-		}
-	}
-	if set == 0 || set == 256*256 || d[rcValue] != 0 {
-		t.Fatalf("matrix bits %d, value %q", set, d[rcValue:rcValue+4])
+	// The shipped file is inactive with every field empty and no image:
+	// the 48 chunks carry an all-zero block.
+	if *d != ([rechargeSize]byte{}) {
+		t.Fatalf("block not empty: active %d holder %q key %q side %d", d[rcActive],
+			fieldText(d[rcHolder:rcHolder+0x60]), fieldText(d[rcKey:rcKey+0x80]),
+			binary.LittleEndian.Uint16(d[rcQRSize:]))
 	}
 	// 3 s between requests.
 	b.xshopRecharge(o, []byte{0xC1, 4, 0xFA, 0x0E})

@@ -26,7 +26,7 @@ Campos do objeto citados em handlers (offsets do struct original, úteis para co
 | `+0x396..+0x3a7` | CharSet (18 bytes de aparência) |
 | `+0x93f` | possui guild (>0) |
 
-Estado de "duelo/evento" para bloquear trade/party/duelo: flags em `+0x93c*4` e em três tabelas globais por índice (`0x104e8b4`, `0x7742b8`, `0xff4420`) — mensagens "Proibido dar trade/formar party/iniciar o duelo no evento." (custom WizardTeam).
+Estado de "duelo/evento" para bloquear trade/party/duelo: flags em `+0x93c*4` e em três tabelas globais por índice (`0x104e8b4`, `0x7742b8`, `0xff4420`) — mensagens "Proibido dar trade/formar party/iniciar o duelo no evento." (custom do emulador).
 
 Proposta Go:
 

@@ -112,7 +112,7 @@ func DecodeDB(src []byte) (it Item, ok bool) {
 }
 
 // EncodeWire writes the 7-byte client form (0x496700). xshopFlag is the
-// WizardTeam CCustomXShop marker (byte 4 bit 7) for items with OptionEx
+// Custom CCustomXShop marker (byte 4 bit 7) for items with OptionEx
 // bit 0x40 that appear in the XShop table.
 func (it Item) EncodeWire(dst []byte, xshopFlag bool) {
 	dst[0] = byte(it.Index)

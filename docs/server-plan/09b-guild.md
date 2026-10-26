@@ -108,6 +108,6 @@ Objeto em `DAT_0115f298` (`FUN_0040aa60`, construtor `FUN_00410c50`): `+4` índi
 | U-GUILD-03 | Quem põe a interface tipo 5 (`0x140`) que 54/55/57 limpam não foi achado; usamos a fala do NPC 241. |
 | U-GUILD-04 | Destinatário de `FUN_0050c6d0` nas respostas A0 03/05/06 (ponteiro em registrador): assumido mestre da guild para a lista 52 e o resultado E1/E2. |
 | U-GUILD-05 | Ramo de aceitação automática do 50 para mestres em ataque offline (`obj+0x20f8/0x2110/0x2294`) não reproduzido. |
-| U-GUILD-06 | Trava de senha WizardTeam (`obj+0x24fc`, mensagem 1778) no 53 não reproduzida. |
+| U-GUILD-06 | Trava de senha custom (`obj+0x24fc`, mensagem 1778) no 53 não reproduzida. |
 | U-GUILD-07 | Estado do Castle Siege (`FUN_0040ab00()+4 == 7` e `4 < estado < 8`) aproximado por `castleBattleHook`; dono do castelo por `castleOwnerHook`. |
 | U-GUILD-08 | Bytes de lixo de pilha em `C2 65 [9..11]`, `C2 67 [2..3]/[17..19]`, `C1 3C 66 [3]/[57..59]`, `C2 52 [6..7]/[22..23]`: enviados como 0. |

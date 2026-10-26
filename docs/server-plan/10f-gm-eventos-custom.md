@@ -1,6 +1,6 @@
-# 10f — Comandos de GM, eventos custom e customs de mundo (WizardTeam)
+# 10f — Comandos de GM, eventos custom e customs de mundo
 
-Continuação do [10e](10e-customs-wizardteam.md): os índices 100–135 do `CommandManager.txt`, os sete eventos de `Data/Custom/Event/`, o esconde-esconde e os customs de mundo de `Data/Custom/`. Fonte: `GameServer.exe` (`.re/gs.c`, assembly via `objdump` para argumentos em registrador), `DataServer.exe` (`.re/ds.c`) e `MuOnline.sql`.
+Continuação do [10e](10e-customs.md): os índices 100–135 do `CommandManager.txt`, os sete eventos de `Data/Custom/Event/`, o esconde-esconde e os customs de mundo de `Data/Custom/`. Fonte: `GameServer.exe` (`.re/gs.c`, assembly via `objdump` para argumentos em registrador), `DataServer.exe` (`.re/ds.c`) e `MuOnline.sql`.
 
 Implementação: `internal/game/command_gm.go`, `customevent.go`, `customevent_sobre.go`, `customevent_kill.go`, `customevent_duel.go`, `customevent_pair.go`, `customevent_roleta.go`, `custom_world.go`; `internal/gamedata/customevent.go`, `customworld.go`; `internal/store/ban.go`, `customevent.go`; migração `0015_custom_events.sql`. Bloco 12 (customs de mundo restantes, agente P): `custom_world_ext.go`, `customarena.go`, `customeventdrop.go`, `lukehelper.go`, `healthbar.go`, `killcount.go`, `summonscroll.go`, `creationgold.go`, `dailyreward.go`, `patente.go`, `windowtime.go`; `internal/gamedata/customworld_ext.go`; `internal/store/customworld.go`; migração `0017_custom_world.sql`; importação em `internal/migrate/custom_world.go`.
 
@@ -72,7 +72,7 @@ Os três comandos de evento sem argumento numérico respondem com avisos tipo 1 
 
 ## Eventos (`Data/Custom/Event`)
 
-Os arquivos são lidos pelo leitor de script WizardTeam (`FUN_00409600` / `FUN_00451390`): seções numeradas fechadas por `end`, comentários `;` e `//`. Célula ausente = -1 (inteiros) ou 0xFF (mapa/x/y).
+Os arquivos são lidos pelo leitor de script custom (`FUN_00409600` / `FUN_00451390`): seções numeradas fechadas por `end`, comentários `;` e `//`. Célula ausente = -1 (inteiros) ou 0xFF (mapa/x/y).
 
 ### Prainha da Morte (`SobreEvent.txt`, `DAT_0104c260`)
 

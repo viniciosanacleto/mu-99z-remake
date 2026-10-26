@@ -10,7 +10,7 @@ import (
 )
 
 // CreditStore replaces the DataServer requests of CCustomXShop
-// (docs/server-plan/10e-customs-wizardteam.md) on MEMB_INFO.Credits
+// (docs/server-plan/10e-customs.md) on MEMB_INFO.Credits
 // (accounts.credits).
 type CreditStore interface {
 	// Credits is DS 0x0F 0x20 (FUN_00401040): "SELECT ISNULL(Credits,0)".

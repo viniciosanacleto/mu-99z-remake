@@ -7,7 +7,7 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
-// WizardTeam world customs read with the standard tokenizer (one table
+// Emulator world customs read with the standard tokenizer (one table
 // closed by "end"; "*" = -1).
 
 func customTable(dataDir, name string) ([]mutext.Line, error) {

@@ -108,7 +108,7 @@ func (w *World) attackFull(a, t *Object, args attackArgs) bool {
 	if r, stop := w.guildWarAttackRule(a, t); stop {
 		return r
 	}
-	// WizardTeam custom events (Death, Theft, Sobre, Duel, Pair checks of
+	// Custom events (Death, Theft, Sobre, Duel, Pair checks of
 	// FUN_0040b110; customevent.go).
 	if customEventAttackHook != nil && !customEventAttackHook(w, a, t) {
 		return false
@@ -784,7 +784,7 @@ func (w *World) deathPenalty(killer, t *Object) {
 	}
 }
 
-// packetCharRefresh is the WizardTeam C1 A4 F3 E0 (FUN_004dba70): level,
+// packetCharRefresh is the custom C1 A4 F3 E0 (FUN_004dba70): level,
 // points, experience, stats, life/mana/BP (u16 capped and u32) and the
 // class, then u32 reset count (obj+0x6dc) at 48, master resets (obj+0x6e0)
 // at 52 and account level (obj+0x618) at 56. The other custom fields

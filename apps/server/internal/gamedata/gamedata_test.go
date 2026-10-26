@@ -128,7 +128,7 @@ func TestItems(t *testing.T) {
 		kris.AttackSpeed != 50 || kris.Durability != 20 || kris.ReqStrength != 40 || kris.Class != [5]int{1, 1, 1, 1, 1} {
 		t.Fatalf("kris = %+v", kris)
 	}
-	// WizardTeam additions at the end of the file.
+	// Custom additions at the end of the file.
 	if sb := items[29]; sb.Name != "Sonic Blade" || sb.Level != 149 {
 		t.Fatalf("sonic blade = %+v", sb)
 	}

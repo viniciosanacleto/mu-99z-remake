@@ -2,7 +2,7 @@ package game
 
 import "strings"
 
-// WizardTeam player commands of FUN_00435400 (CommandManager indexes 5..17):
+// Custom player commands of FUN_00435400 (CommandManager indexes 5..17):
 // stat points, PK clear, zen, inventory clear and stat redistribution.
 
 func init() {

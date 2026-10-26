@@ -115,7 +115,7 @@ func TestLuaWelcomeMessage(t *testing.T) {
 		"0D 0 " + b.messageFor(nil, 990),
 		"0D 0 Bem-vindo de volta, Hero!",
 		"0D 1 " + b.messageFor(nil, 155),
-		"E4 2 2 Compartilhe o MuJogatina.com.br",
+		"E4 2 2 Bem-vindo ao MU Online",
 		"E4 2 2 Ajude-nos a crescer",
 		"E4 2 2 /cemiterio /bar /pista /offline /bau1 ..20",
 	}
@@ -169,14 +169,14 @@ func TestLuaCustomWindowName(t *testing.T) {
 	v.P.Account.Level = 3
 	b.tick1000()
 	p := find(b.drain(o), 0xF3, 0xE8)
-	title := "MuJogatina 97D - [Hero] [Free] - Resets: 7 - Level: 250"
+	title := "MU Online 97D - [Hero] [Free] - Resets: 7 - Level: 250"
 	want := make([]byte, 0x84)
 	copy(want, []byte{0xC1, 0x84, 0xF3, 0xE8})
 	copy(want[4:], title)
 	if !bytes.Equal(p, want) {
 		t.Fatalf("title % X\nwant % X", p, want)
 	}
-	if p := find(b.drain(v), 0xF3, 0xE8); luaCStr(p[4:]) != "MuJogatina 97D - [Vip] [VIP] - Resets: 0 - Level: 400" {
+	if p := find(b.drain(v), 0xF3, 0xE8); luaCStr(p[4:]) != "MU Online 97D - [Vip] [VIP] - Resets: 0 - Level: 400" {
 		t.Fatalf("vip title %q", luaCStr(p[4:]))
 	}
 }
@@ -543,11 +543,11 @@ func TestLuaWelcomeAndTitleEndToEnd(t *testing.T) {
 			t.Fatalf("notice %q want %q", luaCStr(p[13:]), want)
 		}
 	}
-	if p := c.next(0xF3, 0xE4); p[4] != 2 || p[5] != 2 || luaCStr(p[6:]) != "Compartilhe o MuJogatina.com.br" {
+	if p := c.next(0xF3, 0xE4); p[4] != 2 || p[5] != 2 || luaCStr(p[6:]) != "Bem-vindo ao MU Online" {
 		t.Fatalf("F3 E4 % X", p)
 	}
 	title := c.next(0xF3, 0xE8)
-	if len(title) != 0x84 || luaCStr(title[4:]) != "MuJogatina 97D - [Hero] [Free] - Resets: 0 - Level: 1" {
+	if len(title) != 0x84 || luaCStr(title[4:]) != "MU Online 97D - [Hero] [Free] - Resets: 0 - Level: 1" {
 		t.Fatalf("title %q", luaCStr(title[4:]))
 	}
 }

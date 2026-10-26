@@ -12,7 +12,7 @@ Cada fase termina com o cliente original funcionando até o ponto descrito, cont
 | **3 — Combate e itens** | IA de monstros, ataque físico e skills, experiência e level up, drops, inventário, uso de itens, lojas, reparo, baú, chaos machine básica | Matar monstros, subir de nível, comprar/vender, guardar no baú, persistir tudo |
 | **4 — Social** | Party, guild (+ alianças, guerra), trade, loja pessoal, amigos/mail, duelo, PK | Paridade com fluxos capturados do original |
 | **5 — Eventos** | Blood Castle, Devil Square, Chaos Castle, Kalima, Golden Archer, invasões, quests; Castle Siege + troca de servidor | Agenda de eventos completa rodando |
-| **6 — Customs WizardTeam** | XShop/créditos, Jewel Bank, attack/offline, pick, reset/master reset, rankings, marriage, eventos de GM | Lista priorizada pelo dono do servidor |
+| **6 — Customs do emulador** | XShop/créditos, Jewel Bank, attack/offline, pick, reset/master reset, rankings, marriage, eventos de GM | Lista priorizada pelo dono do servidor |
 
 Paralelamente: observabilidade, testes de carga (1000 conexões por instância, como o original), hardening (queries parametrizadas, hash de senha, rate limiting).
 

@@ -137,7 +137,7 @@ func (it *ItemInfo) set(col string, v int) {
 }
 
 // LoadItems reads Data/Item/Item.txt. The file is a sequence of numbered
-// category sections; categories may appear more than once (the WizardTeam
+// category sections; categories may appear more than once (the custom
 // additions at the end) and later rows override earlier ones.
 func LoadItems(dataDir string) (map[int]ItemInfo, error) {
 	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "Item.txt"))

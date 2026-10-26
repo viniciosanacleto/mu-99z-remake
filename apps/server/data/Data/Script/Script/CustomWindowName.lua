@@ -1,10 +1,4 @@
 --############################################################################
--- SSeMU MU Online Emulator
--- https://www.ssemu.com.ar
--- https://www.facebook.com/ssemuemulator
--- https://www.youtube.com/@ssemu
--- ---------------------------------------------------------------------------
--- © 2023 Creado por ponneyhd, Modificado por Anthony Rosas
 -- Description: Este archivo es un script para poder ver cierta informacion en el titulo de la ventana de window
 --############################################################################
 
@@ -40,6 +34,6 @@ function CustomWindowName_OnTimerThread()
         end
 
         -- Ponemos en el titulo
-        SetObjectWindowTitle(i, string.format("MuJogatina 97D - [%s] [%s] - Resets: %d - Level: %d", UserName, UserAccountLevel, UserReset, UserLevel))
+        SetObjectWindowTitle(i, string.format("MU Online 97D - [%s] [%s] - Resets: %d - Level: %d", UserName, UserAccountLevel, UserReset, UserLevel))
     end
 end

@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// CustomWorldStore replaces the DataServer requests of the WizardTeam
+// CustomWorldStore replaces the DataServer requests of the custom
 // world customs (docs/server-plan/10f-gm-eventos-custom.md, block 12):
 // MonsterKillCount (DS 0x50), DailyReward (character load and DS 0x68)
 // and the Jewel of Creation gold bonus (DS F7 06).

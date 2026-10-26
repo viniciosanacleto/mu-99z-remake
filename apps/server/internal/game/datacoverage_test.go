@@ -336,7 +336,6 @@ var ignoredFiles = map[string]string{
 	"Data/Custom/Crywolf.dat":                               "not referenced (no Crywolf system in this build)",
 	"Data/Custom/CustomDailyReward.txt":                     "not referenced (the original reads Custom\\DailyReward.txt)",
 	"Data/Custom/CustomMix.txt":                             "not referenced by any server binary",
-	"Data/Custom/pixFE31.tmp.bmp":                           "runtime output: GetTempFileName(\"pix\") + .bmp of CustomXShopRecharge (FUN_00404a60)",
 	"Data/Event/Crywolf.dat":                                "not referenced (no Crywolf system in this build)",
 	"Data/Event/IllusionTemple.dat":                         "not referenced (CIllusionTemple exists but loads no file)",
 	"Data/Event/Kanturu.dat":                                "not referenced (no Kanturu system in this build)",

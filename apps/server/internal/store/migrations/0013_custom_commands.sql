@@ -1,4 +1,4 @@
--- WizardTeam custom commands (docs/server-plan/10e-customs-wizardteam.md).
+-- Custom commands (docs/server-plan/10e-customs.md).
 --
 -- GiftData (DS 0x0F 03, /gift): how many times each character took each
 -- CustomGift.txt gift. The original row is created with Count 0 on the

@@ -1,16 +1,6 @@
-// =============================================================================
-// # WizarD TeaM Emulator
-// # https://www.wzteam.com.br/
-// # https://www.facebook.com/WizardTeamDev
-// # https://www.youtube.com/@wizardteam9953
-// =============================================================================
-// # © 2008 - 2025 WizarD TeaM Development
-// # This file is part of the WzTeaM MuOnline Server files.
-// =============================================================================
-
 // -------------------------------------------------------------------------------------------------------------------------------------------------
 // Message                                                            Type   Count   Opacity   Delay   ColorR   ColorG   ColorB   Speed   RepeatTime
 // -------------------------------------------------------------------------------------------------------------------------------------------------
-   "==MuJogatina GMS e ADMS nao pedem senhas=="                                0      0       0         0       0        100        0        0       360
+   "==GMs e ADMs nunca pedem senhas=="                                         0      0       0         0       0        100        0        0       360
    "==Tecla [X] Loja de Utilitarios e magias=="                            0      0       0         0       0        100        0        0       360
 end

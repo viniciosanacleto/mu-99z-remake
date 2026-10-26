@@ -94,7 +94,7 @@ type World struct {
 	castle    *castleSiege     // castlesiege.go: CCastleSiege (CastleSiege server only)
 	cmd       *cmdWorld        // command_player2.go: ResetTable/ResetLimit, CustomQuiz
 	custom    *customWorld     // command_custom.go: CustomAttack/Gift/Marriage/BuyVip/Pick, /superdrop
-	cevt      *customEvents    // customevent.go: WizardTeam custom events (Data/Custom/Event)
+	cevt      *customEvents    // customevent.go: custom events (Data/Custom/Event)
 	cash      *cashWorld       // xshop.go: CustomXShop, CustomJewel, LuckyWheel (block 12)
 	rq        *roundQWorld     // round_q.go: raven table, push-back, MoveSummon, battle soccer
 	rcn       *reconnectWorld  // reconnect.go: CReconnect cache (ReconnectTime, Offline Reconnect)

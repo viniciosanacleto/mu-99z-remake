@@ -9,9 +9,9 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// CustomCommandStore replaces the DataServer requests of the WizardTeam
-// commands 50..65 and /minhainfo (docs/server-plan/10e-customs-
-// wizardteam.md): DS 0x0F 02 (divorce of an offline partner), DS 0x0F 03
+// CustomCommandStore replaces the DataServer requests of the custom
+// commands 50..65 and /minhainfo (docs/server-plan/10e-customs.md):
+// DS 0x0F 02 (divorce of an offline partner), DS 0x0F 03
 // (GiftData), DS 0x0F 0x23 (account info) and DS 0x13 00 / 0x30
 // (CustomPick load / save).
 type CustomCommandStore interface {

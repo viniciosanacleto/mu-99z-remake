@@ -1,7 +1,7 @@
 // Package charset builds the 18-byte CharSet (appearance) block sent in the
 // character list (F3 00, built by 0x472d00) and in the player viewport
 // (C2 12, built by 0x4c6ba0). Both builders share the same bit layout;
-// it is reproduced here byte for byte, including the WizardTeam custom wing
+// it is reproduced here byte for byte, including the custom wing
 // (CustomWing.txt) and custom pet (CustomPet.txt) markers.
 package charset
 
@@ -30,7 +30,7 @@ type Piece struct {
 	SetOption byte // ancient, only "!= 0" matters
 }
 
-// Custom resolves the WizardTeam custom tables.
+// Custom resolves the custom tables.
 type Custom interface {
 	// WingSlot returns the CustomWing.txt Index column for an item index.
 	WingSlot(itemIndex int) (int, bool)

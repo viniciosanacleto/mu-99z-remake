@@ -8,8 +8,8 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
-// TestCharInfoMainDLLLayout pins C3 B0 F3 03 to the offsets the WizardTeam
-// Main.dll handler (0x1001d640) reads.
+// TestCharInfoMainDLLLayout pins C3 B0 F3 03 to the offsets the original
+// client's Main.dll handler (0x1001d640) reads.
 func TestCharInfoMainDLLLayout(t *testing.T) {
 	p := packetCharInfo(charInfo{
 		X: 130, Y: 131, Map: 3, Dir: 2, Exp: 1000, NextExp: 2000, LevelUpPoints: 3003,

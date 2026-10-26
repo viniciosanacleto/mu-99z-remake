@@ -1,13 +1,3 @@
-// =============================================================================
-// # WizarD TeaM Emulator
-// # https://www.wzteam.com.br/
-// # https://www.facebook.com/WizardTeamDev
-// # https://www.youtube.com/@wizardteam9953
-// =============================================================================
-// # © 2008 - 2025 WizarD TeaM Development
-// # This file is part of the WzTeaM MuOnline Server files.
-// =============================================================================
-
 // -------------------------------------------------------------------------------------------------------------------------------------------------
 // [1~512]     [0~255]    [1~255]       [1~255]       [0~255]  [1~255]     [1~255]    [*/N]      [*/N]      [*/N]      [*/N]      [0/3]
 // GateIndex   MapStart   RangeStartX   RangeStartY   MapEnd   RangeEndX   RangeEndY  MinLevel   MaxLevel   MinReset   MaxReset   AccountLevel

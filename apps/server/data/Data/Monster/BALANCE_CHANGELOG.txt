@@ -1,5 +1,5 @@
-WzTeam Monster Balance - Progressao de UP
-=========================================
+Monster Balance - Progressao de UP
+==================================
 
 Objetivo
 - Respawn rapido sem espera excessiva.

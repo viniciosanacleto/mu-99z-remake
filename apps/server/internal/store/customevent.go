@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// CustomEventStore replaces the DataServer requests of the WizardTeam
+// CustomEventStore replaces the DataServer requests of the custom
 // custom events: DS F3 E7 (FUN_00477060 -> DataServer FUN_00410ae0,
 // patente) and DS 0x41 (FUN_00476fb0 -> FUN_004108f0, ranking column + 1).
 type CustomEventStore interface {

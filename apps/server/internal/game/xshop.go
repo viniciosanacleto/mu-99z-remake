@@ -10,8 +10,8 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
-// CCustomXShop (0x401fd0..0x405960, docs/server-plan/10e-customs-
-// wizardteam.md): the credits shop of the WizardTeam client. Prices come
+// CCustomXShop (0x401fd0..0x405960, docs/server-plan/10e-customs.md):
+// the credits shop of the original client. Prices come
 // from Custom/CustomXShop.txt; the currency is MEMB_INFO.Credits, debited
 // by the DataServer (DS 0x0F 0x20/0x21/0x22, store.CreditStore). Client
 // packets use the private head FA (C1 only):

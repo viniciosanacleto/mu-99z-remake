@@ -1,6 +1,6 @@
-# 10e — Customs WizardTeam
+# 10e — Customs do emulador
 
-Sistemas próprios do emulador WizardTeam "Premium VS2026 OriX" que não existem no GameServer 97D/99z da Webzen: comandos extras do `CommandManager`, XShop, JewelBank, LuckyWheel, ataque/loja offline, reset e afins. Fonte: `GameServer.exe` (`.re/gs.c`), `Data/CommandManager.txt` e `GameServerInfo - Command.dat`.
+Sistemas próprios do emulador customizado de origem que não existem no GameServer 97D/99z da Webzen: comandos extras do `CommandManager`, XShop, JewelBank, LuckyWheel, ataque/loja offline, reset e afins. Fonte: `GameServer.exe` (`.re/gs.c`), `Data/CommandManager.txt` e `GameServerInfo - Command.dat`.
 
 ## Comandos (`FUN_00435400`)
 
@@ -277,7 +277,7 @@ Implementação: `internal/game/command_player2.go`, `internal/game/customquiz.g
 
 ## CustomXShop (`CCustomXShop`, `0x401fd0..0x405960`)
 
-Loja de créditos do cliente WizardTeam. A moeda é `MEMB_INFO.Credits` (`accounts.credits`), que só o DataServer altera. Os pacotes do cliente usam o head privado `FA` (só C1; o despachante `0x4d6690` exige `tamanho > 3` e o tamanho exato de cada sub). O HackPacketCheck não é aplicado ao `FA`.
+Loja de créditos do cliente original. A moeda é `MEMB_INFO.Credits` (`accounts.credits`), que só o DataServer altera. Os pacotes do cliente usam o head privado `FA` (só C1; o despachante `0x4d6690` exige `tamanho > 3` e o tamanho exato de cada sub). O HackPacketCheck não é aplicado ao `FA`.
 
 | Pacote                        | Função     | Tamanho | Resposta                             |
 | ----------------------------- | ---------- | ------- | ------------------------------------ |
@@ -299,7 +299,7 @@ Loja de créditos do cliente WizardTeam. A moeda é `MEMB_INFO.Credits` (`accoun
 
 Bloco de 0x23F3 bytes: `[0] Ativo`, `[1] Titular[0x60]`, `[0x61] ChavePix[0x80]`, `[0xE1] CopiaECola[0x200]`, `[0x2E1] lado(u16 ≤ 256)`, `[0x2E3] matriz lado×lado bits (0x2000)`, `[0x22E3] ImagemURL[0x100]`, `[0x23E3] Valor[0x10]`.
 
-- **`FA 0E`** (`0x404a60`): no máximo a cada 3 s; lê `[Recarga]` do arquivo ao lado do `CustomXShop.txt` (`Ativo` = 1, `Titular`, `ChavePix`, `CopiaECola`, `ImagemURL`, `ImagemBMP`). `ImagemBMP` sem `\` nem `/` é relativo à pasta. A imagem (`0x401bf0`, GDI+, até 8192×8192) é reduzida para lado = min(maior lado, 256), centrada; pixel com R+G+B (sobre branco, pelo alfa) < 0x180 liga o bit. Imagem ausente/ruim → log "Cache local invalido/ausente" e o original tenta baixar `ImagemURL` (http/https, "MuJogatina-ShopX/2026"). Depois valida (`0x401140`: `Ativo` < 2; textos terminados em NUL no campo, sem caracteres < 0x20 nem `"`; lado ≤ 256; refaz `Valor` com a tag EMV `54` de `CopiaECola` (`0x401080`: campos `tag(2) tamanho(2 dígitos) valor`; malformado, tag 54 repetida ou ≥ 16 bytes falham) quando ela tem o formato `dígitos.dd`). Inválido → `Ativo` 0. Envia `C1 C6 FA 0F offset(u16) dados[0xC0]` para os offsets 0, 0xC0, … (48 pacotes, o último completado com zeros).
+- **`FA 0E`** (`0x404a60`): no máximo a cada 3 s; lê `[Recarga]` do arquivo ao lado do `CustomXShop.txt` (`Ativo` = 1, `Titular`, `ChavePix`, `CopiaECola`, `ImagemURL`, `ImagemBMP`). `ImagemBMP` sem `\` nem `/` é relativo à pasta. A imagem (`0x401bf0`, GDI+, até 8192×8192) é reduzida para lado = min(maior lado, 256), centrada; pixel com R+G+B (sobre branco, pelo alfa) < 0x180 liga o bit. Imagem ausente/ruim → log "Cache local invalido/ausente" e o original tenta baixar `ImagemURL` (http/https, com user agent próprio). Depois valida (`0x401140`: `Ativo` < 2; textos terminados em NUL no campo, sem caracteres < 0x20 nem `"`; lado ≤ 256; refaz `Valor` com a tag EMV `54` de `CopiaECola` (`0x401080`: campos `tag(2) tamanho(2 dígitos) valor`; malformado, tag 54 repetida ou ≥ 16 bytes falham) quando ela tem o formato `dígitos.dd`). Inválido → `Ativo` 0. Envia `C1 C6 FA 0F offset(u16) dados[0xC0]` para os offsets 0, 0xC0, … (48 pacotes, o último completado com zeros).
 - **`FA 10`** `[4] offset(u16) [6] dados[0xC0]` (`0x405030`): sem `Authority` 8 só responde `FA 11`. Offset 0 abre um envio novo (no máximo a cada 3 s; senão `FA 11`). Os pedaços seguintes precisam ser da mesma conta, em ordem e em até 10 s; quebra → descarta e `FA 11`. Pedaço aceito no meio não tem resposta. Completo: valida e salva (`0x405350`): matriz em um BMP novo `pixXXXX.tmp.bmp` (32 bits, de cima para baixo, `0x00000000` para bit ligado e `0x00FFFFFF` desligado; os antigos ficam na pasta) e o arquivo reescrito por um temporário: `"; Configurado pelo GM no X Shop. Credito manual.\r\n[Recarga]\r\nAtivo=%u\r\nTitular=%s\r\nChavePix=%s\r\nCopiaECola=%s\r\nImagemURL=%s\r\nImagemBMP=%s\r\nValor=%s\r\n"`; log "[RECHARGE][SAVED]" e `FA 11`.
 - **Desvio deliberado**: este servidor nunca faz requisições de rede; sem BMP local a matriz fica vazia e o pulo do download é registrado em log (U-XSHOP-03).
 
