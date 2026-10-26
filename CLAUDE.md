@@ -35,6 +35,10 @@ The original files (WizardTeam "Premium VS2026 OriX" 97D/99z emulator and its cl
 - At the end of every change, run the full server test suite (not only the new tests) and report the result. If anything fails, fix it or report the failure with its output. Don't call the change done while tests are failing.
 - Server tests use Go's standard `go test ./...` from `apps/server`.
 
+## Changelog
+
+- Record every change in `CHANGELOG.md` at the repository root, in English. Add the entry in the same change, under the current date (`## YYYY-MM-DD`, newest first), with one line per change saying what changed and where.
+
 ## Working with the original binaries
 
 - Ground every protocol, packet layout, formula and data structure in evidence from the original binaries (REA decompilation, strings, runtime captures). Don't fill gaps from general knowledge of MU Online. Record anything unresolved as an open unknown.
