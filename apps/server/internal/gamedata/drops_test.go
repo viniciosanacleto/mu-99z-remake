@@ -2,8 +2,6 @@ package gamedata
 
 import (
 	"testing"
-
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
 func fixedRnd(vals ...int) func() int {
@@ -11,25 +9,8 @@ func fixedRnd(vals ...int) func() int {
 	return func() int { v := vals[i%len(vals)]; i++; return v }
 }
 
-func TestNumTokLikeOriginalTokenizer(t *testing.T) {
-	cases := []struct {
-		tok  string
-		prev int
-		want int
-	}{{"12", 0, 12}, {"*", 5, -1}, {"N", 7, 7}, {"-3", 0, -3}, {"2.9", 0, 2}, {"", 4, 4}}
-	for _, c := range cases {
-		if got := numTok(c.tok, c.prev); got != c.want {
-			t.Errorf("numTok(%q,%d) = %d want %d", c.tok, c.prev, got, c.want)
-		}
-	}
-	l := mutext.Line{Tokens: []string{"07,000", "0", "0,", "8", "N"}}
-	if got := numRow(numFields(l), 0, 6); got[0] != 7 || got[1] != 0 || got[3] != 0 || got[4] != 8 || got[5] != 8 {
-		t.Fatalf("numRow = %v", got)
-	}
-}
-
 func TestItemOptionRateAndMapRate(t *testing.T) {
-	r, err := LoadItemOptionRate(dataDir())
+	r, err := LoadItemOptionRate(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +36,7 @@ func TestItemOptionRateAndMapRate(t *testing.T) {
 	if _, ok := r.Pick(4, -1, fixedRnd(0)); ok {
 		t.Fatal("missing row picked")
 	}
-	rows, err := LoadMapRateInfo(dataDir())
+	rows, err := LoadMapRateInfo(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +47,7 @@ func TestItemOptionRateAndMapRate(t *testing.T) {
 }
 
 func TestExcellentOptionRate(t *testing.T) {
-	rows, err := LoadExcellentOptionRate(dataDir())
+	rows, err := LoadExcellentOptionRate(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +67,7 @@ func TestExcellentOptionRate(t *testing.T) {
 }
 
 func TestItemDropTables(t *testing.T) {
-	drops, err := LoadItemDrop(dataDir())
+	drops, err := LoadItemDrop(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,18 +84,18 @@ func TestItemDropTables(t *testing.T) {
 	if h.Index != 7*512 || h.Option != [6]int{} || h.Rate[0] != 4200 {
 		t.Fatalf("helm row = %+v", h)
 	}
-	money, err := LoadItemMoneyDrop(dataDir())
+	money, err := LoadItemMoneyDrop(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(money) != 1 || money[0].Amount != -1 || money[0].Rate != 1000 || money[0].Map != -1 {
 		t.Fatalf("money = %+v", money)
 	}
-	guard, err := LoadCustomGuard(dataDir())
+	guard, err := LoadCustomGuard(configDir())
 	if err != nil || len(guard) != 1 || guard[0] != 835 {
 		t.Fatalf("guard = %v %v", guard, err)
 	}
-	cm, err := LoadCustomMonsterRows(dataDir())
+	cm, err := LoadCustomMonsterRows(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +108,7 @@ func TestItemDropTables(t *testing.T) {
 }
 
 func TestEventItemBags(t *testing.T) {
-	bags, err := LoadEventItemBags(dataDir())
+	bags, err := LoadEventItemBags(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +146,7 @@ func TestEventItemBags(t *testing.T) {
 }
 
 func TestSetItemTables(t *testing.T) {
-	types, err := LoadSetItemType(dataDir())
+	types, err := LoadSetItemType(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +160,7 @@ func TestSetItemTables(t *testing.T) {
 	if len(types.Order) != len(types.ByIndex) || types.Order[0] != 0 {
 		t.Fatal("order")
 	}
-	opts, err := LoadSetItemOption(dataDir())
+	opts, err := LoadSetItemOption(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}

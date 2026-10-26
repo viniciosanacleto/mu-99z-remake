@@ -3,13 +3,12 @@ package game
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/auth"
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
@@ -83,53 +82,22 @@ type resetLimitRow struct {
 
 func loadCmdWorld(w *World) error {
 	w.cmd = &cmdWorld{}
-	if w.dataDir == "" {
+	if w.configDir == "" {
 		return nil
 	}
-	rows, err := loadIntRows(filepath.Join(w.dataDir, "Util", "ResetTable.txt"), 14)
+	f, err := gamedata.LoadUtilConfig(w.configDir)
 	if err != nil {
 		return err
 	}
-	for _, v := range rows {
-		r := resetTableRow{MinReset: v[0], MaxReset: v[1]}
-		copy(r.Level[:], v[2:6])
-		copy(r.Money[:], v[6:10])
-		copy(r.Point[:], v[10:14])
-		w.cmd.resetTable = append(w.cmd.resetTable, r)
+	for _, r := range f.ResetTable.Rows {
+		w.cmd.resetTable = append(w.cmd.resetTable, resetTableRow{MinReset: r.MinReset, MaxReset: r.MaxReset,
+			Level: r.Level, Money: r.Money, Point: r.Point})
 	}
-	if rows, err = loadIntRows(filepath.Join(w.dataDir, "Util", "ResetLimit.txt"), 14); err != nil {
-		return err
-	}
-	for _, v := range rows {
-		r := resetLimitRow{MinReset: v[0], MaxReset: v[1]}
-		copy(r.Day[:], v[2:6])
-		copy(r.Week[:], v[6:10])
-		copy(r.Month[:], v[10:14])
-		w.cmd.resetLimit = append(w.cmd.resetLimit, r)
+	for _, r := range f.ResetLimit.Rows {
+		w.cmd.resetLimit = append(w.cmd.resetLimit, resetLimitRow{MinReset: r.MinReset, MaxReset: r.MaxReset,
+			Day: r.LimitDay, Week: r.LimitWeek, Month: r.LimitMonth})
 	}
 	return w.loadQuiz()
-}
-
-// loadIntRows reads a table of n integer columns ("*" = -1) up to "end".
-func loadIntRows(path string, n int) ([][]int, error) {
-	lines, err := mutext.LoadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	var out [][]int
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) < n {
-			return nil, fmt.Errorf("%s line %d: %d columns", filepath.Base(path), l.No, len(l.Tokens))
-		}
-		v := make([]int, n)
-		for i := range v {
-			if v[i], err = l.Int(i); err != nil {
-				return nil, err
-			}
-		}
-		out = append(out, v)
-	}
-	return out, nil
 }
 
 func (w *World) cmdWorld() *cmdWorld {

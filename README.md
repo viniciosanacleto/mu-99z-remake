@@ -23,12 +23,13 @@ This project merges all of them into **one Go service** backed by **PostgreSQL**
 - **ConnectServer and login.** Server list, authentication, single-session enforcement, IP/HWID limits, VIP expiry and map-server transfers. Passwords are stored with argon2id.
 - **Game world.** Movement, gates and teleports, chat and commands, monsters with AI and pathfinding, combat and damage formulas, experience and leveling, items, inventory, shops, warehouse, trade, parties, PK, guilds, quests, chaos mixes, pets, friends and mail.
 - **Events and custom systems.** Blood Castle, Devil Square, Chaos Castle, Illusion Temple, Kalima, Castle Siege, GM events, and the emulator customs (XShop, LuckyWheel, JewelBank, marriage, arena, resets, rankings, Lua scripts).
-- **Original data files.** The server reads the original `MuServer/Data` configuration as is (copied into [`apps/server/data/`](apps/server/data/)); a test loads every file the original binary reads.
+- **Configuration.** The original `.ini`, `.dat` and `.txt` configuration was converted into TOML files in [`apps/server/config/`](apps/server/config/) (`cmd/configconv` keeps the original column names, comments and reader quirks); binary files such as terrain and Lua scripts stay in [`apps/server/data/`](apps/server/data/). A test loads every table the original binary reads.
 - **PostgreSQL.** Schema and embedded migrations that keep the binary column layouts of the original database (inventory, skills, etc.).
 - **Tooling.**
   - `cmd/migrate` imports an existing MuOnline database from SQL Server.
   - `cmd/muproxy` is a capture proxy that decodes traffic between the client and a server and records golden sessions.
   - `cmd/mueditor` is a web editor for offline characters.
+  - `cmd/configconv` converts the original configuration files into the TOML files of `apps/server/config`.
 - **Tests.** Each module ships with unit tests checked against the values documented in `docs/`.
 
 Some bugs of the original server are reproduced on purpose and listed in the progress log until a decision is made about each one.
@@ -45,7 +46,7 @@ See **[`apps/server/README.md`](apps/server/README.md)** for requirements, setti
 
 | Path | Contents |
 |---|---|
-| [`apps/server/`](apps/server/) | The Go service (`github.com/viniciosanacleto/mu-remake/apps/server`) and the original server data it reads |
+| [`apps/server/`](apps/server/) | The Go service (`github.com/viniciosanacleto/mu-remake/apps/server`), its TOML configuration (`config/`) and the original binary data (`data/`) |
 | [`docs/server-plan/`](docs/server-plan/) | Reverse-engineering specs: architecture, protocol, persistence, formulas, game systems, events, roadmap and open unknowns |
 
 The documentation in `docs/` and the server README are written in Portuguese.

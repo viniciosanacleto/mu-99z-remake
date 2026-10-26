@@ -1,20 +1,17 @@
 package gamedata
 
 import (
-	"bytes"
+	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
+	"io/fs"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/tomlconf"
 )
 
-// Data files of the last emulator customs (docs/server-plan/
-// 10e-customs.md): Custom/CustomJewel.txt (CCustomJewel),
-// Custom/CustomLuckyWheel.txt (CLuckyWheel) and Custom/CustomXShop.txt
-// (CCustomXShop, with the in-game GM price writer).
+// Data of the last emulator customs (docs/server-plan/
+// 10e-customs.md): CustomJewel (CCustomJewel) and
+// CustomLuckyWheel (CLuckyWheel) in config/data/custom.toml, CustomXShop
+// (CCustomXShop, with the in-game GM price writer) in config/data/xshop.toml.
 
 // --- CustomJewel ---------------------------------------------------------------------
 
@@ -52,7 +49,7 @@ type CustomJewel struct {
 	Success, Failure JewelChange
 }
 
-// CustomJewels is Data/Custom/CustomJewel.txt.
+// CustomJewels is CustomJewel.txt.
 type CustomJewels struct {
 	Slots [CustomJewelSlots]CustomJewel
 }
@@ -71,33 +68,6 @@ func (c *CustomJewels) Find(index int) (*CustomJewel, bool) {
 	return nil, false
 }
 
-// itemRefAt reads an item reference at token i: "cc,iii" in one token or
-// "cc iii" in two (the original tokenizer splits on the comma). It returns
-// the number of tokens used; out-of-range references read as -1.
-func itemRefAt(l mutext.Line, i int) (int, int, error) {
-	tok, err := l.String(i)
-	if err != nil {
-		return 0, 0, err
-	}
-	if c, x, ok := strings.Cut(tok, ","); ok {
-		cat, err1 := strconv.Atoi(c)
-		idx, err2 := strconv.Atoi(x)
-		if err1 != nil || err2 != nil {
-			return 0, 0, fmt.Errorf("line %d: item reference %q", l.No, tok)
-		}
-		return refIndex(cat, idx), 1, nil
-	}
-	cat, err := l.Int(i)
-	if err != nil {
-		return 0, 0, err
-	}
-	idx, err := l.Int(i + 1)
-	if err != nil {
-		return 0, 0, err
-	}
-	return refIndex(cat, idx), 2, nil
-}
-
 func refIndex(cat, idx int) int {
 	v := cat*512 + idx
 	if v < 0 || v >= 0x2000 {
@@ -106,89 +76,57 @@ func refIndex(cat, idx int) int {
 	return v
 }
 
-// LoadCustomJewel reads Data/Custom/CustomJewel.txt (FUN_00464b70).
-// Indexes of 50 or more are ignored; a later row overwrites the slot.
-func LoadCustomJewel(dataDir string) (*CustomJewels, error) {
+// LoadCustomJewel reads the CustomJewel table of config/data/custom.toml
+// (FUN_00464b70). Indexes of 50 or more are ignored; a later row overwrites
+// the slot.
+func LoadCustomJewel(configDir string) (*CustomJewels, error) {
+	f, err := LoadCustomConfig(configDir)
+	if err != nil {
+		return nil, err
+	}
 	c := &CustomJewels{}
 	for i := range c.Slots {
 		c.Slots[i].Index = -1
 	}
-	secs, err := loadSections(filepath.Join(dataDir, "Custom", "CustomJewel.txt"))
-	if err != nil {
-		return nil, err
+	ok := func(i int) bool { return i >= 0 && i < CustomJewelSlots }
+	t := f.CustomJewel
+	for i, r := range t.Jewel {
+		cat, idx, err := SplitItemRef(r.ItemIndex)
+		if err != nil {
+			return nil, fmt.Errorf("CustomJewel.Jewel row %d: %w", i+1, err)
+		}
+		if !ok(r.JewelIndex) {
+			continue
+		}
+		j := &c.Slots[r.JewelIndex]
+		j.Index, j.ItemIndex = r.JewelIndex, refIndex(cat, idx)
+		j.Weapon, j.Armor, j.Wing = r.EnableSlotWeapon, r.EnableSlotArmor, r.EnableSlotWing
+		j.Rate = [4]int{r.Rate_AL0, r.Rate_AL1, r.Rate_AL2, r.Rate_AL3}
+		j.SalePrice = r.SalePrice
 	}
-	for _, s := range secs {
-		for _, l := range s.Rows {
-			if err := c.loadRow(s.Index, l); err != nil {
-				return nil, fmt.Errorf("CustomJewel.txt: %w", err)
+	for _, r := range t.Requirement {
+		if !ok(r.JewelIndex) {
+			continue
+		}
+		j := &c.Slots[r.JewelIndex]
+		j.MinLevel, j.MaxLevel, j.Skill, j.Luck = r.MinItemLevel, r.MaxItemLevel, r.ItemWithSkill, r.ItemWithLuck
+		j.MinOption, j.MaxOption = r.ItemMinAditional, r.ItemMaxAditional
+		j.MinExc, j.MaxExc, j.MaxSetOption = r.MinItemExcellent, r.MaxItemExcellent, r.MaxItemSetOption
+	}
+	for k, rows := range [2][]CustomJewelChangeRow{t.Success, t.Failure} {
+		for _, r := range rows {
+			if !ok(r.JewelIndex) {
+				continue
+			}
+			ch := JewelChange{r.ItemLevel, r.SkillSwitch, r.LuckSwitch, r.Aditional, r.Excellent, r.SetOption}
+			if k == 0 {
+				c.Slots[r.JewelIndex].Success = ch
+			} else {
+				c.Slots[r.JewelIndex].Failure = ch
 			}
 		}
 	}
 	return c, nil
-}
-
-func (c *CustomJewels) loadRow(sec int, l mutext.Line) error {
-	idx, err := l.Int(0)
-	if err != nil {
-		return err
-	}
-	switch sec {
-	case 0:
-		item, n, err := itemRefAt(l, 1)
-		if err != nil {
-			return err
-		}
-		v, err := shopInts(l, 1+n, 8)
-		if err != nil {
-			return err
-		}
-		if idx < 0 || idx >= CustomJewelSlots {
-			return nil
-		}
-		j := &c.Slots[idx]
-		j.Index, j.ItemIndex = idx, item
-		j.Weapon, j.Armor, j.Wing = v[0], v[1], v[2]
-		copy(j.Rate[:], v[3:7])
-		j.SalePrice = v[7]
-	case 1:
-		v, err := shopInts(l, 1, 9)
-		if err != nil {
-			return err
-		}
-		if idx < 0 || idx >= CustomJewelSlots {
-			return nil
-		}
-		j := &c.Slots[idx]
-		j.MinLevel, j.MaxLevel, j.Skill, j.Luck = v[0], v[1], v[2], v[3]
-		j.MinOption, j.MaxOption, j.MinExc, j.MaxExc, j.MaxSetOption = v[4], v[5], v[6], v[7], v[8]
-	case 2, 3:
-		v, err := shopInts(l, 1, 6)
-		if err != nil {
-			return err
-		}
-		if idx < 0 || idx >= CustomJewelSlots {
-			return nil
-		}
-		ch := JewelChange{v[0], v[1], v[2], v[3], v[4], v[5]}
-		if sec == 2 {
-			c.Slots[idx].Success = ch
-		} else {
-			c.Slots[idx].Failure = ch
-		}
-	}
-	return nil
-}
-
-func shopInts(l mutext.Line, from, n int) ([]int, error) {
-	v := make([]int, n)
-	for i := range v {
-		x, err := l.Int(from + i)
-		if err != nil {
-			return nil, err
-		}
-		v[i] = x
-	}
-	return v, nil
 }
 
 // --- LuckyWheel ----------------------------------------------------------------------
@@ -202,24 +140,20 @@ type WheelReward struct {
 	Option, Excellent        int
 }
 
-// LoadLuckyWheel reads Data/Custom/CustomLuckyWheel.txt: a plain table
+// LoadLuckyWheel reads the CustomLuckyWheel table of config/data/custom.toml
 // keyed by IndexWheel; the first row of an index wins (std::map insert).
-func LoadLuckyWheel(dataDir string) (map[int]WheelReward, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Custom", "CustomLuckyWheel.txt"))
+func LoadLuckyWheel(configDir string) (map[int]WheelReward, error) {
+	f, err := LoadCustomConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	out := map[int]WheelReward{}
-	for _, l := range mutext.Table(lines) {
-		v, err := shopInts(l, 0, 8)
-		if err != nil {
-			return nil, fmt.Errorf("CustomLuckyWheel.txt: %w", err)
-		}
-		if _, ok := out[v[0]]; ok {
+	for _, r := range f.CustomLuckyWheel.Rows {
+		if _, ok := out[r.IndexWheel]; ok {
 			continue
 		}
-		out[v[0]] = WheelReward{Index: v[0], Type: v[1], Item: v[2], Level: v[3], Skill: v[4], Luck: v[5],
-			Option: v[6], Excellent: v[7]}
+		out[r.IndexWheel] = WheelReward{Index: r.IndexWheel, Type: r.Type, Item: r.Index, Level: r.Level, Skill: r.Skill,
+			Luck: r.Luck, Option: r.Option, Excellent: r.Excellent}
 	}
 	return out, nil
 }
@@ -230,7 +164,7 @@ func LoadLuckyWheel(dataDir string) (map[int]WheelReward, error) {
 // be opened (FUN_004026e0).
 const XShopDefaultPrice = 25
 
-// XShopPrices is Custom/CustomXShop.txt (CCustomXShop +0x34 and the
+// XShopPrices is CustomXShop.txt (CCustomXShop +0x34 and the
 // std::map at +0x78): section 0 "Category Price" (16 categories), section 1
 // "Type Index Price" overrides. Negative prices read as 0.
 type XShopPrices struct {
@@ -254,130 +188,72 @@ func nonNegative(v int) uint32 {
 	return uint32(v)
 }
 
-// LoadXShopPrices reads path (FUN_004026e0). A missing file is not an
-// error: every category costs XShopDefaultPrice and ok is false.
+// LoadXShopPrices reads the CustomXShop table of the xshop.toml at path
+// (FUN_004026e0). A missing file is not an error: every category costs
+// XShopDefaultPrice and ok is false.
 func LoadXShopPrices(path string) (x *XShopPrices, ok bool, err error) {
 	x = &XShopPrices{Overrides: map[int]uint32{}}
 	for i := range x.Category {
 		x.Category[i] = XShopDefaultPrice
 	}
-	lines, err := mutext.LoadFile(path)
+	f, err := LoadXShopConfig(path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return x, false, nil
 		}
 		return nil, false, err
 	}
-	secs, err := mutext.Sections(lines)
-	if err != nil {
-		return nil, false, fmt.Errorf("CustomXShop.txt: %w", err)
+	for _, r := range f.CustomXShop.Category {
+		if r.Type >= 0 && r.Type < 16 {
+			x.Category[r.Type] = nonNegative(r.Price)
+		}
 	}
-	for _, s := range secs {
-		for _, l := range s.Rows {
-			switch s.Index {
-			case 0:
-				v, err := shopInts(l, 0, 2)
-				if err != nil {
-					return nil, false, fmt.Errorf("CustomXShop.txt: %w", err)
-				}
-				if v[0] >= 0 && v[0] < 16 {
-					x.Category[v[0]] = nonNegative(v[1])
-				}
-			case 1:
-				v, err := shopInts(l, 0, 3)
-				if err != nil {
-					return nil, false, fmt.Errorf("CustomXShop.txt: %w", err)
-				}
-				if i := v[0]*0x200 + v[1]; i >= 0 && i < 0x2000 {
-					x.Overrides[i] = nonNegative(v[2])
-				}
-			}
+	for _, r := range f.CustomXShop.Item {
+		if i := r.Type*0x200 + r.Index; i >= 0 && i < 0x2000 {
+			x.Overrides[i] = nonNegative(r.Price)
 		}
 	}
 	return x, true, nil
 }
 
 // xshopGMComment marks a row written by the GM price packet.
-const xshopGMComment = "// alterado/criado ingame por GM"
+const xshopGMComment = "alterado/criado ingame por GM"
 
-// WriteXShopPrice is FUN_00403920: the GM price change rewrites
-// CustomXShop.txt line by line. Inside section 1 a "Type Index Price" row
-// of the item is replaced by "%d   %d   %lu" (keeping its "//" comment);
-// without such a row a new "... // alterado/criado ingame por GM" line goes
-// before the section's "end"; without a section 1 the lines "", "1", the
-// new row and "end" are appended. The text goes to "<path>.tmp", which then
-// replaces the file.
+// WriteXShopPrice is FUN_00403920 on xshop.toml: the GM price change sets
+// the Price of every CustomXShop.Item row of the item (keeping its
+// comment); without such a row a new one commented "alterado/criado ingame
+// por GM" is added. The file is rewritten through a temporary file.
 func WriteXShopPrice(path string, index int, price uint32) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
+	var f XShopConfig
+	if err := tomlconf.LoadUTF8(path, &f); err != nil {
 		return err
 	}
 	cat, idx := index>>9, index&0x1ff
-	newRow := fmt.Sprintf("%d   %d   %d   %s", cat, idx, price, xshopGMComment)
-	var out []string
-	inSec, found, written := false, false, false
-	// std::getline keeps a '\r' of CRLF lines; so does this split.
-	lines := strings.Split(string(data), "\n")
-	if len(lines) > 0 && lines[len(lines)-1] == "" {
-		lines = lines[:len(lines)-1]
-	}
-	for _, line := range lines {
-		trimmed := strings.Trim(line, " \t\r\n")
-		if trimmed == "" {
-			out = append(out, line)
-			continue
+	found := false
+	for i := range f.CustomXShop.Item {
+		if r := &f.CustomXShop.Item[i]; r.Type == cat && r.Index == idx {
+			r.Price = int(price)
+			found = true
 		}
-		if !inSec {
-			if trimmed == "1" {
-				inSec, found = true, true
-			}
-			out = append(out, line)
-			continue
-		}
-		if trimmed == "end" {
-			if !written {
-				out = append(out, newRow)
-				written = true
-			}
-			inSec = false
-			out = append(out, line)
-			continue
-		}
-		if strings.HasPrefix(trimmed, "//") {
-			out = append(out, line)
-			continue
-		}
-		var t, i int
-		var p uint64
-		if n, _ := fmt.Sscanf(trimmed, "%d %d %d", &t, &i, &p); n == 3 && t == cat && i == idx {
-			row := fmt.Sprintf("%d   %d   %d", cat, idx, price)
-			if k := strings.Index(trimmed, "//"); k >= 0 {
-				if c := strings.TrimSpace(trimmed[k:]); c != "" {
-					row += "   " + c
-				}
-			}
-			out = append(out, row)
-			written = true
-			continue
-		}
-		out = append(out, line)
 	}
 	if !found {
-		out = append(out, "", "1", newRow, "end")
+		f.CustomXShop.Item = append(f.CustomXShop.Item, XShopItemRow{Type: cat, Index: idx, Price: int(price),
+			Comment: xshopGMComment})
 	}
-	tmp := path + ".tmp"
-	var buf bytes.Buffer
-	for _, l := range out {
-		buf.WriteString(l)
-		buf.WriteByte('\n')
-	}
-	if err := os.WriteFile(tmp, buf.Bytes(), 0o644); err != nil {
-		os.Remove(tmp)
+	return tomlconf.Save(path, &f)
+}
+
+// WriteXShopRecharge is the file part of FUN_00405350 on xshop.toml: the
+// CustomXShopRecharge table is replaced (strings in Windows-1252, as the
+// client sends them).
+func WriteXShopRecharge(path string, r XShopRechargeFile) error {
+	var f XShopConfig
+	if err := tomlconf.LoadUTF8(path, &f); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
-	if err := os.Rename(tmp, path); err != nil {
-		os.Remove(tmp)
-		return err
+	for _, s := range []*string{&r.Titular, &r.ChavePix, &r.CopiaECola, &r.ImagemURL, &r.ImagemBMP, &r.Valor} {
+		*s = tomlconf.UTF8(*s)
 	}
-	return nil
+	f.CustomXShopRecharge = r
+	return tomlconf.Save(path, &f)
 }

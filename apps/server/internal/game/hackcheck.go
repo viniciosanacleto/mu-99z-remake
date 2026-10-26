@@ -1,16 +1,14 @@
 package game
 
 import (
-	"fmt"
-	"path/filepath"
 	"time"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/gscodec"
 )
 
-// HackPacketCheck (Data/Hack/HackPacketCheck.txt, CHackPacketCheck):
+// HackPacketCheck (HackPacketCheck.txt in config/data/hack.toml, CHackPacketCheck):
 // every packet a player sends must have a rule for its head (and sub), the
 // C1/C3 kind must match the Encrypt column, C3/C4 serials must increase by
 // one, and MaxDelay/MinCount/MaxCount limit the rate per head.
@@ -29,23 +27,16 @@ type hackRules struct {
 	sub  map[[2]int]hackRule // rows with a specific Value
 }
 
-func loadHackRules(dataDir string) (*hackRules, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Hack", "HackPacketCheck.txt"))
+// loadHackRules reads the HackPacketCheck table of config/data/hack.toml.
+func loadHackRules(configDir string) (*hackRules, error) {
+	f, err := gamedata.LoadHackConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	r := &hackRules{sub: map[[2]int]hackRule{}}
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) != 6 {
-			return nil, fmt.Errorf("HackPacketCheck.txt line %d: %d columns", l.No, len(l.Tokens))
-		}
-		v := [6]int{}
-		for i := range v {
-			if v[i], err = l.Int(i); err != nil {
-				return nil, err
-			}
-		}
-		r.add(hackRule{head: v[0], value: v[1], encrypt: v[2], maxDelay: v[3], minCount: v[4], maxCount: v[5]})
+	for _, v := range f.HackPacketCheck.Rows {
+		r.add(hackRule{head: v.Index, value: v.Value, encrypt: v.Encrypt, maxDelay: v.MaxDelay, minCount: v.MinCount,
+			maxCount: v.MaxCount})
 	}
 	return r, nil
 }

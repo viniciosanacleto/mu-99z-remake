@@ -1,8 +1,8 @@
 package ini
 
 import (
+	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 )
 
@@ -52,23 +52,19 @@ func TestParse(t *testing.T) {
 	}
 }
 
-func TestLoadConnectServerIni(t *testing.T) {
-	_, file, _, _ := runtime.Caller(0)
-	path := filepath.Join(filepath.Dir(file), "..", "..", "..", "data", "1.ConnectServer", "ConnectServer.ini")
+func TestLoad(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "a.ini")
+	if err := os.WriteFile(path, []byte("[ConnectServerInfo]\r\nConnectServerPortTCP = 44405\r\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	f, err := Load(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := map[string]int{
-		"ConnectServerPortTCP": 44405,
-		"ConnectServerPortUDP": 55557,
-		"MaxConnectionIdle":    60,
-		"MaxConnectionPerIP":   1,
-		"MaxPacketPerSecond":   10,
+	if f.Int("connectserverinfo", "connectserverporttcp", -1) != 44405 {
+		t.Fatal("value")
 	}
-	for k, v := range want {
-		if got := f.Int("ConnectServerInfo", k, -1); got != v {
-			t.Errorf("%s = %d, want %d", k, got, v)
-		}
+	if _, err := Load(filepath.Join(t.TempDir(), "missing.ini")); err == nil {
+		t.Fatal("missing file accepted")
 	}
 }

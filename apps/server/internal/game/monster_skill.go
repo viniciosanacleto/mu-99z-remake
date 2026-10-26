@@ -3,9 +3,7 @@ package game
 import (
 	"fmt"
 	"math"
-	"path/filepath"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -301,68 +299,35 @@ type monsterSkillData struct {
 	byClass map[int]*monsterSkillInfo
 }
 
-func loadMonsterSkills(dataDir string) (*monsterSkillData, error) {
-	dir := filepath.Join(dataDir, "Monster", "Skill")
-	rows := func(name string) ([]mutext.Line, error) {
-		lines, err := mutext.LoadFile(filepath.Join(dir, name))
-		if err != nil {
-			return nil, err
-		}
-		secs, err := mutext.Sections(lines)
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", name, err)
-		}
-		var out []mutext.Line
-		for _, s := range secs {
-			if s.Index == 0 {
-				out = append(out, s.Rows...)
-			}
-		}
-		return out, nil
-	}
-	num := func(l mutext.Line, i int) int {
-		if i >= len(l.Tokens) {
-			return 0
-		}
-		v, err := l.Int(i)
-		if err != nil {
-			return 0
-		}
-		return v
-	}
-	elems := map[int]*monsterSkillElement{}
-	ls, err := rows("MonsterSkillElement.txt")
+// loadMonsterSkills reads the Monster/Skill tables of config/data/monster.toml.
+func loadMonsterSkills(configDir string) (*monsterSkillData, error) {
+	f, err := gamedata.LoadMonsterConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
-	for _, l := range ls {
-		e := &monsterSkillElement{Index: num(l, 0), Name: l.Tokens[1], Type: num(l, 2), SuccessRate: num(l, 3),
-			Time: num(l, 4), IncDecType: num(l, 5), IncDecValue: num(l, 6), Nullified: num(l, 7)}
+	elems := map[int]*monsterSkillElement{}
+	for _, r := range f.MonsterSkillElement.Rows {
+		e := &monsterSkillElement{Index: r.Index, Name: r.Name, Type: r.Type, SuccessRate: r.SuccessRate,
+			Time: r.ContinuanceTime, IncDecType: r.IncAndDecType, IncDecValue: r.IncAndDecValue, Nullified: r.NullifiedMagic}
 		elems[e.Index] = e
 	}
 	units := map[int]*monsterSkillUnit{}
-	if ls, err = rows("MonsterSkillUnit.txt"); err != nil {
-		return nil, err
-	}
-	for _, l := range ls {
-		u := &monsterSkillUnit{Index: num(l, 0), TargetType: num(l, 2), ScopeType: num(l, 3), ScopeValue: num(l, 4),
-			Delay: num(l, 5)}
-		for i := range u.Elements {
-			u.Elements[i] = elems[num(l, 6+i)]
+	for _, r := range f.MonsterSkillUnit.Rows {
+		u := &monsterSkillUnit{Index: r.Index, TargetType: r.TargetType, ScopeType: r.ScopeType, ScopeValue: r.ScopeValue,
+			Delay: r.Delay}
+		for i, slot := range r.Slot {
+			u.Elements[i] = elems[slot]
 		}
 		if u.Index >= 0 && u.Index < 200 {
 			units[u.Index] = u
 		}
 	}
 	d := &monsterSkillData{byClass: map[int]*monsterSkillInfo{}}
-	if ls, err = rows("MonsterSkill.txt"); err != nil {
-		return nil, err
-	}
-	for _, l := range ls {
-		info := &monsterSkillInfo{Monster: num(l, 0)}
-		for i := 0; i < 10; i++ {
-			info.Types[i] = num(l, 2+2*i)
-			info.Units[i] = units[num(l, 3+2*i)]
+	for _, r := range f.MonsterSkill.Rows {
+		info := &monsterSkillInfo{Monster: r.Monster}
+		for i, p := range r.Skill {
+			info.Types[i] = p[0]
+			info.Units[i] = units[p[1]]
 		}
 		if info.Monster >= 0 && info.Monster < 1000 {
 			d.byClass[info.Monster] = info
@@ -373,10 +338,10 @@ func loadMonsterSkills(dataDir string) (*monsterSkillData, error) {
 
 func init() {
 	startHooks = append(startHooks, func(w *World) error {
-		if w.dataDir == "" {
+		if w.configDir == "" {
 			return nil
 		}
-		d, err := loadMonsterSkills(w.dataDir)
+		d, err := loadMonsterSkills(w.configDir)
 		if err != nil {
 			return fmt.Errorf("monster skills: %w", err)
 		}

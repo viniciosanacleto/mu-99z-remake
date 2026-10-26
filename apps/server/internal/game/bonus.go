@@ -35,10 +35,10 @@ func init() {
 	startHooks = append(startHooks, func(w *World) error {
 		bm := &bonusManager{}
 		w.ev().bonus = bm
-		if w.dataDir == "" {
+		if w.configDir == "" {
 			return nil
 		}
-		events, bonuses, err := gamedata.LoadBonusManager(w.dataDir)
+		events, bonuses, err := gamedata.LoadBonusManager(w.configDir)
 		if err != nil {
 			return err
 		}

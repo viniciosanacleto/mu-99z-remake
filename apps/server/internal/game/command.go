@@ -2,11 +2,10 @@ package game
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
 // CommandManager (FUN_00435400): "/" chat lines. Data/CommandManager.txt
@@ -41,57 +40,32 @@ type moveEntry struct {
 	Gate     int
 }
 
-func loadCommands(dataDir string) (map[string]command, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "CommandManager.txt"))
+// loadCommands reads the CommandManager table of config/data/common.toml.
+func loadCommands(configDir string) (map[string]command, error) {
+	f, err := gamedata.LoadCommonConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	out := map[string]command{}
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) != 16 {
-			return nil, fmt.Errorf("CommandManager.txt line %d: %d columns", l.No, len(l.Tokens))
-		}
-		var v [16]int
-		for i := range v {
-			if i == 5 {
-				continue
-			}
-			if v[i], err = l.Int(i); err != nil {
-				return nil, err
-			}
-		}
-		c := command{Index: v[0], Syntax: l.Tokens[5], Delay: v[6], GMLevel: v[7], MinLevel: v[8],
-			MaxLevel: v[9], MinReset: v[10], MaxReset: v[11]}
-		copy(c.Switch[:], v[1:5])
-		copy(c.Money[:], v[12:16])
-		out[c.Syntax] = c
+	for _, r := range f.CommandManager.Rows {
+		out[r.Syntax] = command{Index: r.Index, Switch: [4]int{r.AL0, r.AL1, r.AL2, r.AL3}, Syntax: r.Syntax,
+			Delay: r.Delay, GMLevel: r.GMLevel, MinLevel: r.MinLevel, MaxLevel: r.MaxLevel, MinReset: r.MinReset,
+			MaxReset: r.MaxReset, Money: [4]int{r.Money_AL0, r.Money_AL1, r.Money_AL2, r.Money_AL3}}
 	}
 	return out, nil
 }
 
-func loadMoves(dataDir string) ([]moveEntry, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Move", "Move.txt"))
+// loadMoves reads the Move table of config/data/move.toml (the /move list).
+func loadMoves(configDir string) ([]moveEntry, error) {
+	f, err := gamedata.LoadMoveConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	var out []moveEntry
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) != 12 {
-			return nil, fmt.Errorf("Move.txt line %d: %d columns", l.No, len(l.Tokens))
-		}
-		var v [12]int
-		for i := range v {
-			if i == 1 {
-				continue
-			}
-			if v[i], err = l.Int(i); err != nil {
-				return nil, err
-			}
-		}
-		m := moveEntry{Index: v[0], Name: l.Tokens[1], Money: v[2], MinLevel: v[3], MaxLevel: v[4],
-			MinReset: v[5], MaxReset: v[6], Gate: v[11]}
-		copy(m.Switch[:], v[7:11])
-		out = append(out, m)
+	for _, r := range f.Move.Rows {
+		out = append(out, moveEntry{Index: r.Index, Name: r.Name, Money: r.RequireMoney, MinLevel: r.MinLevel,
+			MaxLevel: r.MaxLevel, MinReset: r.MinReset, MaxReset: r.MaxReset, Switch: [4]int{r.AL0, r.AL1, r.AL2, r.AL3},
+			Gate: r.GateNumber})
 	}
 	return out, nil
 }

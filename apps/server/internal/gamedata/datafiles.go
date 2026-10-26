@@ -2,12 +2,7 @@ package gamedata
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
-	"time"
-
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/ini"
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
 // Small data files that the original reads at start-up (loaders
@@ -16,30 +11,6 @@ import (
 // the original tokenizer (FUN_004e0d70 reads a token, _ftol FUN_00534ff0
 // converts it): a row is a fixed count of numbers, a comma ends a number
 // ("12,015" is two numbers) and "*" reads as -1.
-
-// streamRows flattens the numeric fields of rows into one token stream and
-// cuts it into records of n numbers, like the original reader, which does
-// not care about line breaks. A short last record repeats its last value
-// (numRow), as the original keeps the previous number.
-func streamRows(rows []mutext.Line, n int) [][]int {
-	var f []string
-	for _, l := range rows {
-		f = append(f, numFields(l)...)
-	}
-	var out [][]int
-	for i := 0; i < len(f); i += n {
-		out = append(out, numRow(f, i, n))
-	}
-	return out
-}
-
-func loadTable(path string) ([]mutext.Line, error) {
-	lines, err := mutext.LoadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return mutext.Table(lines), nil
-}
 
 // itemRef joins a (category, index) pair read as two numbers; out of range
 // gives -1 (the "-1 < v && v < 0x2000" check of the readers).
@@ -78,34 +49,33 @@ type ClassFreebies struct {
 	Effects       []FreebieEffect
 }
 
-// LoadDefaultClassFreebies reads Data/Character/DefaultClassFreebies.txt.
-func LoadDefaultClassFreebies(dataDir string) (*ClassFreebies, error) {
-	secs, err := dropSections(filepath.Join(dataDir, "Character", "DefaultClassFreebies.txt"))
+// LoadDefaultClassFreebies reads the DefaultClassFreebies table of
+// config/data/character.toml; item rows of a class outside 0..4 are dropped.
+func LoadDefaultClassFreebies(configDir string) (*ClassFreebies, error) {
+	f, err := LoadCharacterConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
+	t := f.DefaultClassFreebies
 	out := &ClassFreebies{Money: map[int]int{}, Points: map[int]int{}}
-	for _, s := range secs {
-		switch s.Index {
-		case 0:
-			for _, v := range streamRows(s.Rows, 3) {
-				out.Money[v[0]], out.Points[v[0]] = v[1], v[2]
-			}
-		case 1:
-			for _, v := range streamRows(s.Rows, 11) {
-				if v[0] < 0 || v[0] >= 5 {
-					continue
-				}
-				out.Items = append(out.Items, FreebieItem{Class: v[0], Index: itemRef(v[1], v[2]), Level: v[3],
-					Durability: v[4], Skill: v[5], Luck: v[6], Option: v[7], Excellent: v[8], SetOption: v[9],
-					Duration: v[10]})
-			}
-		case 2:
-			for _, v := range streamRows(s.Rows, 8) {
-				out.Effects = append(out.Effects, FreebieEffect{Class: v[0], Effect: v[1], Type: v[2],
-					Power: [4]int{v[3], v[4], v[5], v[6]}, Duration: v[7]})
-			}
+	for _, r := range t.Class {
+		out.Money[r.Class], out.Points[r.Class] = r.InitialMoney, r.InitialPoint
+	}
+	for i, r := range t.Item {
+		if r.Class < 0 || r.Class >= 5 {
+			continue
 		}
+		cat, idx, err := SplitItemRef(r.ItemIndex)
+		if err != nil {
+			return nil, fmt.Errorf("DefaultClassFreebies.Item row %d: %w", i+1, err)
+		}
+		out.Items = append(out.Items, FreebieItem{Class: r.Class, Index: itemRef(cat, idx), Level: r.ItemLevel,
+			Durability: r.Durability, Skill: r.SkillSwitch, Luck: r.LuckSwitch, Option: r.Aditional,
+			Excellent: r.Excellent, SetOption: r.SetOption, Duration: r.Duration})
+	}
+	for _, r := range t.Effect {
+		out.Effects = append(out.Effects, FreebieEffect{Class: r.Class, Effect: r.EffectIndex, Type: r.EffectType,
+			Power: r.Power, Duration: r.Duration})
 	}
 	return out, nil
 }
@@ -130,44 +100,30 @@ type CommandRequirement struct {
 	Class                               [5]int
 }
 
-// LoadCommandRequirement reads Data/CommandRequirement.txt.
-func LoadCommandRequirement(dataDir string) ([]CommandRequirement, error) {
-	rows, err := loadTable(filepath.Join(dataDir, "CommandRequirement.txt"))
+// LoadCommandRequirement reads the CommandRequirement table of
+// config/data/common.toml.
+func LoadCommandRequirement(configDir string) ([]CommandRequirement, error) {
+	f, err := LoadCommonConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
-	var f []string
-	for _, l := range rows {
-		f = append(f, numFields(l)...)
-	}
 	var out []CommandRequirement
-	pos, prev := 0, 0
-	next := func() int {
-		tok := ""
-		if pos < len(f) {
-			tok = f[pos]
+	for i, r := range f.CommandRequirement.Rows {
+		req := CommandRequirement{Index: r.Index, AccountLevel: r.AccountLevel, MinLevel: r.MinLevel, MaxLevel: r.MaxLevel,
+			MinReset: r.MinReset, MaxReset: r.MaxReset, CheckItem: r.CheckItem, ReqItem: -1, ReqItemCount: r.ReqItemCount,
+			ReqItemLevel: r.ReqItemLevel, ReqEffect: r.ReqEffectState, ReqQuestIndex: r.ReqQuestIndex,
+			ReqQuestState: r.ReqQuestState, ReqPKLevel: r.ReqPKLevel, ReqPKCount: r.ReqPKCount, ReqGuildRnk: r.ReqGuildRank,
+			Map: r.MapIndex, StartX: r.MapStartX, StartY: r.MapStartY, EndX: r.MapEndX, EndY: r.MapEndY,
+			DayOfWeek: r.DayOfWeek, MinHour: r.MinHour, MaxHour: r.MaxHour, FailMessage: r.FailMessage,
+			Class: [5]int{r.DW, r.DK, r.FE, r.MG, r.DL}}
+		if r.ReqItemIndex != "*" {
+			cat, idx, err := SplitItemRef(r.ReqItemIndex)
+			if err != nil {
+				return nil, fmt.Errorf("CommandRequirement row %d: %w", i+1, err)
+			}
+			req.ReqItem = itemRef(cat, idx)
 		}
-		pos++
-		prev = numTok(tok, prev)
-		return prev
-	}
-	for pos < len(f) {
-		var r CommandRequirement
-		r.Index, r.AccountLevel, r.MinLevel, r.MaxLevel = next(), next(), next(), next()
-		r.MinReset, r.MaxReset, r.CheckItem = next(), next(), next()
-		r.ReqItem = next()
-		if r.ReqItem != -1 {
-			r.ReqItem = itemRef(r.ReqItem, next())
-		}
-		r.ReqItemCount, r.ReqItemLevel, r.ReqEffect = next(), next(), next()
-		r.ReqQuestIndex, r.ReqQuestState = next(), next()
-		r.ReqPKLevel, r.ReqPKCount, r.ReqGuildRnk = next(), next(), next()
-		r.Map, r.StartX, r.StartY, r.EndX, r.EndY = next(), next(), next(), next(), next()
-		r.DayOfWeek, r.MinHour, r.MaxHour, r.FailMessage = next(), next(), next(), next()
-		for i := range r.Class {
-			r.Class[i] = next()
-		}
-		out = append(out, r)
+		out = append(out, req)
 	}
 	return out, nil
 }
@@ -180,18 +136,27 @@ type EvolutionRow struct {
 	Index, Target, Result int
 }
 
-// LoadCustomEvolution reads Data/Custom/CustomEvolution.txt.
-func LoadCustomEvolution(dataDir string) (map[int]EvolutionRow, error) {
-	rows, err := loadTable(filepath.Join(dataDir, "Custom", "CustomEvolution.txt"))
+// LoadCustomEvolution reads the CustomEvolution table of
+// config/data/custom.toml (the first row of an Index wins).
+func LoadCustomEvolution(configDir string) (map[int]EvolutionRow, error) {
+	f, err := LoadCustomConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	out := map[int]EvolutionRow{}
-	for _, v := range streamRows(rows, 5) {
-		if _, ok := out[v[0]]; ok {
+	for i, r := range f.CustomEvolution.Rows {
+		if _, ok := out[r.Index]; ok {
 			continue // std::map insert keeps the first row
 		}
-		out[v[0]] = EvolutionRow{Index: v[0], Target: itemRef(v[1], v[2]), Result: itemRef(v[3], v[4])}
+		var ref [2]int
+		for k, s := range [2]string{r.ItemTarget, r.ItemResult} {
+			cat, idx, err := SplitItemRef(s)
+			if err != nil {
+				return nil, fmt.Errorf("CustomEvolution row %d: %w", i+1, err)
+			}
+			ref[k] = itemRef(cat, idx)
+		}
+		out[r.Index] = EvolutionRow{Index: r.Index, Target: ref[0], Result: ref[1]}
 	}
 	return out, nil
 }
@@ -199,30 +164,24 @@ func LoadCustomEvolution(dataDir string) (map[int]EvolutionRow, error) {
 // --- Custom/CustomMobCombo.txt -------------------------------------------------
 
 // monsterClassList is FUN_0044ef50, shared by CustomGuard.txt and
-// CustomMobCombo.txt: section 0 holds up to 100 monster classes.
-func monsterClassList(path string) ([]int, error) {
-	secs, err := dropSections(path)
+// CustomMobCombo.txt: up to 100 monster classes.
+func monsterClassList(f MonsterClassListFile) []int {
+	out := f.MonsterClass
+	if len(out) > 100 {
+		out = out[:100]
+	}
+	return append([]int(nil), out...)
+}
+
+// LoadCustomMobCombo reads the CustomMobCombo table of
+// config/data/custom.toml (same reader as CustomGuard.txt, FUN_0044ef50 on
+// DAT_0173d940).
+func LoadCustomMobCombo(configDir string) ([]int, error) {
+	f, err := LoadCustomConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
-	var out []int
-	for _, s := range secs {
-		if s.Index != 0 {
-			continue
-		}
-		for _, l := range s.Rows {
-			if len(out) < 100 {
-				out = append(out, numRow(numFields(l), 0, 1)[0])
-			}
-		}
-	}
-	return out, nil
-}
-
-// LoadCustomMobCombo reads Data/Custom/CustomMobCombo.txt (same reader as
-// CustomGuard.txt, FUN_0044ef50 on DAT_0173d940).
-func LoadCustomMobCombo(dataDir string) ([]int, error) {
-	return monsterClassList(filepath.Join(dataDir, "Custom", "CustomMobCombo.txt"))
+	return monsterClassList(f.CustomMobCombo), nil
 }
 
 // --- Custom/CustomGHRS.ini (CastleSiege.exe only) ------------------------------
@@ -237,20 +196,15 @@ type CustomGHRS struct {
 	Hour, Min, Sec int
 }
 
-// LoadCustomGHRS reads Data/Custom/CustomGHRS.ini.
-func LoadCustomGHRS(dataDir string) (*CustomGHRS, error) {
-	f, err := ini.Load(filepath.Join(dataDir, "Custom", "CustomGHRS.ini"))
+// LoadCustomGHRS reads the CustomGHRS table of config/data/custom.toml.
+func LoadCustomGHRS(configDir string) (*CustomGHRS, error) {
+	f, err := LoadCustomConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
-	g := &CustomGHRS{}
-	for d := time.Sunday; d <= time.Saturday; d++ {
-		g.Week[d] = f.Int("WEEK", d.String(), 0)
-	}
-	g.Hour = f.Int("TIMEUPDATE", "Hour", 0)
-	g.Min = f.Int("TIMEUPDATE", "Min", 0)
-	g.Sec = f.Int("TIMEUPDATE", "Sec", 0)
-	return g, nil
+	w, t := f.CustomGHRS.WEEK, f.CustomGHRS.TIMEUPDATE
+	return &CustomGHRS{Week: [7]int{w.Sunday, w.Monday, w.Tuesday, w.Wednesday, w.Thursday, w.Friday, w.Saturday},
+		Hour: t.Hour, Min: t.Min, Sec: t.Sec}, nil
 }
 
 // --- Item/ItemLevel.txt ----------------------------------------------------------
@@ -263,23 +217,23 @@ type ItemLevelName struct {
 	Name         string
 }
 
-// LoadItemLevel reads Data/Item/ItemLevel.txt.
-func LoadItemLevel(dataDir string) ([]ItemLevelName, error) {
-	rows, err := loadTable(filepath.Join(dataDir, "Item", "ItemLevel.txt"))
+// LoadItemLevel reads the ItemLevel table of config/data/item.toml.
+func LoadItemLevel(configDir string) ([]ItemLevelName, error) {
+	f, err := loadItemConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	var out []ItemLevelName
-	for _, l := range rows {
-		if len(l.Tokens) < 3 {
-			return nil, fmt.Errorf("ItemLevel.txt line %d: %d columns", l.No, len(l.Tokens))
+	for i, r := range f.ItemLevel.Rows {
+		cat, idx, err := SplitItemRef(r.ItemIndex)
+		if err != nil {
+			return nil, fmt.Errorf("ItemLevel row %d: %w", i+1, err)
 		}
-		v := numRow(numFields(mutext.Line{Tokens: l.Tokens[:2]}), 0, 3)
-		name := l.Tokens[2]
+		name := r.Name
 		if len(name) > 0x31 {
 			name = name[:0x31] // strcpy_s into a 0x32 buffer
 		}
-		out = append(out, ItemLevelName{Index: itemRef(v[0], v[1]), Level: v[2], Name: name})
+		out = append(out, ItemLevelName{Index: itemRef(cat, idx), Level: r.ItemLevel, Name: name})
 	}
 	return out, nil
 }
@@ -292,15 +246,15 @@ type MonsterMoveRow struct {
 	Monster, Map, X, Y, Dir, KeepTime int
 }
 
-// LoadMonsterMove reads Data/Monster/MonsterMove.txt.
-func LoadMonsterMove(dataDir string) ([]MonsterMoveRow, error) {
-	rows, err := loadTable(filepath.Join(dataDir, "Monster", "MonsterMove.txt"))
+// LoadMonsterMove reads the MonsterMove table of config/data/monster.toml.
+func LoadMonsterMove(configDir string) ([]MonsterMoveRow, error) {
+	f, err := LoadMonsterConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	var out []MonsterMoveRow
-	for _, v := range streamRows(rows, 6) {
-		out = append(out, MonsterMoveRow{v[0], v[1], v[2], v[3], v[4], v[5]})
+	for _, r := range f.MonsterMove.Rows {
+		out = append(out, MonsterMoveRow{r.Index, r.MapNumber, r.MapPosX, r.MapPosY, r.Direction, r.KeepTime})
 	}
 	return out, nil
 }
@@ -322,9 +276,10 @@ type MonsterScheduleGroup struct {
 	Monsters                                  []ScheduledMonster
 }
 
-// LoadMonsterSchedule reads Data/Monster/MonsterSchedule.txt by group.
-func LoadMonsterSchedule(dataDir string) (map[int]*MonsterScheduleGroup, error) {
-	secs, err := dropSections(filepath.Join(dataDir, "Monster", "MonsterSchedule.txt"))
+// LoadMonsterSchedule reads the MonsterSchedule table of
+// config/data/monster.toml by group.
+func LoadMonsterSchedule(configDir string) (map[int]*MonsterScheduleGroup, error) {
+	f, err := LoadMonsterConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
@@ -335,24 +290,20 @@ func LoadMonsterSchedule(dataDir string) (map[int]*MonsterScheduleGroup, error) 
 		}
 		return out[i]
 	}
-	for _, s := range secs {
-		switch s.Index {
-		case 0:
-			for _, v := range streamRows(s.Rows, 8) {
-				g := group(v[0])
-				g.Schedule = append(g.Schedule, Schedule{v[1], v[2], v[3], v[4], v[5], v[6], v[7]})
-			}
-		case 1:
-			for _, v := range streamRows(s.Rows, 5) {
-				g := group(v[0])
-				g.EnableMsg, g.DisableMsg, g.NotTimeMsg, g.NPCSec = v[1], v[2], v[3], v[4]
-			}
-		case 2:
-			for _, v := range streamRows(s.Rows, 5) {
-				g := group(v[0])
-				g.Monsters = append(g.Monsters, ScheduledMonster{v[1], v[2], v[3], v[4]})
-			}
-		}
+	t := f.MonsterSchedule
+	for _, r := range t.Schedule {
+		g := group(r.Group)
+		g.Schedule = append(g.Schedule, Schedule{r.StartYear, r.StartMonth, r.StartDay, r.StartDoW, r.StartHour,
+			r.StartMin, r.StartSec})
+	}
+	for _, r := range t.Message {
+		g := group(r.Group)
+		g.EnableMsg, g.DisableMsg, g.NotTimeMsg, g.NPCSec = r.EnableMessage, r.DisableMessage, r.ItsNotTimeMessage,
+			r.EnableNpcTime
+	}
+	for _, r := range t.Monster {
+		g := group(r.Group)
+		g.Monsters = append(g.Monsters, ScheduledMonster{r.MonsterIndex, r.MapNumber, r.LocationX, r.LocationY})
 	}
 	return out, nil
 }
@@ -370,16 +321,17 @@ type MoveSummonRow struct {
 	AL                         [4]int
 }
 
-// LoadMoveSummon reads Data/Move/MoveSummon.txt.
-func LoadMoveSummon(dataDir string) ([]MoveSummonRow, error) {
-	rows, err := loadTable(filepath.Join(dataDir, "Move", "MoveSummon.txt"))
+// LoadMoveSummon reads the MoveSummon table of config/data/move.toml.
+func LoadMoveSummon(configDir string) ([]MoveSummonRow, error) {
+	f, err := LoadMoveConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	var out []MoveSummonRow
-	for _, v := range streamRows(rows, 13) {
-		out = append(out, MoveSummonRow{Map: v[0], StartX: v[1], StartY: v[2], EndX: v[3], EndY: v[4],
-			MinLevel: v[5], MaxLevel: v[6], MinReset: v[7], MaxReset: v[8], AL: [4]int{v[9], v[10], v[11], v[12]}})
+	for _, r := range f.MoveSummon.Rows {
+		out = append(out, MoveSummonRow{Map: r.MapNumber, StartX: r.RangeStartX, StartY: r.RangeStartY, EndX: r.RangeEndX,
+			EndY: r.RangeEndY, MinLevel: r.MinLevel, MaxLevel: r.MaxLevel, MinReset: r.MinReset, MaxReset: r.MaxReset,
+			AL: [4]int{r.AL0, r.AL1, r.AL2, r.AL3}})
 	}
 	return out, nil
 }
@@ -399,15 +351,17 @@ type SkillSpeedRule struct {
 	Action             int
 }
 
-// LoadHackSkillSpeedCheck reads Data/Hack/HackSkillSpeedCheck.txt.
-func LoadHackSkillSpeedCheck(dataDir string) ([]SkillSpeedRule, error) {
-	rows, err := loadTable(filepath.Join(dataDir, "Hack", "HackSkillSpeedCheck.txt"))
+// LoadHackSkillSpeedCheck reads the HackSkillSpeedCheck table of
+// config/data/hack.toml.
+func LoadHackSkillSpeedCheck(configDir string) ([]SkillSpeedRule, error) {
+	f, err := LoadHackConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	var out []SkillSpeedRule
-	for _, v := range streamRows(rows, 12) {
-		out = append(out, SkillSpeedRule{v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10], v[11]})
+	for _, r := range f.HackSkillSpeedCheck.Rows {
+		out = append(out, SkillSpeedRule{r.Index, r.Class, r.MinLevel, r.MaxLevel, r.MinReset, r.MaxReset, r.MinSpeed,
+			r.MaxSpeed, r.MaxDelay, r.MinCount, r.MaxCount, r.Action})
 	}
 	return out, nil
 }
@@ -430,15 +384,17 @@ type ExperienceRateRow struct {
 // ExperienceTable is the list of ExperienceRateRow.
 type ExperienceTable []ExperienceRateRow
 
-// LoadExperienceTable reads Data/Util/ExperienceTable.txt.
-func LoadExperienceTable(dataDir string) (ExperienceTable, error) {
-	rows, err := loadTable(filepath.Join(dataDir, "Util", "ExperienceTable.txt"))
+// LoadExperienceTable reads the ExperienceTable table of
+// config/data/util.toml.
+func LoadExperienceTable(configDir string) (ExperienceTable, error) {
+	f, err := LoadUtilConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	var out ExperienceTable
-	for _, v := range streamRows(rows, 7) {
-		out = append(out, ExperienceRateRow{v[0], v[1], v[2], v[3], v[4], v[5], v[6]})
+	for _, r := range f.ExperienceTable.Rows {
+		out = append(out, ExperienceRateRow{r.MinLevel, r.MaxLevel, r.MinReset, r.MaxReset, r.MinMasterReset,
+			r.MaxMasterReset, r.ExperienceRate})
 	}
 	return out, nil
 }
@@ -468,45 +424,41 @@ type PetDamageRow struct {
 	DamageRate         int
 }
 
-// LoadPetDamageTable reads Data/Util/PetDamageTable.txt.
-func LoadPetDamageTable(dataDir string) ([]PetDamageRow, error) {
-	rows, err := loadTable(filepath.Join(dataDir, "Util", "PetDamageTable.txt"))
+// LoadPetDamageTable reads the PetDamageTable table of
+// config/data/util.toml.
+func LoadPetDamageTable(configDir string) ([]PetDamageRow, error) {
+	f, err := LoadUtilConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	var out []PetDamageRow
-	for _, v := range streamRows(rows, 6) {
-		out = append(out, PetDamageRow{v[0], v[1], v[2], v[3], v[4], v[5]})
+	for _, r := range f.PetDamageTable.Rows {
+		out = append(out, PetDamageRow{r.Index, r.MinLevel, r.MaxLevel, r.MinReset, r.MaxReset, r.DamageRate})
 	}
 	return out, nil
 }
 
 // --- BlackList.txt (GameServer) ---------------------------------------------------------
 
-// BlackList is Data/BlackList.txt of the GameServer (FUN_00411ae0, loaded
+// BlackList is BlackList.txt of the GameServer (FUN_00411ae0, loaded
 // by FUN_004e8520): section 0 IP addresses (16 characters), section 1
 // hardware ids (44 characters).
 type BlackList struct {
 	IPs, HWIDs []string
 }
 
-// LoadBlackList reads Data/BlackList.txt.
-func LoadBlackList(dataDir string) (*BlackList, error) {
-	secs, err := dropSections(filepath.Join(dataDir, "BlackList.txt"))
+// LoadBlackList reads the BlackList table of config/data/common.toml.
+func LoadBlackList(configDir string) (*BlackList, error) {
+	f, err := LoadCommonConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	b := &BlackList{}
-	for _, s := range secs {
-		for _, l := range s.Rows {
-			v := l.Tokens[0]
-			switch s.Index {
-			case 0:
-				b.IPs = append(b.IPs, truncate(v, 0x10))
-			case 1:
-				b.HWIDs = append(b.HWIDs, truncate(v, 0x2c))
-			}
-		}
+	for _, v := range f.BlackList.IpAddress {
+		b.IPs = append(b.IPs, truncate(v, 0x10))
+	}
+	for _, v := range f.BlackList.HardwareId {
+		b.HWIDs = append(b.HWIDs, truncate(v, 0x2c))
 	}
 	return b, nil
 }

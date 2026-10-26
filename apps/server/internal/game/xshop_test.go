@@ -6,10 +6,12 @@ import (
 	"encoding/binary"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
@@ -279,11 +281,11 @@ func TestXShopRefundWhenItemCannotBeGiven(t *testing.T) {
 func TestXShopGMPrice(t *testing.T) {
 	b := newBareWorld(t)
 	o := b.player(PlayerStart, "Gm", 0, 130, 130)
-	src, err := os.ReadFile(repoData("Data", "Custom", "CustomXShop.txt"))
+	src, err := os.ReadFile(repoConfig("data", "xshop.toml"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(t.TempDir(), "CustomXShop.txt")
+	path := filepath.Join(t.TempDir(), "xshop.toml")
 	if err := os.WriteFile(path, src, 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -300,8 +302,11 @@ func TestXShopGMPrice(t *testing.T) {
 		t.Fatalf("GM % X", p)
 	}
 	data, _ := os.ReadFile(path)
-	if !strings.Contains(string(data), "0   0   300   // Kris") {
+	if !regexp.MustCompile(`Type = 0, +Index = 0, +Price = 300, +Comment = "Kris"`).Match(data) {
 		t.Fatal("file not rewritten")
+	}
+	if x, _, err := gamedata.LoadXShopPrices(path); err != nil || x.Price(0) != 300 || x.Price(1) != 10 {
+		t.Fatalf("reloaded prices %v", err)
 	}
 	b.xshopGMPrice(o, pkt)
 	if p := find(b.drain(o), 0xFA, 0x06); p == nil || p[4] != 2 {
@@ -315,7 +320,7 @@ func TestXShopGMPrice(t *testing.T) {
 		t.Fatalf("price over 2e9 % X", p)
 	}
 	b.advance(time.Second)
-	b.cw2().xshopPath = filepath.Join(t.TempDir(), "missing.txt")
+	b.cw2().xshopPath = filepath.Join(t.TempDir(), "missing.toml")
 	b.xshopGMPrice(o, pkt)
 	if p := find(b.drain(o), 0xFA, 0x06); p == nil || p[4] != 3 {
 		t.Fatalf("write fail % X", p)
@@ -392,7 +397,12 @@ func TestXShopRechargeUploadRoundTrip(t *testing.T) {
 	b := newBareWorld(t)
 	o := b.player(PlayerStart, "Gm", 0, 130, 130)
 	dir := t.TempDir()
-	b.cw2().xshopPath = filepath.Join(dir, "CustomXShop.txt")
+	path := filepath.Join(dir, "xshop.toml")
+	b.cw2().xshopPath = path
+	b.dataDir = dir // the QR image goes to <data>/Custom
+	if err := os.MkdirAll(filepath.Join(dir, "Custom"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	d := new([rechargeSize]byte)
 	d[rcActive] = 1
 	copy(d[rcHolder:], "Fulano")
@@ -416,7 +426,7 @@ func TestXShopRechargeUploadRoundTrip(t *testing.T) {
 	if acks := send(); len(acks) != 48 {
 		t.Fatalf("not GM: %d acks", len(acks))
 	}
-	if _, err := os.Stat(filepath.Join(dir, "CustomXShopRecharge.txt")); !os.IsNotExist(err) {
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Fatal("saved without GM")
 	}
 	mv(o).Authority = 8
@@ -424,14 +434,17 @@ func TestXShopRechargeUploadRoundTrip(t *testing.T) {
 	if len(acks) != 1 || !bytes.Equal(acks[0], []byte{0xC1, 5, 0xFA, 0x11, 0}) {
 		t.Fatalf("acks %d % X", len(acks), acks)
 	}
-	cfg, err := os.ReadFile(filepath.Join(dir, "CustomXShopRecharge.txt"))
+	f, err := gamedata.LoadXShopConfig(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := string(cfg)
-	if !strings.HasPrefix(s, "; Configurado pelo GM no X Shop. Credito manual.\r\n[Recarga]\r\nAtivo=1\r\nTitular=Fulano\r\n") ||
-		!strings.Contains(s, "\r\nValor=10.50\r\n") || !strings.Contains(s, "\r\nImagemBMP=pix") {
-		t.Fatalf("config %q", s)
+	r := f.CustomXShopRecharge
+	if r.Ativo != 1 || r.Titular != "Fulano" || r.ChavePix != "chave@pix" || r.Valor != "10.50" ||
+		!strings.HasPrefix(r.ImagemBMP, "pix") || !strings.HasSuffix(r.ImagemBMP, ".tmp.bmp") {
+		t.Fatalf("config %+v", r)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "Custom", r.ImagemBMP)); err != nil {
+		t.Fatalf("image not in <data>/Custom: %v", err)
 	}
 	// The saved file reads back as the same block.
 	b.xshopRecharge(o, []byte{0xC1, 4, 0xFA, 0x0E})

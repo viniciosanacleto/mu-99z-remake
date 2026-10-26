@@ -2,9 +2,8 @@ package game
 
 import (
 	"fmt"
-	"path/filepath"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
@@ -14,20 +13,17 @@ var langDirs = [3]string{"Eng", "Por", "Spn"}
 
 type messageTable [3]map[int]string
 
-func loadMessages(dataDir string) (messageTable, error) {
+// loadMessages reads the Message tables of config/data/lang.toml.
+func loadMessages(configDir string) (messageTable, error) {
 	var t messageTable
-	for i, lang := range langDirs {
-		lines, err := mutext.LoadFile(filepath.Join(dataDir, "Lang", lang, "Message.txt"))
-		if err != nil {
-			return t, err
-		}
+	f, err := gamedata.LoadLangConfig(configDir)
+	if err != nil {
+		return t, err
+	}
+	for i, lang := range f.Languages() {
 		t[i] = map[int]string{}
-		for _, l := range mutext.Table(lines) {
-			n, err := l.Int(0)
-			if err != nil || len(l.Tokens) < 2 {
-				return t, fmt.Errorf("Lang/%s/Message.txt line %d: bad row", lang, l.No)
-			}
-			t[i][n] = l.Tokens[1]
+		for _, r := range lang.Message.Rows {
+			t[i][r.Index] = r.Text
 		}
 	}
 	return t, nil

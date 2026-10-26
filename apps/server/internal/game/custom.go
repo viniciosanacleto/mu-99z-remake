@@ -2,17 +2,16 @@ package game
 
 import (
 	"fmt"
-	"path/filepath"
 	"strconv"
 	"strings"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
-// customTables implements charset.Custom from Custom/CustomWing.txt
-// (CCustomWing, 100 slots indexed by the Index column) and
-// Custom/CustomPet.txt (CCustomPet, keyed by item index).
+// customTables implements charset.Custom from CustomWing.txt (CCustomWing,
+// 100 slots indexed by the Index column) and CustomPet.txt (CCustomPet,
+// keyed by item index).
 type customTables struct {
 	wings map[int]int // item index -> CustomWing Index
 	pets  map[int]bool
@@ -42,33 +41,27 @@ func parseItemRef(s string) (int, error) {
 	return item.Make(c, i), nil
 }
 
-func loadCustomTables(dataDir string) (customTables, error) {
+// loadCustomTables reads the CustomWing and CustomPet tables of
+// config/data/custom.toml.
+func loadCustomTables(configDir string) (customTables, error) {
 	t := customTables{wings: map[int]int{}, pets: map[int]bool{}}
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Custom", "CustomWing.txt"))
+	f, err := gamedata.LoadCustomConfig(configDir)
 	if err != nil {
 		return t, err
 	}
-	for _, l := range mutext.Table(lines) {
-		slot, err := l.Int(0)
+	for i, r := range f.CustomWing.Rows {
+		idx, err := parseItemRef(r.ItemIndex)
 		if err != nil {
-			return t, err
+			return t, fmt.Errorf("CustomWing row %d: %w", i+1, err)
 		}
-		idx, err := parseItemRef(l.Tokens[1])
-		if err != nil {
-			return t, fmt.Errorf("CustomWing.txt line %d: %w", l.No, err)
-		}
-		if slot >= 0 && slot < 100 {
-			t.wings[idx] = slot
+		if r.Index >= 0 && r.Index < 100 {
+			t.wings[idx] = r.Index
 		}
 	}
-	lines, err = mutext.LoadFile(filepath.Join(dataDir, "Custom", "CustomPet.txt"))
-	if err != nil {
-		return t, err
-	}
-	for _, l := range mutext.Table(lines) {
-		idx, err := parseItemRef(l.Tokens[1])
+	for i, r := range f.CustomPet.Rows {
+		idx, err := parseItemRef(r.ItemIndex)
 		if err != nil {
-			return t, fmt.Errorf("CustomPet.txt line %d: %w", l.No, err)
+			return t, fmt.Errorf("CustomPet row %d: %w", i+1, err)
 		}
 		t.pets[idx] = true
 	}

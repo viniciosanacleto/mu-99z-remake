@@ -91,8 +91,8 @@ func init() {
 			}
 		}
 		w.ev().cc = cc
-		if w.dataDir != "" {
-			d, err := gamedata.LoadChaosCastle(w.dataDir)
+		if w.configDir != "" {
+			d, err := gamedata.LoadChaosCastle(w.configDir)
 			if err != nil {
 				return err
 			}

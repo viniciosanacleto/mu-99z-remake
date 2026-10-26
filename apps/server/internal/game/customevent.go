@@ -99,29 +99,29 @@ func loadCustomEvents(w *World) error {
 		c.world = w.cevt.world // loaded by custom_world.go
 	}
 	w.cevt = c
-	if w.dataDir == "" {
+	if w.configDir == "" {
 		return nil
 	}
 	var err error
-	if c.sobre.data, err = gamedata.LoadSobreEvent(w.dataDir); err != nil {
+	if c.sobre.data, err = gamedata.LoadSobreEvent(w.configDir); err != nil {
 		return err
 	}
-	if c.death.data, err = gamedata.LoadDeathEvent(w.dataDir); err != nil {
+	if c.death.data, err = gamedata.LoadDeathEvent(w.configDir); err != nil {
 		return err
 	}
-	if c.theft.data, err = gamedata.LoadTheftEvent(w.dataDir); err != nil {
+	if c.theft.data, err = gamedata.LoadTheftEvent(w.configDir); err != nil {
 		return err
 	}
-	if c.duel.data, err = gamedata.LoadDuelEvent(w.dataDir); err != nil {
+	if c.duel.data, err = gamedata.LoadDuelEvent(w.configDir); err != nil {
 		return err
 	}
-	if c.roleta.data, err = gamedata.LoadRoletaEvent(w.dataDir); err != nil {
+	if c.roleta.data, err = gamedata.LoadRoletaEvent(w.configDir); err != nil {
 		return err
 	}
-	if c.pair.data, err = gamedata.LoadPairEvent(w.dataDir); err != nil {
+	if c.pair.data, err = gamedata.LoadPairEvent(w.configDir); err != nil {
 		return err
 	}
-	c.raffle, err = gamedata.LoadRaffleEvent(w.dataDir)
+	c.raffle, err = gamedata.LoadRaffleEvent(w.configDir)
 	return err
 }
 

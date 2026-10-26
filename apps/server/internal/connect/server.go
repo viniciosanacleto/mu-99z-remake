@@ -9,47 +9,32 @@ import (
 	"sync"
 	"time"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/ini"
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/servercfg"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
 // maxClients: the original indexes clients in a 100-slot table (index < 100).
 const maxClients = 100
 
-// Config mirrors [ConnectServerInfo] in ConnectServer.ini.
+// Config mirrors [ConnectServer] in config/server.toml ([ConnectServerInfo]
+// of ConnectServer.ini).
 type Config struct {
 	Port               int
 	MaxIdle            time.Duration // MaxConnectionIdle (seconds)
 	MaxPerIP           int           // MaxConnectionPerIP; 0 = unlimited
 	MaxPacketPerSecond int           // 0 = unlimited
-	BlackList          []string      // BlackList.txt
+	BlackList          []string      // BlackList
 }
 
-// LoadConfig reads ConnectServer.ini and, when blackListPath is not empty,
-// BlackList.txt.
-func LoadConfig(iniPath, blackListPath string) (Config, error) {
-	f, err := ini.Load(iniPath)
-	if err != nil {
-		return Config{}, err
+// ConfigFrom takes the [ConnectServer] table of config/server.toml.
+func ConfigFrom(f servercfg.ConnectServer) Config {
+	return Config{
+		Port:               f.ConnectServerPortTCP,
+		MaxIdle:            time.Duration(f.MaxConnectionIdle) * time.Second,
+		MaxPerIP:           f.MaxConnectionPerIP,
+		MaxPacketPerSecond: f.MaxPacketPerSecond,
+		BlackList:          f.BlackList,
 	}
-	const s = "ConnectServerInfo"
-	c := Config{
-		Port:               f.Int(s, "ConnectServerPortTCP", 44405),
-		MaxIdle:            time.Duration(f.Int(s, "MaxConnectionIdle", 60)) * time.Second,
-		MaxPerIP:           f.Int(s, "MaxConnectionPerIP", 0),
-		MaxPacketPerSecond: f.Int(s, "MaxPacketPerSecond", 0),
-	}
-	if blackListPath != "" {
-		lines, err := mutext.LoadFile(blackListPath)
-		if err != nil {
-			return Config{}, err
-		}
-		for _, l := range mutext.Table(lines) {
-			c.BlackList = append(c.BlackList, l.Tokens[0])
-		}
-	}
-	return c, nil
 }
 
 // Server is the TCP front end on ConnectServerPortTCP.

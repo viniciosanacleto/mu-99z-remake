@@ -15,10 +15,10 @@ func init() {
 	startHooks = append(startHooks, func(w *World) error {
 		de := &dropEventManager{}
 		w.ev().drop = de
-		if w.dataDir == "" {
+		if w.configDir == "" {
 			return nil
 		}
-		events, items, err := gamedata.LoadDropEvent(w.dataDir)
+		events, items, err := gamedata.LoadDropEvent(w.configDir)
 		if err != nil {
 			return err
 		}

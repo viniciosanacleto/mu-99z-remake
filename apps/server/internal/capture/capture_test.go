@@ -25,7 +25,7 @@ func repo(parts ...string) string {
 
 func testKeys(t *testing.T) Keys {
 	t.Helper()
-	k, err := LoadKeys(repo("data", "4.GameServer", "DATA"), repo("data", "Data", "Hack"),
+	k, err := LoadKeys(repo("config", "gameserver", "gameserver.toml"), repo("data", "Data", "Hack"),
 		repo("..", "client", "assets", "Data"))
 	if err != nil {
 		t.Fatal(err)

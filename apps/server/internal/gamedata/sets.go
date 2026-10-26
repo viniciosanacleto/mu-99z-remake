@@ -2,13 +2,10 @@ package gamedata
 
 import (
 	"fmt"
-	"path/filepath"
 	"sort"
-
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
-// Ancient (set) items: Item/SetItemType.txt (CSetItemType, loader
+// Ancient (set) items: SetItemType.txt (CSetItemType, loader
 // FUN_004f3910, lookup FUN_004f42b0) and Item/SetItemOption.txt
 // (CSetItemOption, 100 rows of 0xac bytes, loader FUN_004f2b50).
 
@@ -28,16 +25,21 @@ type SetItemTypes struct {
 	Order   []int
 }
 
-// LoadSetItemType reads Data/Item/SetItemType.txt.
-func LoadSetItemType(dataDir string) (*SetItemTypes, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "SetItemType.txt"))
+// LoadSetItemType reads the SetItemType table of config/data/item.toml;
+// the first row of an item wins.
+func LoadSetItemType(configDir string) (*SetItemTypes, error) {
+	f, err := loadItemConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	s := &SetItemTypes{ByIndex: map[int]SetItemType{}}
-	for _, l := range mutext.Table(lines) {
-		v := numRow(numFields(l), 0, 6)
-		r := SetItemType{Index: v[0]*512 + v[1], StatType: v[2], Option: [2]int{v[3], v[4]}, DropRate: v[5]}
+	for i, row := range f.SetItemType.Rows {
+		cat, idx, err := SplitItemRef(row.ItemIndex)
+		if err != nil {
+			return nil, fmt.Errorf("SetItemType row %d: %w", i+1, err)
+		}
+		r := SetItemType{Index: cat*512 + idx, StatType: row.StatType,
+			Option: [2]int{row.OptionIndex1, row.OptionIndex2}, DropRate: row.ItemDropRate}
 		if _, dup := s.ByIndex[r.Index]; dup {
 			continue
 		}
@@ -85,10 +87,10 @@ type SetItemOption struct {
 // SetItemOptions is the 100-entry table (Index -1 = empty slot).
 type SetItemOptions [100]SetItemOption
 
-// LoadSetItemOption reads Data/Item/SetItemOption.txt; rows with an index
-// >= 100 are ignored like the original.
-func LoadSetItemOption(dataDir string) (*SetItemOptions, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "SetItemOption.txt"))
+// LoadSetItemOption reads the SetItemOption table of config/data/item.toml;
+// rows with an index outside 0..99 are ignored like the original.
+func LoadSetItemOption(configDir string) (*SetItemOptions, error) {
+	f, err := loadItemConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
@@ -96,21 +98,16 @@ func LoadSetItemOption(dataDir string) (*SetItemOptions, error) {
 	for i := range t {
 		t[i].Index = -1
 	}
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) < 2+34 {
-			return nil, fmt.Errorf("SetItemOption.txt line %d: %d columns", l.No, len(l.Tokens))
+	for _, row := range f.SetItemOption.Rows {
+		r := SetItemOption{Index: row.Index, Name: row.Name}
+		for k, p := range row.Option {
+			r.Tier[k/2][k%2] = SetOptionPair{p[0], p[1]}
 		}
-		idx := numTok(l.Tokens[0], 0)
-		v := numRow(l.Tokens, 2, 34)
-		r := SetItemOption{Index: idx, Name: l.Tokens[1]}
-		for k := 0; k < 12; k++ {
-			r.Tier[k/2][k%2] = SetOptionPair{v[2*k], v[2*k+1]}
+		for k, p := range row.FullOption {
+			r.Full[k] = SetOptionPair{p[0], p[1]}
 		}
-		for k := 0; k < 5; k++ {
-			r.Full[k] = SetOptionPair{v[24+2*k], v[24+2*k+1]}
-		}
-		if idx >= 0 && idx < 100 {
-			t[idx] = r
+		if row.Index >= 0 && row.Index < 100 {
+			t[row.Index] = r
 		}
 	}
 	return t, nil

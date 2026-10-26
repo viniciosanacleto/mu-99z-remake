@@ -33,37 +33,37 @@ type dropTables struct {
 	setOptions *gamedata.SetItemOptions
 }
 
-func loadDropTables(dir string) (*dropTables, error) {
+func loadDropTables(cfgDir string) (*dropTables, error) {
 	t := &dropTables{}
 	var err error
-	if t.optionRate, err = gamedata.LoadItemOptionRate(dir); err != nil {
+	if t.optionRate, err = gamedata.LoadItemOptionRate(cfgDir); err != nil {
 		return nil, err
 	}
-	if t.mapRate, err = gamedata.LoadMapRateInfo(dir); err != nil {
+	if t.mapRate, err = gamedata.LoadMapRateInfo(cfgDir); err != nil {
 		return nil, err
 	}
-	if t.excRate, err = gamedata.LoadExcellentOptionRate(dir); err != nil {
+	if t.excRate, err = gamedata.LoadExcellentOptionRate(cfgDir); err != nil {
 		return nil, err
 	}
-	if t.itemDrop, err = gamedata.LoadItemDrop(dir); err != nil {
+	if t.itemDrop, err = gamedata.LoadItemDrop(cfgDir); err != nil {
 		return nil, err
 	}
-	if t.moneyDrop, err = gamedata.LoadItemMoneyDrop(dir); err != nil {
+	if t.moneyDrop, err = gamedata.LoadItemMoneyDrop(cfgDir); err != nil {
 		return nil, err
 	}
-	if t.guard, err = gamedata.LoadCustomGuard(dir); err != nil {
+	if t.guard, err = gamedata.LoadCustomGuard(cfgDir); err != nil {
 		return nil, err
 	}
-	if t.customMons, err = gamedata.LoadCustomMonsterRows(dir); err != nil {
+	if t.customMons, err = gamedata.LoadCustomMonsterRows(cfgDir); err != nil {
 		return nil, err
 	}
-	if t.bags, err = gamedata.LoadEventItemBags(dir); err != nil {
+	if t.bags, err = gamedata.LoadEventItemBags(cfgDir); err != nil {
 		return nil, err
 	}
-	if t.setTypes, err = gamedata.LoadSetItemType(dir); err != nil {
+	if t.setTypes, err = gamedata.LoadSetItemType(cfgDir); err != nil {
 		return nil, err
 	}
-	if t.setOptions, err = gamedata.LoadSetItemOption(dir); err != nil {
+	if t.setOptions, err = gamedata.LoadSetItemOption(cfgDir); err != nil {
 		return nil, err
 	}
 	return t, nil
@@ -76,10 +76,10 @@ func init() {
 	// drop.go sorts before monster.go: the tables are loaded before the
 	// start-up spawn so CustomMonster applies to it.
 	startHooks = append(startHooks, func(w *World) error {
-		if w.dataDir == "" {
+		if w.configDir == "" {
 			return nil
 		}
-		t, err := loadDropTables(w.dataDir)
+		t, err := loadDropTables(w.configDir)
 		if err != nil {
 			return fmt.Errorf("drops: %w", err)
 		}

@@ -2,16 +2,12 @@ package gamedata
 
 import (
 	"fmt"
-	"path/filepath"
-	"strconv"
-
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
 // Tables used by CalcCharacter (GameServer FUN_004c9790), CItem::Convert
 // (FUN_0048aed0) and the experience formulas (FUN_004c5a30/FUN_004c5ea0).
 
-// ClassInfo is a Character/DefaultClassInfo.txt row (CDefaultClassInfo,
+// ClassInfo is a DefaultClassInfo.txt row (CDefaultClassInfo,
 // 0x30-byte records at 0x12418a4): base stats and the float life/mana
 // coefficients CalcCharacter reads (+0x18 MaxLife, +0x1c MaxMana,
 // +0x20 LevelLife, +0x24 LevelMana, +0x28 VitalityToLife, +0x2c
@@ -24,34 +20,19 @@ type ClassInfo struct {
 	VitalityToLife, EnergyToMana                float32
 }
 
-// LoadClassInfo reads Data/Character/DefaultClassInfo.txt.
-func LoadClassInfo(dataDir string) (map[int]ClassInfo, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Character", "DefaultClassInfo.txt"))
+// LoadClassInfo reads the DefaultClassInfo table of
+// config/data/character.toml.
+func LoadClassInfo(configDir string) (map[int]ClassInfo, error) {
+	f, err := LoadCharacterConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	out := map[int]ClassInfo{}
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) < 12 {
-			return nil, fmt.Errorf("DefaultClassInfo.txt line %d: %d columns", l.No, len(l.Tokens))
-		}
-		var iv [6]int
-		for i := range iv {
-			if iv[i], err = l.Int(i); err != nil {
-				return nil, err
-			}
-		}
-		var fv [6]float32
-		for i := range fv {
-			f, err := strconv.ParseFloat(l.Tokens[6+i], 32)
-			if err != nil {
-				return nil, fmt.Errorf("DefaultClassInfo.txt line %d column %d: %w", l.No, 7+i, err)
-			}
-			fv[i] = float32(f)
-		}
-		out[iv[0]] = ClassInfo{Class: iv[0], Strength: iv[1], Dexterity: iv[2], Vitality: iv[3], Energy: iv[4],
-			Lead: iv[5], MaxLife: fv[0], MaxMana: fv[1], LevelLife: fv[2], LevelMana: fv[3],
-			VitalityToLife: fv[4], EnergyToMana: fv[5]}
+	for _, r := range f.DefaultClassInfo.Rows {
+		out[r.Class] = ClassInfo{Class: r.Class, Strength: r.Strength, Dexterity: r.Dexterity, Vitality: r.Vitality,
+			Energy: r.Energy, Lead: r.Leadership, MaxLife: float32(r.MaxLife), MaxMana: float32(r.MaxMana),
+			LevelLife: float32(r.LevelLife), LevelMana: float32(r.LevelMana), VitalityToLife: float32(r.VitalityToLife),
+			EnergyToMana: float32(r.EnergyToMana)}
 	}
 	return out, nil
 }
@@ -80,34 +61,24 @@ func (r ItemOptionRule) Matches(index, skill, luck, option int, excellent byte) 
 		(r.Excellent == -1 || int(excellent)&r.Excellent != 0)
 }
 
-// LoadItemOptions reads Data/Item/ItemOption.txt grouped by option slot.
-func LoadItemOptions(dataDir string) (map[int][]ItemOptionRule, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "ItemOption.txt"))
+// LoadItemOptions reads the ItemOption table of config/data/item.toml,
+// grouped by option slot.
+func LoadItemOptions(configDir string) (map[int][]ItemOptionRule, error) {
+	f, err := loadItemConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	out := map[int][]ItemOptionRule{}
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) < 9 {
-			return nil, fmt.Errorf("ItemOption.txt line %d: %d columns", l.No, len(l.Tokens))
-		}
-		var v [9]int
-		for i := range v {
-			if i == 3 || i == 4 {
-				if v[i], err = ParseItemRef(l.Tokens[i]); err != nil {
-					return nil, fmt.Errorf("ItemOption.txt line %d: %w", l.No, err)
-				}
-				if v[i] >= 0x2000 {
-					v[i] = -1
-				}
-				continue
-			}
-			if v[i], err = l.Int(i); err != nil {
-				return nil, err
+	for i, row := range f.ItemOption.Rows {
+		var rng [2]int
+		for k, ref := range [2]string{row.ItemIndexMin, row.ItemIndexMax} {
+			if rng[k], err = ParseItemRef(ref); err != nil {
+				return nil, fmt.Errorf("ItemOption row %d: %w", i+1, err)
 			}
 		}
-		r := ItemOptionRule{Index: v[0], OptionIndex: v[1], Value: v[2], ItemMin: v[3], ItemMax: v[4],
-			Skill: v[5], Luck: v[6], Additional: v[7], Excellent: v[8]}
+		r := ItemOptionRule{Index: row.Index, OptionIndex: row.OptionIndex, Value: row.OptionValue,
+			ItemMin: rng[0], ItemMax: rng[1], Skill: row.SkillSwitch, Luck: row.LuckSwitch,
+			Additional: row.Aditional, Excellent: row.Excellent}
 		out[r.Index] = append(out[r.Index], r)
 	}
 	return out, nil
@@ -124,34 +95,26 @@ type WingOption struct {
 	MaxNewOption    int
 }
 
-// LoadWingOptions reads Data/Item/WingOption.txt.
-func LoadWingOptions(dataDir string) (map[int]WingOption, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "WingOption.txt"))
+// LoadWingOptions reads the WingOption table of config/data/item.toml.
+func LoadWingOptions(configDir string) (map[int]WingOption, error) {
+	f, err := loadItemConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	out := map[int]WingOption{}
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) < 7 {
-			return nil, fmt.Errorf("WingOption.txt line %d: %d columns", l.No, len(l.Tokens))
-		}
-		idx, err := ParseItemRef(l.Tokens[0])
+	for i, r := range f.WingOption.Rows {
+		idx, err := ParseItemRef(r.ItemIndex)
 		if err != nil {
-			return nil, fmt.Errorf("WingOption.txt line %d: %w", l.No, err)
+			return nil, fmt.Errorf("WingOption row %d: %w", i+1, err)
 		}
-		var v [6]int
-		for i := range v {
-			if v[i], err = l.Int(1 + i); err != nil {
-				return nil, err
-			}
-		}
-		out[idx] = WingOption{ItemIndex: idx, DefenseConstA: v[0], IncDamageConstA: v[1], IncDamageConstB: v[2],
-			DecDamageConstA: v[3], DecDamageConstB: v[4], MaxNewOption: v[5]}
+		out[idx] = WingOption{ItemIndex: idx, DefenseConstA: r.DefenseConstA, IncDamageConstA: r.IncDamageConstA,
+			IncDamageConstB: r.IncDamageConstB, DecDamageConstA: r.DecDamageConstA, DecDamageConstB: r.DecDamageConstB,
+			MaxNewOption: r.MaxNewOption}
 	}
 	return out, nil
 }
 
-// CustomWing is a Custom/CustomWing.txt row (CCustomWing, 100 slots).
+// CustomWing is a CustomWing.txt row (CCustomWing, 100 slots).
 type CustomWing struct {
 	Index           int
 	ItemIndex       int
@@ -165,49 +128,35 @@ type CustomWing struct {
 	ModelType       int
 }
 
-// LoadCustomWings reads Data/Custom/CustomWing.txt keyed by item index.
-func LoadCustomWings(dataDir string) (map[int]CustomWing, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Custom", "CustomWing.txt"))
+// LoadCustomWings reads the CustomWing table of config/data/custom.toml
+// keyed by item index (Index outside 0..99 is ignored).
+func LoadCustomWings(configDir string) (map[int]CustomWing, error) {
+	f, err := LoadCustomConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	out := map[int]CustomWing{}
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) < 21 {
-			return nil, fmt.Errorf("CustomWing.txt line %d: %d columns", l.No, len(l.Tokens))
+	for i, r := range f.CustomWing.Rows {
+		idx, err := ParseItemRef(r.ItemIndex)
+		if err != nil {
+			return nil, fmt.Errorf("CustomWing row %d: %w", i+1, err)
 		}
-		var v [21]int
-		for i := range v {
-			if i == 1 {
-				if v[i], err = ParseItemRef(l.Tokens[i]); err != nil {
-					return nil, fmt.Errorf("CustomWing.txt line %d: %w", l.No, err)
-				}
-				continue
-			}
-			if v[i], err = l.Int(i); err != nil {
-				return nil, err
-			}
-		}
-		if v[0] < 0 || v[0] >= 100 {
+		if r.Index < 0 || r.Index >= 100 {
 			continue
 		}
-		w := CustomWing{Index: v[0], ItemIndex: v[1], DefenseConstA: v[2], IncDamageConstA: v[3],
-			IncDamageConstB: v[4], DecDamageConstA: v[5], DecDamageConstB: v[6]}
-		for i := 0; i < 3; i++ {
-			w.Option[i] = [2]int{v[7+2*i], v[8+2*i]}
-		}
-		for i := 0; i < 4; i++ {
-			w.NewOption[i] = [2]int{v[13+2*i], v[14+2*i]}
-		}
-		if len(l.Tokens) > 21 {
-			w.ModelType, _ = l.Int(21)
-		}
-		out[w.ItemIndex] = w
+		out[idx] = CustomWing{Index: r.Index, ItemIndex: idx, DefenseConstA: r.DefenseConstA,
+			IncDamageConstA: r.IncDamageConstA, IncDamageConstB: r.IncDamageConstB, DecDamageConstA: r.DecDamageConstA,
+			DecDamageConstB: r.DecDamageConstB,
+			Option: [3][2]int{{r.OptionIndex1, r.OptionValue1}, {r.OptionIndex2, r.OptionValue2},
+				{r.OptionIndex3, r.OptionValue3}},
+			NewOption: [4][2]int{{r.NewOptionIndex1, r.NewOptionValue1}, {r.NewOptionIndex2, r.NewOptionValue2},
+				{r.NewOptionIndex3, r.NewOptionValue3}, {r.NewOptionIndex4, r.NewOptionValue4}},
+			ModelType: r.ModelType}
 	}
 	return out, nil
 }
 
-// CustomAttribute is a Custom/CustomAttribute.txt row (CItemAttribute,
+// CustomAttribute is a CustomAttribute.txt row (CItemAttribute,
 // applied by FUN_00448070 for every equipped item).
 type CustomAttribute struct {
 	ItemIndex           int
@@ -222,35 +171,27 @@ type CustomAttribute struct {
 	ExcellentDamageRate int
 }
 
-// LoadCustomAttributes reads Data/Custom/CustomAttribute.txt.
-func LoadCustomAttributes(dataDir string) (map[int]CustomAttribute, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Custom", "CustomAttribute.txt"))
+// LoadCustomAttributes reads the CustomAttribute table of
+// config/data/custom.toml.
+func LoadCustomAttributes(configDir string) (map[int]CustomAttribute, error) {
+	f, err := LoadCustomConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	out := map[int]CustomAttribute{}
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) < 10 {
-			return nil, fmt.Errorf("CustomAttribute.txt line %d: %d columns", l.No, len(l.Tokens))
-		}
-		idx, err := ParseItemRef(l.Tokens[0])
+	for i, r := range f.CustomAttribute.Rows {
+		idx, err := ParseItemRef(r.ItemIndex)
 		if err != nil {
-			return nil, fmt.Errorf("CustomAttribute.txt line %d: %w", l.No, err)
+			return nil, fmt.Errorf("CustomAttribute row %d: %w", i+1, err)
 		}
-		var v [9]int
-		for i := range v {
-			if v[i], err = l.Int(1 + i); err != nil {
-				return nil, err
-			}
-		}
-		out[idx] = CustomAttribute{ItemIndex: idx, AttackSuccess: v[0], Defense: v[1], DefenseSuccess: v[2],
-			AddLife: v[3], DamageReflect: v[4], DamageMin: v[5], DamageMax: v[6], CriticalDamage: v[7],
-			ExcellentDamageRate: v[8]}
+		out[idx] = CustomAttribute{ItemIndex: idx, AttackSuccess: r.AttackSuccess, Defense: r.Defense,
+			DefenseSuccess: r.SucessDefense, AddLife: r.AddLife, DamageReflect: r.DamageReflect, DamageMin: r.DamageMin,
+			DamageMax: r.DamageMax, CriticalDamage: r.CriticalDamage, ExcellentDamageRate: r.ExcellentDamageRate}
 	}
 	return out, nil
 }
 
-// CustomMonster is a Custom/CustomMonster.txt row (CCustomMonster); only
+// CustomMonster is a CustomMonster.txt row (CCustomMonster); only
 // ExperienceRate is used by the experience formulas (FUN_004670a0).
 type CustomMonster struct {
 	Monster        int // -1 = any
@@ -258,24 +199,16 @@ type CustomMonster struct {
 	ExperienceRate int // -1 = keep 100
 }
 
-// LoadCustomMonsters reads Data/Custom/CustomMonster.txt in file order.
-func LoadCustomMonsters(dataDir string) ([]CustomMonster, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Custom", "CustomMonster.txt"))
+// LoadCustomMonsters reads the CustomMonster table of
+// config/data/custom.toml in file order.
+func LoadCustomMonsters(configDir string) ([]CustomMonster, error) {
+	f, err := LoadCustomConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	var out []CustomMonster
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) < 9 {
-			return nil, fmt.Errorf("CustomMonster.txt line %d: %d columns", l.No, len(l.Tokens))
-		}
-		var v [9]int
-		for i := range v {
-			if v[i], err = l.Int(i); err != nil {
-				return nil, err
-			}
-		}
-		out = append(out, CustomMonster{Monster: v[0], Map: v[1], ExperienceRate: v[8]})
+	for _, r := range f.CustomMonster.Rows {
+		out = append(out, CustomMonster{Monster: r.MonsterIndex, Map: r.MapNumber, ExperienceRate: r.ExperienceRate})
 	}
 	return out, nil
 }

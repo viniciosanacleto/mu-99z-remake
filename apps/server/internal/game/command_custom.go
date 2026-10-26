@@ -73,23 +73,23 @@ func (w *World) cw() *customWorld {
 
 func loadCustomWorld(w *World) error {
 	c := w.cw()
-	if w.dataDir == "" {
+	if w.configDir == "" {
 		return nil
 	}
 	var err error
-	if c.attack, err = gamedata.LoadCustomAttack(w.dataDir); err != nil {
+	if c.attack, err = gamedata.LoadCustomAttack(w.configDir); err != nil {
 		return err
 	}
-	if c.gifts, err = gamedata.LoadCustomGift(w.dataDir); err != nil {
+	if c.gifts, err = gamedata.LoadCustomGift(w.configDir); err != nil {
 		return err
 	}
-	if c.marriage, err = gamedata.LoadCustomMarriage(w.dataDir); err != nil {
+	if c.marriage, err = gamedata.LoadCustomMarriage(w.configDir); err != nil {
 		return err
 	}
-	if c.vip, err = gamedata.LoadCustomBuyVip(w.dataDir); err != nil {
+	if c.vip, err = gamedata.LoadCustomBuyVip(w.configDir); err != nil {
 		return err
 	}
-	c.pickBlock, err = gamedata.LoadCustomPick(w.dataDir)
+	c.pickBlock, err = gamedata.LoadCustomPick(w.configDir)
 	return err
 }
 

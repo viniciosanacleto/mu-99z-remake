@@ -148,16 +148,16 @@ func init() {
 func loadChaosData(w *World) error {
 	d := &chaosData{}
 	var err error
-	if d.bags, err = gamedata.LoadEventItemBags(w.dataDir); err != nil {
+	if d.bags, err = gamedata.LoadEventItemBags(w.configDir); err != nil {
 		return err
 	}
-	if d.rates, err = gamedata.LoadItemOptionRate(w.dataDir); err != nil {
+	if d.rates, err = gamedata.LoadItemOptionRate(w.configDir); err != nil {
 		return err
 	}
-	if d.exc, err = gamedata.LoadExcellentOptionRate(w.dataDir); err != nil {
+	if d.exc, err = gamedata.LoadExcellentOptionRate(w.configDir); err != nil {
 		return err
 	}
-	if d.sets, err = gamedata.LoadSetItemType(w.dataDir); err != nil {
+	if d.sets, err = gamedata.LoadSetItemType(w.configDir); err != nil {
 		return err
 	}
 	w.chaos = d

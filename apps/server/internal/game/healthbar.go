@@ -28,10 +28,10 @@ func (w *World) hpBar() *healthBar {
 func init() {
 	startHooks = append(startHooks, func(w *World) error {
 		w.wcx().hpBar = nil
-		if w.dataDir == "" {
+		if w.configDir == "" {
 			return nil
 		}
-		rows, err := gamedata.LoadCustomHealthBar(w.dataDir)
+		rows, err := gamedata.LoadCustomHealthBar(w.configDir)
 		w.hpBar().rows = rows
 		return err
 	})

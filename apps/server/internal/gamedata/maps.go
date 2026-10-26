@@ -1,11 +1,6 @@
 package gamedata
 
-import (
-	"fmt"
-	"path/filepath"
-
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
-)
+import ()
 
 // MapInfo is a MapManager.txt row. Columns written "*" read as -1.
 type MapInfo struct {
@@ -34,31 +29,22 @@ type MapInfo struct {
 // DefaultViewRange is used when a map has no MapManager row (local_14 = 0xc).
 const DefaultViewRange = 12
 
-// LoadMapManager reads Data/MapManager.txt.
-func LoadMapManager(dataDir string) (map[int]MapInfo, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "MapManager.txt"))
+// LoadMapManager reads the MapManager table of config/data/common.toml.
+func LoadMapManager(configDir string) (map[int]MapInfo, error) {
+	f, err := LoadCommonConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	out := map[int]MapInfo{}
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) != 20 {
-			return nil, fmt.Errorf("MapManager.txt line %d: %d columns", l.No, len(l.Tokens))
-		}
-		v := make([]int, 19)
-		for i := range v {
-			if v[i], err = l.Int(i); err != nil {
-				return nil, err
-			}
-		}
-		m := MapInfo{v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10], v[11],
-			v[12], v[13], v[14], v[15], v[16], v[17], v[18], l.Tokens[19]}
-		out[m.Number] = m
+	for _, r := range f.MapManager.Rows {
+		out[r.MapNumber] = MapInfo{r.MapNumber, r.NonPK, r.ViewRange, r.ExperienceRate, r.ItemDropRate, r.MoneyDropRate,
+			r.ExcItemDropRate, r.SetItemDropRate, r.ItemDrop, r.PKItemDrop, r.MonsterHPBar, r.TradeEnable, r.PShopEnable,
+			r.ChatEnable, r.PartyEnable, r.DuelEnable, r.GuildWarEnable, r.SpawnGate, r.RespawnGate, r.Name}
 	}
 	return out, nil
 }
 
-// Gate is a Move/Gate.txt row.
+// Gate is a Gate.txt row.
 type Gate struct {
 	Index      int
 	Flag       int // 1 = entrance, 2 = destination (0 = plain destination)
@@ -74,32 +60,17 @@ type Gate struct {
 	AccountLvl int
 }
 
-// LoadGates reads Data/Move/Gate.txt.
-func LoadGates(dataDir string) (map[int]Gate, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Move", "Gate.txt"))
+// LoadGates reads the Gate table of config/data/move.toml.
+func LoadGates(configDir string) (map[int]Gate, error) {
+	f, err := LoadMoveConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	out := map[int]Gate{}
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) < 12 {
-			return nil, fmt.Errorf("Gate.txt line %d: %d columns", l.No, len(l.Tokens))
-		}
-		v := make([]int, len(l.Tokens))
-		for i := range v {
-			if v[i], err = l.Int(i); err != nil {
-				return nil, err
-			}
-		}
-		g := Gate{Index: v[0], Flag: v[1], Map: v[2], X1: v[3], Y1: v[4], X2: v[5], Y2: v[6],
-			TargetGate: v[7], TargetDir: v[8], MinLevel: v[9], MaxLevel: v[10], MinReset: v[11], MaxReset: -1, AccountLvl: -1}
-		if len(v) > 12 {
-			g.MaxReset = v[12]
-		}
-		if len(v) > 13 {
-			g.AccountLvl = v[13]
-		}
-		out[g.Index] = g
+	for _, r := range f.Gate.Rows {
+		out[r.GateIndex] = Gate{Index: r.GateIndex, Flag: r.GateFlag, Map: r.MapNumber, X1: r.RangeStartX,
+			Y1: r.RangeStartY, X2: r.RangeEndX, Y2: r.RangeEndY, TargetGate: r.TargetGate, TargetDir: r.TargetDir,
+			MinLevel: r.MinLevel, MaxLevel: r.MaxLevel, MinReset: r.MinReset, MaxReset: r.MaxReset, AccountLvl: r.AccountLevel}
 	}
 	return out, nil
 }
@@ -124,39 +95,18 @@ type MapServerMove struct {
 	NextServer int // -1 = "*"
 }
 
-// LoadMapServer reads Data/MapServerInfo.txt.
-func LoadMapServer(dataDir string) (*MapServer, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "MapServerInfo.txt"))
-	if err != nil {
-		return nil, err
-	}
-	secs, err := mutext.Sections(lines)
+// LoadMapServer reads the MapServerInfo table of config/data/common.toml.
+func LoadMapServer(configDir string) (*MapServer, error) {
+	f, err := LoadCommonConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	ms := &MapServer{}
-	for _, s := range secs {
-		for _, l := range s.Rows {
-			switch s.Index {
-			case 0:
-				code, _ := l.Int(0)
-				group, _ := l.Int(1)
-				init, _ := l.Int(2)
-				port, err := l.Int(4)
-				if err != nil {
-					return nil, err
-				}
-				ms.Servers = append(ms.Servers, MapServerEntry{code, group, init, l.Tokens[3], port})
-			case 1:
-				v := [4]int{}
-				for i := range v {
-					if v[i], err = l.Int(i); err != nil {
-						return nil, err
-					}
-				}
-				ms.Moves = append(ms.Moves, MapServerMove{v[0], v[1], v[2], v[3]})
-			}
-		}
+	for _, r := range f.MapServerInfo.Server {
+		ms.Servers = append(ms.Servers, MapServerEntry{r.ServerCode, r.ServerGroup, r.InitSetVal, r.IpAddress, r.Port})
+	}
+	for _, r := range f.MapServerInfo.Move {
+		ms.Moves = append(ms.Moves, MapServerMove{r.ServerCode, r.MoveOption, r.NextMap, r.NextServerCode})
 	}
 	return ms, nil
 }

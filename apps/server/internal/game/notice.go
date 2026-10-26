@@ -1,14 +1,12 @@
 package game
 
 import (
-	"fmt"
-	"path/filepath"
 	"time"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
-// Periodic notices (CNotice, Lang/<lang>/Notice.txt): one rotating list per
+// Periodic notices (CNotice, Lang/<lang>/Notice.txt in config/data/lang.toml): one rotating list per
 // client language. FUN_004c0490 loads them; FUN_004c06d0 (called from the
 // object timer) sends the current notice to every playing player of that
 // language when its RepeatTime has elapsed and moves to the next one.
@@ -28,29 +26,21 @@ type noticeList struct {
 	last  time.Time
 }
 
-func loadNotices(dataDir string, now time.Time) ([3]noticeList, error) {
+// loadNotices reads the Notice tables of config/data/lang.toml.
+func loadNotices(configDir string, now time.Time) ([3]noticeList, error) {
 	var out [3]noticeList
-	for i, lang := range langDirs {
-		lines, err := mutext.LoadFile(filepath.Join(dataDir, "Lang", lang, "Notice.txt"))
-		if err != nil {
-			return out, err
-		}
+	f, err := gamedata.LoadLangConfig(configDir)
+	if err != nil {
+		return out, err
+	}
+	for i, lang := range f.Languages() {
 		out[i].last = now
-		for _, l := range mutext.Table(lines) {
-			if len(l.Tokens) != 10 {
-				return out, fmt.Errorf("Lang/%s/Notice.txt line %d: %d columns", lang, l.No, len(l.Tokens))
-			}
-			v := make([]int, 10)
-			for k := 1; k < 10; k++ {
-				if v[k], err = l.Int(k); err != nil {
-					return out, err
-				}
-			}
+		for _, r := range lang.Notice.Rows {
 			out[i].items = append(out[i].items, notice{
-				text: l.Tokens[0], typ: byte(v[1]), count: byte(v[2]), opacity: byte(v[3]),
-				delay: uint16(v[4]),
-				color: uint32(v[5]) | uint32(v[6])<<8 | uint32(v[7])<<16 | uint32(v[3])<<24,
-				speed: byte(v[8]), repeat: time.Duration(v[9]) * time.Second,
+				text: r.Message, typ: byte(r.Type), count: byte(r.Count), opacity: byte(r.Opacity),
+				delay: uint16(r.Delay),
+				color: uint32(r.ColorR) | uint32(r.ColorG)<<8 | uint32(r.ColorB)<<16 | uint32(r.Opacity)<<24,
+				speed: byte(r.Speed), repeat: time.Duration(r.RepeatTime) * time.Second,
 			})
 		}
 	}
@@ -85,7 +75,7 @@ func (w *World) noticeTick() {
 func init() {
 	startHooks = append(startHooks, func(w *World) error {
 		var err error
-		w.notices, err = loadNotices(w.dataDir, w.now())
+		w.notices, err = loadNotices(w.configDir, w.now())
 		return err
 	})
 	tick1000Hooks = append(tick1000Hooks, (*World).noticeTick)

@@ -32,10 +32,10 @@ func (w *World) summon() *summonScroll {
 func init() {
 	startHooks = append(startHooks, func(w *World) error {
 		w.wcx().summon = nil
-		if w.dataDir == "" {
+		if w.configDir == "" {
 			return nil
 		}
-		d, err := gamedata.LoadSummonScroll(w.dataDir)
+		d, err := gamedata.LoadSummonScroll(w.configDir)
 		w.summon().data = d
 		return err
 	})

@@ -2,12 +2,8 @@ package game
 
 import (
 	"encoding/binary"
-	"fmt"
 	"math"
-	"os"
-	"path/filepath"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
@@ -318,24 +314,16 @@ type moveSummonRow struct {
 	AccountLevel        [4]int
 }
 
-func loadMoveSummon(dataDir string) ([]moveSummonRow, error) {
-	path := filepath.Join(dataDir, "Move", "MoveSummon.txt")
-	if _, err := os.Stat(path); err != nil {
-		return nil, nil
-	}
-	lines, err := mutext.LoadFile(path)
+// loadMoveSummon reads the MoveSummon table of config/data/move.toml.
+func loadMoveSummon(configDir string) ([]moveSummonRow, error) {
+	rows, err := gamedata.LoadMoveSummon(configDir)
 	if err != nil {
 		return nil, err
 	}
 	var out []moveSummonRow
-	for _, l := range mutext.Table(lines) {
-		v, err := intsOf(l, 13)
-		if err != nil {
-			return nil, fmt.Errorf("MoveSummon.txt: %w", err)
-		}
-		out = append(out, moveSummonRow{Map: v[0], X1: v[1], Y1: v[2], X2: v[3], Y2: v[4],
-			MinLevel: v[5], MaxLevel: v[6], MinReset: v[7], MaxReset: v[8],
-			AccountLevel: [4]int{v[9], v[10], v[11], v[12]}})
+	for _, r := range rows {
+		out = append(out, moveSummonRow{Map: r.Map, X1: r.StartX, Y1: r.StartY, X2: r.EndX, Y2: r.EndY,
+			MinLevel: r.MinLevel, MaxLevel: r.MaxLevel, MinReset: r.MinReset, MaxReset: r.MaxReset, AccountLevel: r.AL})
 	}
 	return out, nil
 }
@@ -500,10 +488,10 @@ func (w *World) handleTeleportAlly(o *Object, p []byte) {
 func init() {
 	worldHandlers[0xB0] = (*World).handleTeleportAlly
 	startHooks = append(startHooks, func(w *World) error {
-		if w.dataDir == "" {
+		if w.configDir == "" {
 			return nil
 		}
-		rows, err := loadMoveSummon(w.dataDir)
+		rows, err := loadMoveSummon(w.configDir)
 		if err != nil {
 			return err
 		}

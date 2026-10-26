@@ -16,7 +16,8 @@ Server commands (run from `apps/server`):
 
 - `go test ./...` — full test suite (add `-race` for the network code)
 - `go vet ./...` and `gofmt -l .`
-- `go run ./cmd/muserver -data data` — run the service: ConnectServer plus one GameServer instance per folder in `-instances` (default `4.GameServer,5.GameServerCS`); `-db` takes a PostgreSQL URL, otherwise an in-memory store is used. The original `BlackList.txt` blocks 127.0.0.1, so pass `-blacklist` with another file for local testing
+- `go run ./cmd/muserver` — run the service: ConnectServer plus one GameServer instance per file in `-instances` (default `gameserver,gameserver-cs`, read from `<-config>/gameserver/<name>.toml`); `-config` (default `config`) is the TOML configuration, `-data` (default `data`) the binary files; `-db` takes a PostgreSQL URL, otherwise an in-memory store is used. The original BlackList (`config/server.toml`) blocks 127.0.0.1, so pass `-blacklist none` for local testing
+- `go run ./cmd/configconv -from <MuServer folder> -to config [-only group,...]` — convert the original `.ini`/`.dat`/`.txt` configuration into the TOML files of `apps/server/config` (format in `docs/server-plan/11-arquivos-de-configuracao.md` section 0)
 - PostgreSQL store tests run when `MU_TEST_DATABASE_URL` is set
 - `go run ./cmd/migrate -from sqlserver://... | -script file.sql -to postgres://...` — import an original MuOnline database
 - `go run ./cmd/muproxy ...` — capture proxy between the original client and a server (decoded log, golden files); usage in `docs/server-plan/15-captura.md`
@@ -48,4 +49,4 @@ The original files (a customized 97D/99z emulator and its client) are in `/Users
 ## Assets and licensing
 
 - Ignore licensing of the original files (Webzen / emulator authors). Don't add license or redistribution caveats to docs or code, and don't block work on them.
-- When the rewrite needs original data files, copy them into this repository instead of referencing the external folder: server data (`MuServer/Data/**`, `DATA/*.dat`, `.ini`) into `apps/server/data/`. Keep the original relative paths and file names. Copy only what the current task uses.
+- The server's configuration is TOML in `apps/server/config/`, generated from the original text files by `cmd/configconv`. When the rewrite needs another original text file (`MuServer/Data/**`, `DATA/*.dat`, `.ini`), add it to the converter (`internal/config/legacy`, with its TOML schema in `internal/gamedata` or `internal/config`) and regenerate; never add a reader of the original formats to the server. Binary files (terrain, keys, Lua scripts, images) are copied into `apps/server/data/` with their original relative paths and file names. Bring in only what the current task uses, instead of referencing the external folder.

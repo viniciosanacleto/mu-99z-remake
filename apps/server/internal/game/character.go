@@ -182,7 +182,8 @@ func (w *World) handleCharCreate(o *Object, p []byte) {
 	})
 }
 
-// badSyntax is the DataServer BadSyntax.txt check (strstr on the name).
+// badSyntax is the DataServer BadSyntax.txt check (strstr on the name),
+// list from config/server.toml [DataServer] BadSyntax.
 func (w *World) badSyntax(name string) bool {
 	for _, bad := range w.badWords {
 		if bad != "" && strings.Contains(name, bad) {

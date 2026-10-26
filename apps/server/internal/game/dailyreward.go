@@ -48,10 +48,10 @@ func (w *World) daily() *dailyReward {
 func init() {
 	startHooks = append(startHooks, func(w *World) error {
 		w.wcx().daily = nil
-		if w.dataDir == "" {
+		if w.configDir == "" {
 			return nil
 		}
-		rows, err := gamedata.LoadDailyReward(w.dataDir)
+		rows, err := gamedata.LoadDailyReward(w.configDir)
 		w.daily().rows = rows
 		return err
 	})

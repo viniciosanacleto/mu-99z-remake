@@ -3,13 +3,9 @@ package game
 import (
 	"context"
 	"encoding/binary"
-	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/gsconfig"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
@@ -17,39 +13,7 @@ import (
 // withConfigs is withConfig for several files at once.
 func withConfigs(t *testing.T, b *bareWorld, files map[string]map[string]string) {
 	t.Helper()
-	dir := t.TempDir()
-	for _, name := range gsconfig.Files {
-		fn := "GameServerInfo - " + name + ".dat"
-		data, err := os.ReadFile(repoData("4.GameServer", "DATA", fn))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if kv := files[name]; kv != nil {
-			lines := strings.Split(string(data), "\n")
-			done := map[string]bool{}
-			for i, l := range lines {
-				k := strings.TrimSpace(strings.SplitN(l, "=", 2)[0])
-				if v, ok := kv[k]; ok {
-					lines[i] = k + " = " + v
-					done[k] = true
-				}
-			}
-			for k, v := range kv {
-				if !done[k] {
-					lines = append(lines, k+" = "+v)
-				}
-			}
-			data = []byte(strings.Join(lines, "\n"))
-		}
-		if err := os.WriteFile(filepath.Join(dir, fn), data, 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	cfg, err := gsconfig.Load(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	b.cfg = cfg
+	b.cfg = instanceConfig(t, "gameserver", files)
 }
 
 // settle runs the continuations the async work posts until none comes

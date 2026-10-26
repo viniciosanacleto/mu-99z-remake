@@ -54,17 +54,17 @@ func init() {
 func loadDataUses(w *World) error {
 	w.du = nil
 	d := w.dus()
-	if w.dataDir == "" {
+	if w.configDir == "" {
 		return nil
 	}
 	var err error
-	if d.freebies, err = gamedata.LoadDefaultClassFreebies(w.dataDir); err != nil {
+	if d.freebies, err = gamedata.LoadDefaultClassFreebies(w.configDir); err != nil {
 		return err
 	}
-	if d.requirements, err = gamedata.LoadCommandRequirement(w.dataDir); err != nil {
+	if d.requirements, err = gamedata.LoadCommandRequirement(w.configDir); err != nil {
 		return err
 	}
-	bl, err := gamedata.LoadBlackList(w.dataDir)
+	bl, err := gamedata.LoadBlackList(w.configDir)
 	if err != nil {
 		return err
 	}
@@ -74,29 +74,29 @@ func loadDataUses(w *World) error {
 	for _, hw := range bl.HWIDs {
 		d.blackHWIDs[hw] = true
 	}
-	evo, err := gamedata.LoadCustomEvolution(w.dataDir)
+	evo, err := gamedata.LoadCustomEvolution(w.configDir)
 	if err != nil {
 		return err
 	}
 	d.evolution = sortedEvolution(evo)
-	if d.itemLevels, err = gamedata.LoadItemLevel(w.dataDir); err != nil {
+	if d.itemLevels, err = gamedata.LoadItemLevel(w.configDir); err != nil {
 		return err
 	}
-	if d.speedRules, err = gamedata.LoadHackSkillSpeedCheck(w.dataDir); err != nil {
+	if d.speedRules, err = gamedata.LoadHackSkillSpeedCheck(w.configDir); err != nil {
 		return err
 	}
-	moves, err := gamedata.LoadMonsterMove(w.dataDir)
+	moves, err := gamedata.LoadMonsterMove(w.configDir)
 	if err != nil {
 		return err
 	}
 	w.setMonsterMoves(moves)
-	sched, err := gamedata.LoadMonsterSchedule(w.dataDir)
+	sched, err := gamedata.LoadMonsterSchedule(w.configDir)
 	if err != nil {
 		return err
 	}
 	w.setMonsterSchedule(sched)
 	if w.cfg.ServerType == 1 {
-		g, err := gamedata.LoadCustomGHRS(w.dataDir)
+		g, err := gamedata.LoadCustomGHRS(w.configDir)
 		if err != nil {
 			return err
 		}

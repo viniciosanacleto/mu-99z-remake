@@ -52,13 +52,13 @@ type Keys struct {
 	ClientEnc, ClientDec crypto.ModulusKeys
 }
 
-// LoadKeys reads the stream keys from the GameServer DATA folder
-// (gsDataDir, e.g. data/4.GameServer/DATA), Enc2.dat/Dec1.dat from
+// LoadKeys reads the stream keys from a GameServer instance file
+// (gsConfig, e.g. config/gameserver/gameserver.toml), Enc2.dat/Dec1.dat from
 // serverHackDir (data/Data/Hack) and Enc1.dat/Dec2.dat from clientDataDir
 // (the client's Data folder).
-func LoadKeys(gsDataDir, serverHackDir, clientDataDir string) (Keys, error) {
+func LoadKeys(gsConfig, serverHackDir, clientDataDir string) (Keys, error) {
 	var k Keys
-	cfg, err := gsconfig.Load(gsDataDir)
+	cfg, err := gsconfig.Load(gsConfig)
 	if err != nil {
 		return k, err
 	}

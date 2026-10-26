@@ -15,8 +15,9 @@ import (
 
 // Line is one non-empty line of tokens.
 type Line struct {
-	No     int      // 1-based line number in the file
-	Tokens []string // quotes removed
+	No      int      // 1-based line number in the file
+	Tokens  []string // quotes removed
+	Comment string   // text after "//" on a line with tokens (the Comment column)
 }
 
 // Section is a block of rows closed by "end". Index is the leading section
@@ -32,18 +33,18 @@ func Tokenize(data []byte) ([]Line, error) {
 	sc := bufio.NewScanner(bytes.NewReader(data))
 	sc.Buffer(make([]byte, 0, 64*1024), 1<<20)
 	for no := 1; sc.Scan(); no++ {
-		toks, err := splitLine(sc.Text())
+		toks, comment, err := splitLine(sc.Text())
 		if err != nil {
 			return nil, fmt.Errorf("line %d: %w", no, err)
 		}
 		if len(toks) > 0 {
-			lines = append(lines, Line{No: no, Tokens: toks})
+			lines = append(lines, Line{No: no, Tokens: toks, Comment: comment})
 		}
 	}
 	return lines, sc.Err()
 }
 
-func splitLine(s string) ([]string, error) {
+func splitLine(s string) ([]string, string, error) {
 	var toks []string
 	for i := 0; i < len(s); {
 		c := s[i]
@@ -51,11 +52,11 @@ func splitLine(s string) ([]string, error) {
 		case c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == 0xA0:
 			i++
 		case c == '/' && i+1 < len(s) && s[i+1] == '/':
-			return toks, nil
+			return toks, strings.TrimSpace(s[i+2:]), nil
 		case c == '"':
 			end := strings.IndexByte(s[i+1:], '"')
 			if end < 0 {
-				return nil, fmt.Errorf("unterminated string")
+				return nil, "", fmt.Errorf("unterminated string")
 			}
 			toks = append(toks, s[i+1:i+1+end])
 			i += end + 2
@@ -69,7 +70,7 @@ func splitLine(s string) ([]string, error) {
 			i = j
 		}
 	}
-	return toks, nil
+	return toks, "", nil
 }
 
 // Table returns the rows of a plain table: every line up to the first "end".
@@ -144,4 +145,78 @@ func (l Line) String(i int) (string, error) {
 		return "", fmt.Errorf("line %d: missing column %d", l.No, i+1)
 	}
 	return l.Tokens[i], nil
+}
+
+// NumTok reproduces the number reader of the original tokenizer
+// (FUN_004e0d70 + _ftol): a token made of digits, '.', '-' or '*' is a
+// number ("*" = -1); any other token (a word such as "N") leaves the
+// previous number in place, so it reads as the value of the previous
+// numeric column.
+func NumTok(tok string, prev int) int {
+	if tok == "" {
+		return prev
+	}
+	c := tok[0]
+	if !(c >= '0' && c <= '9' || c == '.' || c == '-' || c == '*') {
+		return prev
+	}
+	end := 0
+	for end < len(tok) && (tok[end] >= '0' && tok[end] <= '9' || tok[end] == '.' || tok[end] == '-' || tok[end] == '*') {
+		end++
+	}
+	s := tok[:end]
+	if s == "*" {
+		return -1
+	}
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0 // atof of a malformed number
+	}
+	return int(f) // _ftol truncates
+}
+
+// NumFields splits the tokens of a line the way the original reads them:
+// a comma ends a number ("07,000" and "0," "8" are two numbers each).
+func NumFields(l Line) []string {
+	var out []string
+	for _, t := range l.Tokens {
+		for _, p := range strings.Split(t, ",") {
+			if p != "" {
+				out = append(out, p)
+			}
+		}
+	}
+	return out
+}
+
+// NumRow reads n numbers from fields starting at from (missing columns read
+// as the previous value, like the original reading past the line).
+func NumRow(f []string, from, n int) []int {
+	out := make([]int, n)
+	prev := 0
+	for i := 0; i < n; i++ {
+		tok := ""
+		if from+i < len(f) {
+			tok = f[from+i]
+		}
+		prev = NumTok(tok, prev)
+		out[i] = prev
+	}
+	return out
+}
+
+// StreamRows flattens the numeric fields of rows into one token stream and
+// cuts it into records of n numbers, like the original reader, which does
+// not care about line breaks. A short last record repeats its last value
+// (numRow), as the original keeps the previous number.
+func StreamRows(rows []Line, n int) [][]int {
+	var f []string
+	for _, l := range rows {
+		f = append(f, NumFields(l)...)
+	}
+	var out [][]int
+	for i := 0; i < len(f); i += n {
+		out = append(out, NumRow(f, i, n))
+	}
+	return out
 }

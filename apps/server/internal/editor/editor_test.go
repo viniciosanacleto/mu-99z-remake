@@ -16,9 +16,9 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
-func dataDir() string {
+func configDir() string {
 	_, file, _, _ := runtime.Caller(0)
-	return filepath.Join(filepath.Dir(file), "..", "..", "data", "Data")
+	return filepath.Join(filepath.Dir(file), "..", "..", "config")
 }
 
 var (
@@ -31,12 +31,12 @@ var (
 func testCatalog(t *testing.T) *Catalog {
 	t.Helper()
 	catOnce.Do(func() {
-		items, err := gamedata.LoadItems(dataDir())
+		items, err := gamedata.LoadItems(configDir())
 		if err != nil {
 			catErr = err
 			return
 		}
-		opts, err := gamedata.LoadItemOptions(dataDir())
+		opts, err := gamedata.LoadItemOptions(configDir())
 		if err != nil {
 			catErr = err
 			return

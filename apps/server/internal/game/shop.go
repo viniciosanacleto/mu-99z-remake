@@ -22,7 +22,7 @@ type shop struct {
 // loadShops reads ShopManager.txt + Shop/*.txt and registers the NPC talk
 // handlers of the shop NPC classes.
 func (w *World) loadShops() error {
-	list, err := gamedata.LoadShops(w.dataDir)
+	list, err := gamedata.LoadShops(w.configDir)
 	if err != nil {
 		return err
 	}

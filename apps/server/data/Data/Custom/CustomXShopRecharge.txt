@@ -1,9 +1,0 @@
-; Configurado pelo GM no X Shop. Credito manual.
-[Recarga]
-Ativo=0
-Titular=
-ChavePix=
-CopiaECola=
-ImagemURL=
-ImagemBMP=
-Valor=

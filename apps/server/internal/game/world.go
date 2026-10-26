@@ -12,7 +12,6 @@ import (
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/auth"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/gsconfig"
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/charset"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/crypto"
@@ -29,18 +28,22 @@ type Reporter interface {
 
 // Options configure an instance.
 type Options struct {
-	DataDir  string // MuServer/Data equivalent
-	Config   *gsconfig.Config
-	Store    store.Store
-	Auth     *auth.Service
-	Reporter Reporter
-	Log      *slog.Logger
-	Now      func() time.Time
+	DataDir   string // MuServer/Data equivalent (binary files: terrain, keys, Lua)
+	ConfigDir string // apps/server/config: the TOML tables under data/
+	Config    *gsconfig.Config
+	Store     store.Store
+	Auth      *auth.Service
+	Reporter  Reporter
+	Log       *slog.Logger
+	Now       func() time.Time
 	// PublicIP, when set, replaces the MapServerInfo.txt address sent in
 	// server move packets.
 	PublicIP string
 	// Hub links the instances of the process (nil = private hub).
 	Hub *Hub
+	// BadSyntax is the DataServer list of forbidden name parts
+	// (config/server.toml [DataServer]).
+	BadSyntax []string
 }
 
 // Data is the static game data shared by the instance.
@@ -74,7 +77,8 @@ type World struct {
 	notices        [3]noticeList
 	publicIP       string
 	hub            *Hub
-	dataDir        string    // Options.DataDir (modules load their tables from it)
+	dataDir        string    // Options.DataDir (binary data files)
+	configDir      string    // Options.ConfigDir (modules load their tables from it)
 	moveData       *moveData // move.go / chat.go / teleport.go tables
 	hackRules      *hackRules
 	messages       messageTable
@@ -134,7 +138,7 @@ func New(o Options) (*World, error) {
 	if err != nil {
 		return nil, err
 	}
-	data, err := loadData(o.DataDir, cfg)
+	data, err := loadData(o.DataDir, o.ConfigDir, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -142,22 +146,20 @@ func New(o Options) (*World, error) {
 		log: o.Log.With("server", cfg.ServerName, "code", cfg.ServerCode), now: o.Now,
 		keys:   gscodec.Keys{Stream: stream, Encrypt: enc, Decrypt: dec},
 		events: make(chan func(), 4096), nextUser: PlayerStart, publicIP: o.PublicIP,
-		dataDir: o.DataDir}
+		dataDir: o.DataDir, configDir: o.ConfigDir}
 	if w.terrains, err = gamedata.LoadTerrains(o.DataDir); err != nil {
 		return nil, err
 	}
-	if w.hackRules, err = loadHackRules(o.DataDir); err != nil {
+	if w.hackRules, err = loadHackRules(o.ConfigDir); err != nil {
 		return nil, err
 	}
-	if w.messages, err = loadMessages(o.DataDir); err != nil {
+	if w.messages, err = loadMessages(o.ConfigDir); err != nil {
 		return nil, err
 	}
-	if w.connectMembers, err = loadNameList(filepath.Join(o.DataDir, "ConnectMember.txt")); err != nil {
+	if w.connectMembers, err = loadConnectMembers(o.ConfigDir); err != nil {
 		return nil, err
 	}
-	if w.badWords, err = loadNameList(filepath.Join(o.DataDir, "..", "2.DataServer", "BadSyntax.txt")); err != nil {
-		return nil, err
-	}
+	w.badWords = o.BadSyntax
 	for i := range w.objects {
 		w.objects[i] = newObject(i)
 	}
@@ -174,25 +176,25 @@ func New(o Options) (*World, error) {
 	return w, nil
 }
 
-func loadData(dir string, cfg *gsconfig.Config) (*Data, error) {
+func loadData(dir, cfgDir string, cfg *gsconfig.Config) (*Data, error) {
 	d := &Data{Custom: charset.NoCustom{}}
 	var err error
-	if d.Maps, err = gamedata.LoadMapManager(dir); err != nil {
+	if d.Maps, err = gamedata.LoadMapManager(cfgDir); err != nil {
 		return nil, err
 	}
-	if d.Gates, err = gamedata.LoadGates(dir); err != nil {
+	if d.Gates, err = gamedata.LoadGates(cfgDir); err != nil {
 		return nil, err
 	}
-	if d.MapServer, err = gamedata.LoadMapServer(dir); err != nil {
+	if d.MapServer, err = gamedata.LoadMapServer(cfgDir); err != nil {
 		return nil, err
 	}
-	if d.Skills, err = gamedata.LoadSkills(dir); err != nil {
+	if d.Skills, err = gamedata.LoadSkills(cfgDir); err != nil {
 		return nil, err
 	}
-	if d.Items, err = gamedata.LoadItems(dir); err != nil {
+	if d.Items, err = gamedata.LoadItems(cfgDir); err != nil {
 		return nil, err
 	}
-	if d.Custom, err = loadCustomTables(dir); err != nil {
+	if d.Custom, err = loadCustomTables(cfgDir); err != nil {
 		return nil, err
 	}
 	d.Experience = gamedata.NewExperience(int32(cfg.Int("Common", "ExperienceMultiplierConstA", 0)),
@@ -451,15 +453,11 @@ func (w *World) objectOf(c *conn) *Object {
 
 func (w *World) String() string { return fmt.Sprintf("World(%s)", w.cfg.ServerName) }
 
-// loadNameList reads a one-column table (ConnectMember.txt, BadSyntax.txt).
-func loadNameList(path string) ([]string, error) {
-	lines, err := mutext.LoadFile(path)
+// loadConnectMembers reads the ConnectMember table of config/data/common.toml.
+func loadConnectMembers(configDir string) ([]string, error) {
+	f, err := gamedata.LoadCommonConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
-	var out []string
-	for _, l := range mutext.Table(lines) {
-		out = append(out, l.Tokens[0])
-	}
-	return out, nil
+	return append([]string(nil), f.ConnectMember.Account...), nil
 }

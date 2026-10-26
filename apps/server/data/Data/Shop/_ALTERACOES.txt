@@ -1,5 +1,0 @@
-ALTERACOES REALIZADAS
-1. Potions com stack/durabilidade acima de 50 foram limitadas a 50, reduzindo o custo total por compra no NPC.
-2. Large Healing/Mana Potion com ItemLevel 11 foram normalizadas para ItemLevel 0.
-3. Bar de Lorencia (255 - Lumen the Barmaid): adicionados Scroll of Emperor, Broken Sword, Tear of Elf e Soul Shard of Wizard.
-4. Shops que ja tinham stacks menores (15/10) foram preservados.

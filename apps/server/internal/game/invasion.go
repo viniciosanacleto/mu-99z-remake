@@ -43,10 +43,10 @@ type invasionState struct {
 func init() {
 	startHooks = append(startHooks, func(w *World) error {
 		e := w.ev()
-		if w.dataDir == "" {
+		if w.configDir == "" {
 			return nil
 		}
-		list, err := gamedata.LoadInvasions(w.dataDir)
+		list, err := gamedata.LoadInvasions(w.configDir)
 		if err != nil {
 			return err
 		}

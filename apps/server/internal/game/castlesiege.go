@@ -16,9 +16,6 @@ package game
 
 import (
 	"context"
-	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
@@ -191,7 +188,7 @@ func (w *World) csEnabled() bool { return w.castle != nil && w.cfg.ServerType ==
 
 // csLoad is CCastleSiege::LoadData (FUN_0041ab60).
 func (w *World) csLoad() error {
-	d, err := gamedata.LoadCastleSiege(w.dataDir)
+	d, err := gamedata.LoadCastleSiege(w.configDir)
 	if err != nil {
 		return err
 	}
@@ -233,36 +230,16 @@ func (w *World) csLoad() error {
 func dateKey(t time.Time) int { y, m, d := t.Date(); return y*10000 + int(m)*100 + d }
 
 // csResetEventKeys is the WritePrivateProfileStringA("...", "0") block
-// of FUN_0041ab60.
+// of FUN_0041ab60, applied to the [Event] table of the instance file.
 func (w *World) csResetEventKeys() {
-	if w.cfg.Dir == "" {
-		return
-	}
-	path := filepath.Join(w.cfg.Dir, "GameServerInfo - Event.dat")
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return
-	}
-	keys := []string{"CastleSiegeCycleStartYear", "CastleSiegeCycleStartMonth", "CastleSiegeCycleStartDay",
+	for _, key := range []string{"CastleSiegeCycleStartYear", "CastleSiegeCycleStartMonth", "CastleSiegeCycleStartDay",
 		"CastleSiegeSpecificState", "CastleSiegeStateStartYear", "CastleSiegeStateStartMonth",
-		"CastleSiegeStateStartDay", "CastleSiegeStateStartHour", "CastleSiegeStateStartMinute"}
-	lines := strings.Split(string(b), "\n")
-	for i, l := range lines {
-		k, _, ok := strings.Cut(l, "=")
-		if !ok {
-			continue
-		}
-		for _, key := range keys {
-			if strings.EqualFold(strings.TrimSpace(k), key) {
-				cr := strings.HasSuffix(l, "\r")
-				lines[i] = key + "=0"
-				if cr {
-					lines[i] += "\r"
-				}
-			}
+		"CastleSiegeStateStartDay", "CastleSiegeStateStartHour", "CastleSiegeStateStartMinute"} {
+		if err := w.cfg.SetInt("Event", key, 0); err != nil {
+			w.log.Warn("castle siege: reset event keys", "err", err)
+			return
 		}
 	}
-	os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0o644)
 }
 
 func (w *World) csStore() store.CastleStore {

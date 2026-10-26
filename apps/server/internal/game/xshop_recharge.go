@@ -9,13 +9,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/ini"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
 // XShop recharge (CCustomXShop, 0x404a60 / 0x405030 / 0x405350): the PIX
-// payment data of Custom/CustomXShopRecharge.txt that the client shows in
-// the X Shop, with the QR code as a bit matrix. Players read it with FA 0E;
+// payment data of CustomXShopRecharge.txt (the CustomXShopRecharge table of
+// config/data/xshop.toml) that the client shows in the X Shop, with the QR
+// code as a bit matrix (a BMP of data/Data/Custom). Players read it with FA 0E;
 // a GM (Authority 8) replaces it with FA 10 uploads.
 //
 // Deliberate deviation: when ImagemBMP is missing or unreadable the
@@ -71,13 +72,11 @@ func packetRechargeChunk(off int, d *[rechargeSize]byte) []byte {
 // never written).
 func packetRechargeAck() []byte { return newPacket(frame.C1, 0xFA, 0x11, 5) }
 
-func (w *World) rechargePath() string {
-	c := w.cw2()
-	if c.xshopPath == "" {
-		return ""
-	}
-	return filepath.Join(filepath.Dir(c.xshopPath), "CustomXShopRecharge.txt")
-}
+// rechargePath is the xshop.toml holding the CustomXShopRecharge table.
+func (w *World) rechargePath() string { return w.cw2().xshopPath }
+
+// rechargeImageDir is the folder of the QR images (bare ImagemBMP names).
+func (w *World) rechargeImageDir() string { return filepath.Join(w.dataDir, "Custom") }
 
 // fieldText returns the NUL-terminated text of a fixed field.
 func fieldText(b []byte) string {
@@ -88,7 +87,7 @@ func fieldText(b []byte) string {
 }
 
 // xshopRecharge is FUN_00404a60: at most every 3 s, the block is built from
-// CustomXShopRecharge.txt (next to CustomXShop.txt) and sent in 48 chunks.
+// the CustomXShopRecharge table and sent in 48 chunks.
 func (w *World) xshopRecharge(o *Object, p []byte) {
 	if !playerReady(o) {
 		return
@@ -108,29 +107,30 @@ func (w *World) xshopRecharge(o *Object, p []byte) {
 	}
 }
 
-// rechargeBlock reads [Recarga] Ativo, Titular, ChavePix, CopiaECola,
-// ImagemURL and ImagemBMP (a bare file name is taken from the directory of
-// the file), converts the image (FUN_00401bf0) and validates the result
-// (FUN_00401140): an invalid block is sent with Ativo 0.
+// rechargeBlock reads the CustomXShopRecharge table ([Recarga] of the
+// original: Ativo, Titular, ChavePix, CopiaECola, ImagemURL and ImagemBMP,
+// a bare file name being taken from data/Data/Custom), converts the image
+// (FUN_00401bf0) and validates the result (FUN_00401140): an invalid block
+// is sent with Ativo 0.
 func (w *World) rechargeBlock(path string) *[rechargeSize]byte {
 	d := new([rechargeSize]byte)
-	f, err := ini.Load(path)
-	if err != nil {
-		f = ini.Parse(nil)
+	var r gamedata.XShopRechargeFile
+	if f, err := gamedata.LoadXShopConfig(path); err == nil {
+		r = f.CustomXShopRecharge
 	}
-	if f.Int("Recarga", "Ativo", 0) == 1 {
+	if r.Ativo == 1 {
 		d[rcActive] = 1
 	}
-	copy(d[rcHolder:], f.String("Recarga", "Titular", "", 0x60))
-	copy(d[rcKey:], f.String("Recarga", "ChavePix", "", 0x80))
-	copy(d[rcCopy:], f.String("Recarga", "CopiaECola", "", 0x200))
-	url := f.String("Recarga", "ImagemURL", "", 0x100)
+	copy(d[rcHolder:], cutField(r.Titular, 0x60))
+	copy(d[rcKey:], cutField(r.ChavePix, 0x80))
+	copy(d[rcCopy:], cutField(r.CopiaECola, 0x200))
+	url := cutField(r.ImagemURL, 0x100)
 	copy(d[rcURL:], url)
-	img := f.String("Recarga", "ImagemBMP", "", 0x104)
+	img := cutField(r.ImagemBMP, 0x104)
 	loaded := false
 	if img != "" {
 		if !strings.ContainsAny(img, `\/`) {
-			img = filepath.Join(filepath.Dir(path), img)
+			img = filepath.Join(w.rechargeImageDir(), img)
 		}
 		if loaded = loadRechargeImage(img, d); !loaded {
 			w.log.Warn("[CustomXShop][RECHARGE] Cache local invalido/ausente", "file", img)
@@ -379,9 +379,9 @@ func (w *World) xshopRechargeUpload(o *Object, p []byte) {
 	w.send(o, packetRechargeAck())
 }
 
-// rechargeSave is FUN_00405350: the matrix goes to a new "pix*.tmp.bmp"
-// next to the file (when it has a side) and the [Recarga] file is
-// rewritten through a temporary file. Old images are not removed.
+// rechargeSave is FUN_00405350: the matrix goes to a new "pix*.tmp.bmp" in
+// data/Data/Custom (when it has a side) and the CustomXShopRecharge table
+// is rewritten (gamedata.WriteXShopRecharge). Old images are not removed.
 func (w *World) rechargeSave(d *[rechargeSize]byte) bool {
 	c := w.cw2()
 	path := w.rechargePath()
@@ -390,7 +390,7 @@ func (w *World) rechargeSave(d *[rechargeSize]byte) bool {
 	}
 	c.saving = true
 	defer func() { c.saving = false }()
-	dir := filepath.Dir(path)
+	dir := w.rechargeImageDir()
 	bmpName := ""
 	if binary.LittleEndian.Uint16(d[rcQRSize:]) != 0 {
 		f, err := os.CreateTemp(dir, "pix*.tmp")
@@ -411,31 +411,27 @@ func (w *World) rechargeSave(d *[rechargeSize]byte) bool {
 		}
 		bmpName = tmp + ".bmp"
 	}
-	fail := func(tmp string) bool {
-		os.Remove(tmp)
+	imgBase := ""
+	if bmpName != "" {
+		imgBase = filepath.Base(bmpName)
+	}
+	err := gamedata.WriteXShopRecharge(path, gamedata.XShopRechargeFile{Ativo: int(d[rcActive]),
+		Titular: fieldText(d[rcHolder : rcHolder+0x60]), ChavePix: fieldText(d[rcKey : rcKey+0x80]),
+		CopiaECola: fieldText(d[rcCopy : rcCopy+0x200]), ImagemURL: fieldText(d[rcURL : rcURL+0x100]),
+		ImagemBMP: imgBase, Valor: fieldText(d[rcValue : rcValue+0x10])})
+	if err != nil {
 		if bmpName != "" {
 			os.Remove(bmpName)
 		}
 		return false
 	}
-	f, err := os.CreateTemp(dir, "cfg*.tmp")
-	if err != nil {
-		return fail("")
-	}
-	tmp := f.Name()
-	imgBase := ""
-	if bmpName != "" {
-		imgBase = filepath.Base(bmpName)
-	}
-	_, err = fmt.Fprintf(f, "; Configurado pelo GM no X Shop. Credito manual.\r\n[Recarga]\r\nAtivo=%d\r\n"+
-		"Titular=%s\r\nChavePix=%s\r\nCopiaECola=%s\r\nImagemURL=%s\r\nImagemBMP=%s\r\nValor=%s\r\n",
-		d[rcActive], fieldText(d[rcHolder:rcHolder+0x60]), fieldText(d[rcKey:rcKey+0x80]), fieldText(d[rcCopy:rcCopy+0x200]),
-		fieldText(d[rcURL:rcURL+0x100]), imgBase, fieldText(d[rcValue:rcValue+0x10]))
-	if cerr := f.Close(); err == nil {
-		err = cerr
-	}
-	if err != nil || os.Rename(tmp, path) != nil {
-		return fail(tmp)
-	}
 	return true
+}
+
+// cutField is GetPrivateProfileStringA into a buffer of size bytes.
+func cutField(s string, size int) string {
+	if len(s) > size-1 {
+		return s[:size-1]
+	}
+	return s
 }

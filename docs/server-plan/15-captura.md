@@ -8,7 +8,7 @@
   - **ConnectServer**: framing C1/C2 puro nos dois sentidos (`internal/protocol/frame`);
   - **GameServer, cliente → servidor**: cifra de fluxo, framing, C3/C4 (SimpleModulus com `Dec1.dat` + serial) e XOR32 (`gscodec.Server`);
   - **GameServer, servidor → cliente**: cifra de fluxo, framing e C3/C4 (SimpleModulus com `Dec2.dat` do cliente + serial) (`gscodec.Client`).
-- A cifra de fluxo vem de `CustomerName`/`ServerSerial` do `GameServerInfo - Common.dat` (`FUN_00487a60`). As duas instâncias usam a mesma chave (`WizardTeam` / `A9kT3wX5rBz7fQ1u`).
+- A cifra de fluxo vem de `CustomerName`/`ServerSerial` de `[Common]` no arquivo da instância (`GameServerInfo - Common.dat` do original, `FUN_00487a60`). As duas instâncias usam a mesma chave (`WizardTeam` / `A9kT3wX5rBz7fQ1u`).
 - Grava um log com horário, uma linha por pacote:
 
   ```
@@ -47,8 +47,8 @@ go run ./cmd/muproxy -kind game -listen 127.0.0.1:55900 -upstream 192.168.1.1:55
 | `-listen` | `127.0.0.1:44405` | endereço onde o cliente conecta |
 | `-upstream` | (obrigatório) | servidor real |
 | `-kind` | `connect` | `connect` ou `game` |
-| `-data` | `data` | raiz dos dados do servidor |
-| `-gs-data` | `<data>/4.GameServer/DATA` | `Common.dat` (chave de fluxo) |
+| `-data` | `data` | raiz dos dados binários do servidor |
+| `-gs-config` | `config/gameserver/gameserver.toml` | arquivo da instância (`[Common]`: chave de fluxo) |
 | `-server-keys` | `<data>/Data/Hack` | `Enc2.dat`, `Dec1.dat` |
 | `-client-keys` | `../client/assets/Data` | `Enc1.dat`, `Dec2.dat` |
 | `-log` | `-` (stdout) | arquivo de log (append) |
@@ -62,7 +62,7 @@ Para o cliente original passar pelo proxy:
 2. Com `-rewrite`, o `-rewrite-host` precisa ser alcançável pelo cliente, por exemplo o IP do Mac na LAN quando o cliente roda numa VM Windows.
 3. Sem `-rewrite`, o cliente conecta direto no GameServer da lista. Nesse caso rode um segundo proxy `-kind game` e faça o endereço da lista apontar para ele.
 
-O `BlackList.txt` original do ConnectServer bloqueia `127.0.0.1`. Com o `muserver` local, use `-blacklist` sem entradas (veja `13-progresso.md`).
+A `BlackList` original do ConnectServer (`config/server.toml`) bloqueia `127.0.0.1`. Com o `muserver` local, use `-blacklist none`.
 
 ## Vetores golden
 

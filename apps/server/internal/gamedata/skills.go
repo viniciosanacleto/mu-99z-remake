@@ -1,13 +1,8 @@
 package gamedata
 
-import (
-	"fmt"
-	"path/filepath"
+import ()
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
-)
-
-// SkillInfo is a Skill/SkillList.txt row (CSkillManager).
+// SkillInfo is a SkillList.txt row (CSkillManager).
 type SkillInfo struct {
 	Index          int
 	Name           string
@@ -27,31 +22,18 @@ type SkillInfo struct {
 	Class          [5]int // DW DK FE MG DL
 }
 
-// LoadSkills reads Data/Skill/SkillList.txt.
-func LoadSkills(dataDir string) (map[int]SkillInfo, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Skill", "SkillList.txt"))
+// LoadSkills reads the SkillList table of config/data/skill.toml.
+func LoadSkills(configDir string) (map[int]SkillInfo, error) {
+	f, err := LoadSkillConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	out := map[int]SkillInfo{}
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) != 20 {
-			return nil, fmt.Errorf("SkillList.txt line %d: %d columns", l.No, len(l.Tokens))
-		}
-		v := make([]int, 20)
-		for i := range v {
-			if i == 1 {
-				continue
-			}
-			if v[i], err = l.Int(i); err != nil {
-				return nil, err
-			}
-		}
-		s := SkillInfo{Index: v[0], Name: l.Tokens[1], Damage: v[2], Mana: v[3], BP: v[4], Range: v[5],
-			Radio: v[6], Delay: v[7], Type: v[8], Effect: v[9], ReqLevel: v[10], ReqEnergy: v[11],
-			ReqLeadership: v[12], ReqKillCount: v[13], ReqGuildStatus: v[14],
-			Class: [5]int{v[15], v[16], v[17], v[18], v[19]}}
-		out[s.Index] = s
+	for _, r := range f.SkillList.Rows {
+		out[r.Index] = SkillInfo{Index: r.Index, Name: r.Name, Damage: r.Damage, Mana: r.MP, BP: r.BP, Range: r.Range,
+			Radio: r.Radio, Delay: r.Delay, Type: r.Type, Effect: r.Effect, ReqLevel: r.ReqLevel, ReqEnergy: r.ReqEnergy,
+			ReqLeadership: r.ReqLeadership, ReqKillCount: r.ReqKillCount, ReqGuildStatus: r.ReqGuildStatus,
+			Class: [5]int{r.DW, r.DK, r.FE, r.MG, r.DL}}
 	}
 	return out, nil
 }

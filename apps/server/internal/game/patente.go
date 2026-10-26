@@ -13,10 +13,10 @@ import (
 
 func init() {
 	startHooks = append(startHooks, func(w *World) error {
-		if w.dataDir == "" {
+		if w.configDir == "" {
 			return nil
 		}
-		p, err := gamedata.LoadCustomPatente(w.dataDir)
+		p, err := gamedata.LoadCustomPatente(w.configDir)
 		w.wcx().patente = p
 		return err
 	})

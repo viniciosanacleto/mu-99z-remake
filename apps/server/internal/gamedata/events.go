@@ -2,52 +2,14 @@ package gamedata
 
 import (
 	"fmt"
-	"path/filepath"
-
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
-// Event data files (Data/Event/*.dat) shared by the event managers.
+// Event data (Event/*.dat) shared by the event managers.
 
 // Schedule is a start time row: Year Month Day DayOfWeek Hour Minute
 // Second, "*" = -1 (CScheduleManager, FUN_004e53c0).
 type Schedule struct {
 	Year, Month, Day, DayOfWeek, Hour, Minute, Second int
-}
-
-func scheduleRow(l mutext.Line) (Schedule, error) {
-	var v [7]int
-	for i := range v {
-		n, err := l.Int(i)
-		if err != nil {
-			return Schedule{}, err
-		}
-		v[i] = n
-	}
-	return Schedule{v[0], v[1], v[2], v[3], v[4], v[5], v[6]}, nil
-}
-
-func loadSections(path string) ([]mutext.Section, error) {
-	lines, err := mutext.LoadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return mutext.Sections(lines)
-}
-
-func rowInts(l mutext.Line, n int) ([]int, error) {
-	if len(l.Tokens) < n {
-		return nil, fmt.Errorf("line %d: %d columns, want %d", l.No, len(l.Tokens), n)
-	}
-	v := make([]int, n)
-	for i := range v {
-		x, err := l.Int(i)
-		if err != nil {
-			return nil, err
-		}
-		v[i] = x
-	}
-	return v, nil
 }
 
 // DevilSquare is Event/DevilSquare.dat (CDevilSquare::Load, FUN_0046deb0):
@@ -60,41 +22,30 @@ type DevilSquare struct {
 	Experience, Money                          [6][10]int
 }
 
-// LoadDevilSquare reads Data/Event/DevilSquare.dat.
-func LoadDevilSquare(dataDir string) (*DevilSquare, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Event", "DevilSquare.dat"))
+// LoadDevilSquare reads the DevilSquare table of config/data/event.toml;
+// reward rows outside squares 0..5 are skipped.
+func LoadDevilSquare(configDir string) (*DevilSquare, error) {
+	f, err := LoadEventConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
+	t := f.DevilSquare
 	d := &DevilSquare{}
-	for _, s := range secs {
-		for _, l := range s.Rows {
-			switch s.Index {
-			case 0:
-				v, err := rowInts(l, 4)
-				if err != nil {
-					return nil, err
-				}
-				d.ReadyTime, d.StandTime, d.EventTime, d.CloseTime = v[0], v[1], v[2], v[3]
-			case 1:
-				sc, err := scheduleRow(l)
-				if err != nil {
-					return nil, err
-				}
-				d.Schedule = append(d.Schedule, sc)
-			case 2, 3:
-				v, err := rowInts(l, 11)
-				if err != nil {
-					return nil, err
-				}
-				if v[0] < 0 || v[0] >= 6 {
-					continue
-				}
-				dst := &d.Experience[v[0]]
-				if s.Index == 3 {
-					dst = &d.Money[v[0]]
-				}
-				copy(dst[:], v[1:])
+	for _, r := range t.Time {
+		d.ReadyTime, d.StandTime, d.EventTime, d.CloseTime = r.WarningTime, r.NotifyTime, r.EventTime, r.CloseTime
+	}
+	for _, r := range t.Schedule {
+		d.Schedule = append(d.Schedule, r.Schedule())
+	}
+	for i, rows := range [2][]DevilRewardRow{t.Experience, t.Money} {
+		for _, r := range rows {
+			if r.EventIndex < 0 || r.EventIndex >= 6 {
+				continue
+			}
+			if i == 0 {
+				d.Experience[r.EventIndex] = r.Reward
+			} else {
+				d.Money[r.EventIndex] = r.Reward
 			}
 		}
 	}
@@ -111,21 +62,18 @@ type EntryLevel struct {
 // Square, 2 Chaos Castle, 3 Kalima, ...).
 type EventEntryLevel map[int][]EntryLevel
 
-// LoadEventEntryLevel reads Data/Event/EventEntryLevel.dat (CEventEntryLevel,
-// FUN_0047aec0).
-func LoadEventEntryLevel(dataDir string) (EventEntryLevel, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Event", "EventEntryLevel.dat"))
+// LoadEventEntryLevel reads the EventEntryLevel table of
+// config/data/event.toml (CEventEntryLevel, FUN_0047aec0).
+func LoadEventEntryLevel(configDir string) (EventEntryLevel, error) {
+	f, err := LoadEventConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	out := EventEntryLevel{}
-	for _, s := range secs {
-		for _, l := range s.Rows {
-			v, err := rowInts(l, 5)
-			if err != nil {
-				return nil, err
-			}
-			out[s.Index] = append(out[s.Index], EntryLevel{v[0], v[1], v[2], v[3], v[4]})
+	for _, s := range f.EventEntryLevel.Sections {
+		for _, r := range s.Rows {
+			out[s.Section] = append(out[s.Section], EntryLevel{r.Index, r.CommonMinLevel, r.CommonMaxLevel,
+				r.SpecialMinLevel, r.SpecialMaxLevel})
 		}
 	}
 	return out, nil
@@ -157,20 +105,17 @@ type StageSpawn struct {
 	Event, Level, Stage, Monster, RegenTime int
 }
 
-// LoadEventStageSpawn reads Data/Event/EventStageSpawn.dat (CEventSpawnStage).
-func LoadEventStageSpawn(dataDir string) ([]StageSpawn, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Event", "EventStageSpawn.dat"))
+// LoadEventStageSpawn reads the EventStageSpawn table of
+// config/data/event.toml (CEventSpawnStage).
+func LoadEventStageSpawn(configDir string) ([]StageSpawn, error) {
+	f, err := LoadEventConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	var out []StageSpawn
-	for _, s := range secs {
-		for _, l := range s.Rows {
-			v, err := rowInts(l, 4)
-			if err != nil {
-				return nil, err
-			}
-			out = append(out, StageSpawn{s.Index, v[0], v[1], v[2], v[3]})
+	for _, s := range f.EventStageSpawn.Sections {
+		for _, r := range s.Rows {
+			out = append(out, StageSpawn{s.Section, r.Level, r.Stage, r.MonsterIndex, r.MaxRegenTime})
 		}
 	}
 	return out, nil
@@ -188,47 +133,36 @@ type BloodCastle struct {
 	StatueX, StatueY                           [7]int
 }
 
-// LoadBloodCastle reads Data/Event/BloodCastle.dat.
-func LoadBloodCastle(dataDir string) (*BloodCastle, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Event", "BloodCastle.dat"))
+// LoadBloodCastle reads the BloodCastle table of config/data/event.toml;
+// rows outside castles 0..6 are skipped.
+func LoadBloodCastle(configDir string) (*BloodCastle, error) {
+	f, err := LoadEventConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
+	t := f.BloodCastle
 	d := &BloodCastle{}
-	for _, s := range secs {
-		for _, l := range s.Rows {
-			switch s.Index {
+	for _, r := range t.Time {
+		d.ReadyTime, d.StandTime, d.EventTime, d.CloseTime = r.WarningTime, r.NotifyTime, r.EventTime, r.CloseTime
+	}
+	for _, r := range t.Schedule {
+		d.Schedule = append(d.Schedule, r.Schedule())
+	}
+	for sec, rows := range [4][]EventIndexPairRow{t.Experience, t.Money, t.Life, t.Statue} {
+		for _, r := range rows {
+			i := r.EventIndex
+			if i < 0 || i >= 7 {
+				continue
+			}
+			switch sec {
 			case 0:
-				v, err := rowInts(l, 4)
-				if err != nil {
-					return nil, err
-				}
-				d.ReadyTime, d.StandTime, d.EventTime, d.CloseTime = v[0], v[1], v[2], v[3]
+				d.Experience[i] = [2]int{r.Value1, r.Value2}
 			case 1:
-				sc, err := scheduleRow(l)
-				if err != nil {
-					return nil, err
-				}
-				d.Schedule = append(d.Schedule, sc)
-			case 2, 3, 4, 5:
-				v, err := rowInts(l, 3)
-				if err != nil {
-					return nil, err
-				}
-				i := v[0]
-				if i < 0 || i >= 7 {
-					continue
-				}
-				switch s.Index {
-				case 2:
-					d.Experience[i] = [2]int{v[1], v[2]}
-				case 3:
-					d.Money[i] = [2]int{v[1], v[2]}
-				case 4:
-					d.GateLife[i], d.StatueLife[i] = v[1], v[2]
-				case 5:
-					d.StatueX[i], d.StatueY[i] = v[1], v[2]
-				}
+				d.Money[i] = [2]int{r.Value1, r.Value2}
+			case 2:
+				d.GateLife[i], d.StatueLife[i] = r.Value1, r.Value2
+			case 3:
+				d.StatueX[i], d.StatueY[i] = r.Value1, r.Value2
 			}
 		}
 	}
@@ -264,9 +198,10 @@ type InvasionSpawn struct {
 	KillMessage                    int
 }
 
-// LoadInvasions reads Data/Event/InvasionManager.dat (20 events at most).
-func LoadInvasions(dataDir string) ([]*Invasion, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Event", "InvasionManager.dat"))
+// LoadInvasions reads the InvasionManager table of config/data/event.toml
+// (20 events at most; rows of other event indexes are ignored).
+func LoadInvasions(configDir string) ([]*Invasion, error) {
+	f, err := LoadEventConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
@@ -281,48 +216,31 @@ func LoadInvasions(dataDir string) ([]*Invasion, error) {
 		}
 		return out[i]
 	}
-	for _, s := range secs {
-		for _, l := range s.Rows {
-			idx, err := l.Int(0)
-			if err != nil {
-				return nil, err
+	t := f.InvasionManager
+	for _, r := range t.Schedule {
+		if inv := get(r.EventIndex); inv != nil {
+			inv.Schedule = append(inv.Schedule, r.Schedule())
+		}
+	}
+	for _, r := range t.Settings {
+		if inv := get(r.EventIndex); inv != nil {
+			inv.RespawnMsg, inv.DespawnMsg, inv.Boss, inv.BossKilledMsg, inv.Time, inv.EffectType =
+				r.RespawnMessage, r.DespawnMessage, r.MonsterBossIndex, r.BossKilledMessage, r.InvasionTime, r.EffectType
+			if r.EventName != "" {
+				inv.Name = r.EventName
 			}
-			inv := get(idx)
-			if inv == nil {
-				continue
-			}
-			rest := mutext.Line{No: l.No, Tokens: l.Tokens[1:]}
-			switch s.Index {
-			case 0:
-				sc, err := scheduleRow(rest)
-				if err != nil {
-					return nil, err
-				}
-				inv.Schedule = append(inv.Schedule, sc)
-			case 1:
-				v, err := rowInts(rest, 6)
-				if err != nil {
-					return nil, err
-				}
-				inv.RespawnMsg, inv.DespawnMsg, inv.Boss, inv.BossKilledMsg, inv.Time, inv.EffectType =
-					v[0], v[1], v[2], v[3], v[4], v[5]
-				if len(rest.Tokens) > 6 {
-					inv.Name = rest.Tokens[6]
-				}
-			case 2:
-				v, err := rowInts(rest, 3)
-				if err != nil {
-					return nil, err
-				}
-				inv.Groups[v[0]] = append(inv.Groups[v[0]], InvasionGroup{v[0], v[1], v[2]})
-			case 3:
-				v, err := rowInts(rest, 13)
-				if err != nil {
-					return nil, err
-				}
-				inv.Spawns = append(inv.Spawns, InvasionSpawn{v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7],
-					v[8], v[9], v[10], v[11], v[12]})
-			}
+		}
+	}
+	for _, r := range t.Group {
+		if inv := get(r.EventIndex); inv != nil {
+			inv.Groups[r.Group] = append(inv.Groups[r.Group], InvasionGroup{r.Group, r.MapNumber, r.Stage})
+		}
+	}
+	for _, r := range t.Spawn {
+		if inv := get(r.EventIndex); inv != nil {
+			inv.Spawns = append(inv.Spawns, InvasionSpawn{r.Group, r.MonsterIndex, r.SpawnRadius, r.MapNumber,
+				r.RangeStartX, r.RangeStartY, r.RangeEndX, r.RangeEndY, r.MaxSpawnCount, r.Stage, r.RegenType,
+				r.RegenTime, r.KillMessage})
 		}
 	}
 	return out, nil
@@ -346,8 +264,9 @@ type Bonus struct {
 	Map          int
 }
 
-// loadTimedEvents reads sections 0 and 1 of an event file into 20 slots.
-func loadTimedEvents(secs []mutext.Section) ([]*TimedEvent, error) {
+// buildTimedEvents fills 20 event slots from the schedule (section 0) and
+// settings (section 1) rows; other event indexes are ignored.
+func buildTimedEvents(schedule []EventScheduleRow, settings []TimedEventSettingsRow) []*TimedEvent {
 	out := make([]*TimedEvent, 20)
 	get := func(i int) *TimedEvent {
 		if i < 0 || i >= len(out) {
@@ -358,65 +277,35 @@ func loadTimedEvents(secs []mutext.Section) ([]*TimedEvent, error) {
 		}
 		return out[i]
 	}
-	for _, s := range secs {
-		if s.Index > 1 {
-			continue
+	for _, r := range schedule {
+		if ev := get(r.EventIndex); ev != nil {
+			ev.Schedule = append(ev.Schedule, r.Schedule())
 		}
-		for _, l := range s.Rows {
-			idx, err := l.Int(0)
-			if err != nil {
-				return nil, err
-			}
-			ev := get(idx)
-			if ev == nil {
-				continue
-			}
-			rest := mutext.Line{No: l.No, Tokens: l.Tokens[1:]}
-			if s.Index == 0 {
-				sc, err := scheduleRow(rest)
-				if err != nil {
-					return nil, err
-				}
-				ev.Schedule = append(ev.Schedule, sc)
-				continue
-			}
-			v, err := rowInts(rest, 3)
-			if err != nil {
-				return nil, err
-			}
-			ev.StartMsg, ev.FinalMsg, ev.Time = v[0], v[1], v[2]
-			if len(rest.Tokens) > 3 {
-				ev.Name = rest.Tokens[3]
+	}
+	for _, r := range settings {
+		if ev := get(r.EventIndex); ev != nil {
+			ev.StartMsg, ev.FinalMsg, ev.Time = r.StartMessage, r.FinalMessage, r.EventTime
+			if r.EventName != "" {
+				ev.Name = r.EventName
 			}
 		}
 	}
-	return out, nil
+	return out
 }
 
-// LoadBonusManager reads Data/Event/BonusManager.dat (CBonusManager).
-func LoadBonusManager(dataDir string) ([]*TimedEvent, []Bonus, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Event", "BonusManager.dat"))
+// LoadBonusManager reads the BonusManager table of config/data/event.toml
+// (CBonusManager).
+func LoadBonusManager(configDir string) ([]*TimedEvent, []Bonus, error) {
+	f, err := LoadEventConfig(configDir)
 	if err != nil {
 		return nil, nil, err
 	}
-	events, err := loadTimedEvents(secs)
-	if err != nil {
-		return nil, nil, err
-	}
+	t := f.BonusManager
 	var bonuses []Bonus
-	for _, s := range secs {
-		if s.Index != 2 {
-			continue
-		}
-		for _, l := range s.Rows {
-			v, err := rowInts(l, 7)
-			if err != nil {
-				return nil, nil, err
-			}
-			bonuses = append(bonuses, Bonus{v[0], v[1], [4]int{v[2], v[3], v[4], v[5]}, v[6]})
-		}
+	for _, r := range t.Bonus {
+		bonuses = append(bonuses, Bonus{r.EventIndex, r.BonusIndex, r.BonusValue, r.BonusMapNumber})
 	}
-	return events, bonuses, nil
+	return buildTimedEvents(t.Schedule, t.Settings), bonuses, nil
 }
 
 // ChaosCastle is Event/ChaosCastle.dat (CChaosCastle::Load, FUN_00430330):
@@ -430,40 +319,27 @@ type ChaosCastle struct {
 	Experience                                 [6][2]int
 }
 
-// LoadChaosCastle reads Data/Event/ChaosCastle.dat. Rows of section 2
-// outside 0..5 are skipped ("Invalid experience level" in the original).
-func LoadChaosCastle(dataDir string) (*ChaosCastle, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Event", "ChaosCastle.dat"))
+// LoadChaosCastle reads the ChaosCastle table of config/data/event.toml.
+// Experience rows outside 0..5 are skipped ("Invalid experience level" in
+// the original).
+func LoadChaosCastle(configDir string) (*ChaosCastle, error) {
+	f, err := LoadEventConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
+	t := f.ChaosCastle
 	d := &ChaosCastle{}
-	for _, s := range secs {
-		for _, l := range s.Rows {
-			switch s.Index {
-			case 0:
-				v, err := rowInts(l, 4)
-				if err != nil {
-					return nil, err
-				}
-				d.ReadyTime, d.StandTime, d.EventTime, d.CloseTime = v[0], v[1], v[2], v[3]
-			case 1:
-				sc, err := scheduleRow(l)
-				if err != nil {
-					return nil, err
-				}
-				d.Schedule = append(d.Schedule, sc)
-			case 2:
-				v, err := rowInts(l, 3)
-				if err != nil {
-					return nil, err
-				}
-				if v[0] < 0 || v[0] > 5 {
-					continue
-				}
-				d.Experience[v[0]] = [2]int{v[1], v[2]}
-			}
+	for _, r := range t.Time {
+		d.ReadyTime, d.StandTime, d.EventTime, d.CloseTime = r.WarningTime, r.NotifyTime, r.EventTime, r.CloseTime
+	}
+	for _, r := range t.Schedule {
+		d.Schedule = append(d.Schedule, r.Schedule())
+	}
+	for _, r := range t.Experience {
+		if r.EventIndex < 0 || r.EventIndex > 5 {
+			continue
 		}
+		d.Experience[r.EventIndex] = [2]int{r.Value1, r.Value2}
 	}
 	return d, nil
 }
@@ -480,30 +356,25 @@ type DropEventItem struct {
 	AccountLevel, Rate       int
 }
 
-// LoadDropEvent reads Data/Event/DropEvent.dat (CDropEvent).
-func LoadDropEvent(dataDir string) ([]*TimedEvent, []DropEventItem, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Event", "DropEvent.dat"))
+// LoadDropEvent reads the DropEvent table of config/data/event.toml
+// (CDropEvent).
+func LoadDropEvent(configDir string) ([]*TimedEvent, []DropEventItem, error) {
+	f, err := LoadEventConfig(configDir)
 	if err != nil {
 		return nil, nil, err
 	}
-	events, err := loadTimedEvents(secs)
-	if err != nil {
-		return nil, nil, err
-	}
+	t := f.DropEvent
 	var items []DropEventItem
-	for _, s := range secs {
-		if s.Index != 2 {
-			continue
+	for i, r := range t.Item {
+		cat, idx, err := SplitItemRef(r.ItemIndex)
+		if err != nil {
+			return nil, nil, fmt.Errorf("DropEvent.Item row %d: %w", i+1, err)
 		}
-		for _, l := range s.Rows {
-			v := numRow(numFields(l), 0, 18)
-			r := DropEventItem{Event: v[0], Index: v[1]*512 + v[2], Level: v[3], Dur: v[4], Duration: v[11],
-				Map: v[12], Monster: v[13], MinLevel: v[14], MaxLevel: v[15], AccountLevel: v[16], Rate: v[17]}
-			copy(r.Option[:], v[5:11])
-			items = append(items, r)
-		}
+		items = append(items, DropEventItem{Event: r.EventIndex, Index: cat*512 + idx, Level: r.ItemLevel,
+			Dur: r.Durability, Option: r.Option, Duration: r.Duration, Map: r.MapNumber, Monster: r.MonsterIndex,
+			MinLevel: r.MonsterMinLevel, MaxLevel: r.MonsterMaxLevel, AccountLevel: r.AccountLevel, Rate: r.ItemDropRate})
 	}
-	return events, items, nil
+	return buildTimedEvents(t.Schedule, t.Settings), items, nil
 }
 
 // GoldenArcherReward is an Event/GoldenArcher.dat row: ItemIndex
@@ -515,19 +386,21 @@ type GoldenArcherReward struct {
 	Rate         int
 }
 
-// LoadGoldenArcher reads Data/Event/GoldenArcher.dat (CGoldenArcher,
-// FUN_00461660).
-func LoadGoldenArcher(dataDir string) ([]GoldenArcherReward, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Event", "GoldenArcher.dat"))
+// LoadGoldenArcher reads the GoldenArcher table of config/data/event.toml
+// (CGoldenArcher, FUN_00461660).
+func LoadGoldenArcher(configDir string) ([]GoldenArcherReward, error) {
+	f, err := LoadEventConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	var out []GoldenArcherReward
-	for _, l := range mutext.Table(lines) {
-		v := numRow(numFields(l), 0, 11)
-		r := GoldenArcherReward{Index: v[0]*512 + v[1], Group: v[2], Duration: v[9], Rate: v[10]}
-		copy(r.Option[:], v[3:9])
-		out = append(out, r)
+	for i, r := range f.GoldenArcher.Rows {
+		cat, idx, err := SplitItemRef(r.ItemIndex)
+		if err != nil {
+			return nil, fmt.Errorf("GoldenArcher row %d: %w", i+1, err)
+		}
+		out = append(out, GoldenArcherReward{Index: cat*512 + idx, Group: r.RewardGroup, Option: r.Option,
+			Duration: r.Duration, Rate: r.DropRate})
 	}
 	return out, nil
 }

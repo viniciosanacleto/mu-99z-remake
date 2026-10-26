@@ -2,9 +2,8 @@ package game
 
 import (
 	"bytes"
-	"path/filepath"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
@@ -55,36 +54,25 @@ var (
 func loadMoveData(w *World) error {
 	d := &moveData{commands: map[string]command{}}
 	w.moveData = d
-	if w.dataDir == "" {
+	if w.configDir == "" {
 		return nil
 	}
-	lines, err := mutext.LoadFile(filepath.Join(w.dataDir, "Util", "Filter.txt"))
+	f, err := gamedata.LoadUtilConfig(w.configDir)
 	if err != nil {
 		return err
 	}
-	for _, l := range mutext.Table(lines) {
-		if l.Tokens[0] != "" {
-			d.filter = append(d.filter, l.Tokens[0])
+	for _, word := range f.Filter.Words {
+		if word != "" {
+			d.filter = append(d.filter, word)
 		}
 	}
-	lines, err = mutext.LoadFile(filepath.Join(w.dataDir, "Util", "GameMaster.txt"))
-	if err != nil {
+	for _, g := range f.GameMaster.Rows {
+		d.gameMasters = append(d.gameMasters, gameMaster{g.Account, g.Name, g.GMLevel})
+	}
+	if d.commands, err = loadCommands(w.configDir); err != nil {
 		return err
 	}
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) < 3 {
-			continue
-		}
-		lv, err := l.Int(2)
-		if err != nil {
-			return err
-		}
-		d.gameMasters = append(d.gameMasters, gameMaster{l.Tokens[0], l.Tokens[1], lv})
-	}
-	if d.commands, err = loadCommands(w.dataDir); err != nil {
-		return err
-	}
-	d.moves, err = loadMoves(w.dataDir)
+	d.moves, err = loadMoves(w.configDir)
 	return err
 }
 

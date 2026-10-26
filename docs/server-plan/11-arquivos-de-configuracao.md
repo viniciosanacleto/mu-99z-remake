@@ -1,8 +1,49 @@
 # 11 — Arquivos de configuração e de dados
 
-O serviço Go deve ler os mesmos arquivos (diretório `Data/` configurável) para reaproveitar o conteúdo existente. Todos são texto Latin-1 com `\r\n`.
+O emulador original lê dezenas de `.ini`, `.dat` e `.txt` (texto Latin-1/UTF-8 com `\r\n`; formatos nas seções 1 a 4). O serviço Go não lê esses arquivos: o conteúdo deles foi convertido para TOML em `apps/server/config/` (seção 0) pelo `cmd/configconv`, que aplica uma vez as regras do leitor original. Em `apps/server/data/` ficam só os arquivos binários (terreno, scripts Lua, chaves, imagens) e o `MuOnline.sql`, com os caminhos originais.
 
-Licenças dos arquivos originais são ignoradas. Quando uma tarefa precisar deles, copiar de `MuServer/Data/**` (e dos `.dat`/`.ini` dos processos) para `apps/server/data/`, mantendo caminhos e nomes originais; o diretório padrão de dados do servidor é essa pasta do repositório.
+Licenças dos arquivos originais são ignoradas. Quando uma tarefa precisar de um arquivo original novo: um texto de configuração entra no `configconv` (um grupo novo ou uma tabela num grupo existente) e o TOML gerado vai para `apps/server/config/`; um binário é copiado para `apps/server/data/` com caminho e nome originais.
+
+## 0. Configuração do serviço Go (TOML, `apps/server/config`)
+
+```
+config/
+  server.toml                 [ConnectServer] ConnectServer.ini + BlackList.txt + ServerList.dat,
+                              [JoinServer] JoinServer.ini, [DataServer] BadSyntax.txt
+  gameserver/gameserver.toml  4.GameServer/DATA: [Common] [Character] [ChaosMix] [Command]
+  gameserver/gameserver-cs.toml 5.GameServerCS/DATA  [Custom] [Event] [Item] [Skill]
+  data/<grupo>.toml           Data/**: um arquivo por pasta original
+```
+
+| Grupo (`config/data`) | Arquivos originais |
+|---|---|
+| `common.toml` | `MapManager.txt`, `MapServerInfo.txt`, `MapRateInfo.txt`, `BlackList.txt`, `CommandManager.txt`, `CommandRequirement.txt`, `ConnectMember.txt` (raiz de `Data/`) |
+| `character.toml` | `Character/*.txt` |
+| `custom.toml` | `Custom/*` menos o XShop (`CreationGold.txt` e `CustomGHRS.ini` como tabelas) |
+| `custom-event.toml` | `Custom/Event/*.txt` (células ausentes já com os valores do leitor: -1, mapa/x/y 255) |
+| `event.toml` | `Event/*.dat` |
+| `eventitembag.toml` | `EventItemBagManager.txt` e as bags que ele cita (`Bag."<caminho com />"`) |
+| `hack.toml` | `Hack/*.txt` (`Enc2.dat`/`Dec1.dat` ficam em `data/`) |
+| `item.toml` | `Item/*.txt` (`Item.txt` com um array por categoria: `Swords`=0 … `Scrolls`=15) |
+| `lang.toml` | `Lang/{Eng,Por,Spn}/{Message,Notice}.txt` |
+| `monster.toml` | `Monster/*.txt` e `Monster/Skill/*.txt` |
+| `move.toml`, `quest.toml`, `skill.toml`, `util.toml` | `Move/`, `Quest/`, `Skill/` (o `SkillElect.hit` fica em `data/`), `Util/` |
+| `shop.toml` | `ShopManager.txt` e as lojas que ele cita (`Shop."<ShopPath>"`) |
+| `spawn.toml` | `Monster/Spawn/NNN - Nome.txt` (`Spawn."NNN - Nome"`, linhas na ordem do arquivo com a coluna `Section`) |
+| `xshop.toml` | `Custom/CustomXShop.txt` e `Custom/CustomXShopRecharge.txt` (o servidor regrava este arquivo) |
+
+Regras:
+
+- Cada arquivo original vira uma tabela com o nome dele (`[ItemOption]`); uma tabela simples vira `Rows = [...]`, uma linha por inline table. Seções numeradas viram arrays nomeados (o número fica no comentário, ex. `# section 1`). As colunas usam os nomes do cabeçalho do original; a coluna `Comment` traz o comentário `//` da linha.
+- Os `.ini`/`.dat` chave=valor viram tabelas com as mesmas chaves, na ordem e com os comentários do original. Um valor é inteiro TOML só quando o valor inteiro é um número (um comentário no fim vira comentário TOML); o resto fica string, e o `gsconfig` lê número de uma string com as regras de `GetPrivateProfileIntA`. As chaves continuam sem distinção de maiúsculas.
+- `*` vira `-1`. Item é sempre `"cc,iii"` (texto), inclusive nas tabelas que o original lê como dois números; o loader Go repete a checagem de faixa do original.
+- Peculiaridades do leitor original resolvidas na conversão: arquivos lidos como fluxo de números (registros cortados a cada N números, sem respeitar quebras de linha, vírgula como separador, `N` repetindo o número anterior) viram as linhas que o original montaria; linhas que o original descarta pela ordem do arquivo (drop de bag antes da bag, item de gift antes do gift) não entram.
+- Os arquivos são UTF-8. Os originais em Windows-1252 (`Lang/*/Message.txt`, `CustomQuiz.txt`, `NpcTalk.txt`, eventos custom) são convertidos, e o servidor converte as strings de volta para Windows-1252 ao carregar, como o cliente espera. A única diferença de bytes em relação ao original é `Item.txt` 12,203 ("Capa del Señor Oscuro"), que estava em UTF-8 no arquivo e agora vai em Windows-1252.
+- Arquivos que o original não lê (ver [16](16-cobertura-dados.md)) não são convertidos.
+- Escritas em tempo de execução: o reinício do ciclo do Castle Siege grava `Chave = 0` em `[Event]` do arquivo da instância (edição de linha, mantém os comentários); o preço por GM e a recarga do XShop regravam `config/data/xshop.toml` (comentários de cabeçalho mantidos, comentários soltos não). As imagens da recarga (`pix*.tmp.bmp`) ficam em `data/Data/Custom`.
+- `-config` (padrão `config`) aponta a pasta para `muserver` e `mueditor`; `-data` aponta os binários. Os arquivos de perfil que os scripts Lua leem e gravam (`GetPrivateProfile*` da API Lua) continuam `.ini`.
+
+Pacotes: `internal/config/tomlconf` (leitura estrita, conversão Windows-1252, codificador com uma linha por registro), `servercfg` (`server.toml`), `gsconfig` (instâncias), `gamedata` (tabelas, com o arquivo decodificado em cache enquanto não muda), `legacy` + `mutext` + `ini` (leitores dos formatos originais, usados só pelo `configconv`).
 
 ## 1. Convenções de formato (observado)
 
@@ -13,7 +54,7 @@ Licenças dos arquivos originais são ignoradas. Quando uma tarefa precisar dele
 - Colunas separadas por espaços/tabs.
 - `.ini`/`.dat` de servidor: formato `GetPrivateProfile` (`[Seção]` + `Chave = Valor`, comentários `;`).
 
-Recomendação: um único tokenizer (`internal/config/mutext`) com suporte a seções, `*`, aspas e `cc,iii`, e structs por arquivo com tags de coluna; testes que carregam todos os arquivos reais.
+O tokenizer desses formatos é `internal/config/mutext`, usado pelo conversor (`internal/config/legacy`).
 
 ## 2. Configuração dos processos
 

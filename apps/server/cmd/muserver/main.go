@@ -22,7 +22,7 @@ import (
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/auth"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/gsconfig"
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/ini"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/servercfg"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/serverlist"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/connect"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game"
@@ -53,6 +53,7 @@ type Ready struct {
 }
 
 type config struct {
+	configDir   string
 	dataDir     string
 	databaseURL string
 	connectAddr string
@@ -65,13 +66,14 @@ type config struct {
 func parseFlags(args []string) (*config, []string, error) {
 	fs := flag.NewFlagSet("muserver", flag.ContinueOnError)
 	c := &config{}
-	fs.StringVar(&c.dataDir, "data", "data", "directory mirroring MuServer/ (Data, 1.ConnectServer, 4.GameServer, ...)")
+	fs.StringVar(&c.configDir, "config", "config", "TOML configuration directory (server.toml, gameserver/, data/)")
+	fs.StringVar(&c.dataDir, "data", "data", "directory with the binary data files (Data/Terrain, Data/Script, ...)")
 	fs.StringVar(&c.databaseURL, "db", os.Getenv("MU_DATABASE_URL"), "PostgreSQL URL; empty uses the in-memory store")
 	fs.StringVar(&c.connectAddr, "connect-addr", "", "ConnectServer listen address (default :ConnectServerPortTCP)")
-	fs.StringVar(&c.blackList, "blacklist", "", "ConnectServer BlackList.txt (default <data>/1.ConnectServer/BlackList.txt)")
+	fs.StringVar(&c.blackList, "blacklist", "", "comma-separated client addresses to refuse instead of BlackList in server.toml (\"none\" for an empty list)")
 	fs.StringVar(&c.bindHost, "bind", "", "host for every listener (default all interfaces)")
-	fs.StringVar(&c.publicIP, "public-ip", "", "address sent to clients instead of ServerList.dat / MapServerInfo.txt")
-	fs.StringVar(&c.instances, "instances", "4.GameServer,5.GameServerCS", "game server directories under -data")
+	fs.StringVar(&c.publicIP, "public-ip", "", "address sent to clients instead of the ServerList / MapServerInfo addresses")
+	fs.StringVar(&c.instances, "instances", "gameserver,gameserver-cs", "game server instances (files under <config>/gameserver, without .toml)")
 	if err := fs.Parse(args); err != nil {
 		return nil, nil, err
 	}
@@ -96,15 +98,13 @@ func run(ctx context.Context, args []string, log *slog.Logger, ready chan<- Read
 		log.Warn("no -db given: using the in-memory store (data is lost on exit)")
 	}
 
-	csDir := filepath.Join(cfg.dataDir, "1.ConnectServer")
-	if cfg.blackList == "" {
-		cfg.blackList = filepath.Join(csDir, "BlackList.txt")
-	}
-	ccfg, err := connect.LoadConfig(filepath.Join(csDir, "ConnectServer.ini"), cfg.blackList)
+	srv, err := servercfg.Load(filepath.Join(cfg.configDir, "server.toml"))
 	if err != nil {
-		return fmt.Errorf("connect config: %w", err)
+		return err
 	}
-	entries, err := serverlist.Load(filepath.Join(csDir, "ServerList.dat"))
+	ccfg := connect.ConfigFrom(srv.ConnectServer)
+	ccfg.BlackList = blackList(cfg, ccfg.BlackList)
+	entries, err := serverlist.Build(srv.ConnectServer.ServerList)
 	if err != nil {
 		return fmt.Errorf("server list: %w", err)
 	}
@@ -116,29 +116,28 @@ func run(ctx context.Context, args []string, log *slog.Logger, ready chan<- Read
 	reg := connect.NewRegistry(entries)
 	reg.SetAuthStatus(true, 0)
 
-	authCfg := auth.Config{}
-	if f, err := ini.Load(filepath.Join(cfg.dataDir, "3.JoinServer", "JoinServer.ini")); err == nil {
-		authCfg.MaxConnectionPerIP = f.Int("JoinServerInfo", "MaxConnectionPerIP", 0)
-		authCfg.MaxConnectionPerHID = f.Int("JoinServerInfo", "MaxConnectionPerHID", 0)
-	}
-	authSvc := auth.New(st, authCfg)
+	authSvc := auth.New(st, auth.Config{
+		MaxConnectionPerIP:  srv.JoinServer.MaxConnectionPerIP,
+		MaxConnectionPerHID: srv.JoinServer.MaxConnectionPerHID,
+	})
 
 	hub := game.NewHub()
 	g, gctx := errgroup.WithContext(ctx)
 	rd := Ready{Games: map[int]string{}}
-	for _, dir := range strings.Split(cfg.instances, ",") {
-		dir = strings.TrimSpace(dir)
-		if dir == "" {
+	for _, inst := range strings.Split(cfg.instances, ",") {
+		inst = strings.TrimSpace(inst)
+		if inst == "" {
 			continue
 		}
-		gcfg, err := gsconfig.Load(filepath.Join(cfg.dataDir, dir, "DATA"))
+		gcfg, err := gsconfig.Load(filepath.Join(cfg.configDir, "gameserver", inst+".toml"))
 		if err != nil {
-			return fmt.Errorf("%s: %w", dir, err)
+			return err
 		}
-		w, err := game.New(game.Options{DataDir: filepath.Join(cfg.dataDir, "Data"), Config: gcfg,
-			Store: st, Auth: authSvc, Reporter: reg, Log: log.With("module", "game"), PublicIP: cfg.publicIP, Hub: hub})
+		w, err := game.New(game.Options{DataDir: filepath.Join(cfg.dataDir, "Data"), ConfigDir: cfg.configDir, Config: gcfg,
+			Store: st, Auth: authSvc, Reporter: reg, Log: log.With("module", "game"), PublicIP: cfg.publicIP, Hub: hub,
+			BadSyntax: srv.DataServer.BadSyntax})
 		if err != nil {
-			return fmt.Errorf("%s: %w", dir, err)
+			return fmt.Errorf("%s: %w", inst, err)
 		}
 		ln, err := net.Listen("tcp", net.JoinHostPort(cfg.bindHost, fmt.Sprint(gcfg.ServerPort)))
 		if err != nil {
@@ -164,6 +163,23 @@ func run(ctx context.Context, args []string, log *slog.Logger, ready chan<- Read
 		ready <- rd
 	}
 	return g.Wait()
+}
+
+// blackList applies the -blacklist flag to the configured list.
+func blackList(cfg *config, configured []string) []string {
+	switch cfg.blackList {
+	case "":
+		return configured
+	case "none":
+		return nil
+	}
+	var out []string
+	for _, ip := range strings.Split(cfg.blackList, ",") {
+		if ip = strings.TrimSpace(ip); ip != "" {
+			out = append(out, ip)
+		}
+	}
+	return out
 }
 
 func openStore(ctx context.Context, url string) (store.Store, error) {

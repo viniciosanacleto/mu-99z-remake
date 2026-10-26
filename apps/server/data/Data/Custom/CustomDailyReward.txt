@@ -1,8 +1,0 @@
-// ----------------------------------------------------------------------------------------------------------------------------------------------------
-//         [*/1~12]      [*/1~31]    [InHour]        [*/N]      [*/N]      [*/N]      [*/N]      [0~3]             [*/N]           [index]
-// Index   RewardMonth   RewardDay   MinOnlineTime   MinLevel   MaxLevel   MinReset   MaxReset   MinAccountLevel   MessageReward   BagSpecial   Comment
-// ----------------------------------------------------------------------------------------------------------------------------------------------------
-// DEMOSTRATION
-// 0       1             1           0               *          *          *          *          0                 *               50           // New Year's Reward Example
-// 1       12            25          0               *          *          *          *          0                 *               50           // Christmas Reward Example
-end

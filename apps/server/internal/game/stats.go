@@ -92,23 +92,22 @@ func loadClassConsts(w *World) classConsts {
 func loadStatsData(w *World) (*statsData, error) {
 	d := &statsData{}
 	var err error
-	dir := w.dataDir
-	if d.classes, err = gamedata.LoadClassInfo(dir); err != nil {
+	if d.classes, err = gamedata.LoadClassInfo(w.configDir); err != nil {
 		return nil, err
 	}
-	if d.options, err = gamedata.LoadItemOptions(dir); err != nil {
+	if d.options, err = gamedata.LoadItemOptions(w.configDir); err != nil {
 		return nil, err
 	}
-	if d.wingOptions, err = gamedata.LoadWingOptions(dir); err != nil {
+	if d.wingOptions, err = gamedata.LoadWingOptions(w.configDir); err != nil {
 		return nil, err
 	}
-	if d.customWings, err = gamedata.LoadCustomWings(dir); err != nil {
+	if d.customWings, err = gamedata.LoadCustomWings(w.configDir); err != nil {
 		return nil, err
 	}
-	if d.attributes, err = gamedata.LoadCustomAttributes(dir); err != nil {
+	if d.attributes, err = gamedata.LoadCustomAttributes(w.configDir); err != nil {
 		return nil, err
 	}
-	if d.customMons, err = gamedata.LoadCustomMonsters(dir); err != nil {
+	if d.customMons, err = gamedata.LoadCustomMonsters(w.configDir); err != nil {
 		return nil, err
 	}
 	d.k = loadClassConsts(w)

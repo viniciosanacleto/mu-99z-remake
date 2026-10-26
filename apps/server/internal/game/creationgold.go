@@ -59,8 +59,8 @@ func (w *World) creationGold(o *Object, slot int) {
 		return
 	}
 	gold := 0x32
-	if w.dataDir != "" {
-		gold = gamedata.CreationGoldValue(w.dataDir)
+	if w.configDir != "" {
+		gold = gamedata.CreationGoldValue(w.configDir)
 	}
 	if gold < 1 {
 		w.eventText(o, NoticeBlue, msgCreationOff)

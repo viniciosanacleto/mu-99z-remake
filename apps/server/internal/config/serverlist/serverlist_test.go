@@ -6,12 +6,16 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/servercfg"
 )
 
-func TestLoadOriginalServerList(t *testing.T) {
+func TestBuildShippedServerList(t *testing.T) {
 	_, file, _, _ := runtime.Caller(0)
-	got, err := Load(filepath.Join(filepath.Dir(file), "..", "..", "..", "data", "1.ConnectServer", "ServerList.dat"))
+	f, err := servercfg.Load(filepath.Join(filepath.Dir(file), "..", "..", "..", "config", "server.toml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := Build(f.ConnectServer.ServerList)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,20 +28,16 @@ func TestLoadOriginalServerList(t *testing.T) {
 	}
 }
 
-func TestParseErrors(t *testing.T) {
-	for _, src := range []string{
-		"0 \"a\" \"1.1.1.1\" 55900\nend\n",             // missing column
-		"x \"a\" \"1.1.1.1\" 55900 1\nend\n",           // bad code
-		"256 \"a\" \"1.1.1.1\" 55900 1\nend\n",         // code does not fit a byte
-		"0 \"a\" \"1.1.1.1\" 70000 1\nend\n",           // bad port
-		"0 \"a\" \"1.1.1.1\" 1 1\n0 \"b\" \"x\" 2 1\n", // duplicate code
+func TestBuildErrors(t *testing.T) {
+	for _, rows := range [][]servercfg.ServerRow{
+		{{ServerCode: 256, Port: 55900}},                     // code does not fit a byte
+		{{ServerCode: -1, Port: 55900}},                      // negative code
+		{{ServerCode: 0, Port: 70000}},                       // bad port
+		{{ServerCode: 0, Port: 0}},                           // bad port
+		{{ServerCode: 0, Port: 1}, {ServerCode: 0, Port: 2}}, // duplicate code
 	} {
-		lines, err := mutext.Tokenize([]byte(src))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := Parse(lines); err == nil {
-			t.Errorf("%q: expected error", src)
+		if _, err := Build(rows); err == nil {
+			t.Errorf("%+v: expected error", rows)
 		}
 	}
 }

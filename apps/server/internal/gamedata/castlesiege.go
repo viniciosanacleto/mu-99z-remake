@@ -2,7 +2,6 @@ package gamedata
 
 import (
 	"fmt"
-	"path/filepath"
 	"sort"
 )
 
@@ -60,58 +59,48 @@ type CastleUpgrade struct {
 	Value, Count, Money int
 }
 
-// LoadCastleSiege reads Data/Event/CastleSiege.dat.
-func LoadCastleSiege(dataDir string) (*CastleSiege, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Event", "CastleSiege.dat"))
+// LoadCastleSiege reads the CastleSiege table of config/data/event.toml.
+func LoadCastleSiege(configDir string) (*CastleSiege, error) {
+	f, err := LoadEventConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
+	t := f.CastleSiege
 	cs := &CastleSiege{CycleDays: 7}
-	upg := map[int]*[3]CastleUpgrade{3: &cs.GateDefenseUpgrade, 4: &cs.StatueDefenseUpgrade,
-		5: &cs.GateLifeUpgrade, 6: &cs.StatueLifeUpgrade, 7: &cs.StatueRegenUpgrade}
-	for _, s := range secs {
-		for _, l := range s.Rows {
-			switch s.Index {
-			case 0:
-				v, err := rowInts(l, 1)
-				if err != nil {
-					return nil, err
-				}
-				cs.CycleDays = v[0]
-			case 1:
-				v, err := rowInts(l, 4)
-				if err != nil {
-					return nil, err
-				}
-				cs.Schedule = append(cs.Schedule, CastleSchedule{State: v[0], Day: v[1], Hour: v[2], Minute: v[3]})
-			case 2:
-				v, err := rowInts(l, 10)
-				if err != nil {
-					return nil, err
-				}
-				cs.NPCs = append(cs.NPCs, CastleNPC{Class: v[0], Index: v[1], DBSave: v[2] != 0, Side: v[3],
-					DFLevel: v[4], RGLevel: v[5], MaxLife: v[6], X: v[7], Y: v[8], Dir: v[9]})
-			case 3, 4, 5, 6, 7:
-				v, err := rowInts(l, 4)
-				if err != nil {
-					return nil, err
-				}
-				if v[0] < 0 || v[0] > 2 {
-					return nil, fmt.Errorf("CastleSiege.dat section %d line %d: index %d", s.Index, l.No, v[0])
-				}
-				upg[s.Index][v[0]] = CastleUpgrade{Value: v[1], Count: v[2], Money: v[3]}
-			case 8, 9:
-				v, err := rowInts(l, 4)
-				if err != nil {
-					return nil, err
-				}
-				dst := &cs.GateDefense
-				if s.Index == 9 {
-					dst = &cs.StatueDefense
-				}
-				copy(dst[:], v)
+	for _, r := range t.Cycle {
+		cs.CycleDays = r.CycleDays
+	}
+	for _, r := range t.Schedule {
+		cs.Schedule = append(cs.Schedule, CastleSchedule{State: r.State, Day: r.StartDay, Hour: r.StartHour, Minute: r.StartMinute})
+	}
+	for _, r := range t.NPC {
+		cs.NPCs = append(cs.NPCs, CastleNPC{Class: r.Class, Index: r.Index, DBSave: r.DBSave != 0, Side: r.Side,
+			DFLevel: r.DFLevel, RGLevel: r.RGLevel, MaxLife: r.MaxLife, X: r.MapX, Y: r.MapY, Dir: r.MapDir})
+	}
+	upgrades := []struct {
+		name string
+		rows []CastleUpgradeRow
+		dst  *[3]CastleUpgrade
+	}{
+		{"GateDefenseUpgrade", t.GateDefenseUpgrade, &cs.GateDefenseUpgrade},
+		{"StatueDefenseUpgrade", t.StatueDefenseUpgrade, &cs.StatueDefenseUpgrade},
+		{"GateLifeUpgrade", t.GateLifeUpgrade, &cs.GateLifeUpgrade},
+		{"StatueLifeUpgrade", t.StatueLifeUpgrade, &cs.StatueLifeUpgrade},
+		{"StatueRegenUpgrade", t.StatueRegenUpgrade, &cs.StatueRegenUpgrade},
+	}
+	for _, u := range upgrades {
+		for _, r := range u.rows {
+			if r.Index < 0 || r.Index > 2 {
+				return nil, fmt.Errorf("CastleSiege.%s: index %d", u.name, r.Index)
 			}
+			u.dst[r.Index] = CastleUpgrade{Value: r.Value, Count: r.Count, Money: r.Money}
 		}
+	}
+	for _, r := range t.GateDefense {
+		cs.GateDefense = r.Level
+	}
+	for _, r := range t.StatueDefense {
+		cs.StatueDefense = r.Level
 	}
 	// FUN_00427da0 with FUN_004202b0: sort by state, then each entry lasts
 	// until the next one: ((dDay*24 - h0 + h1)*60 - m0 + m1)*60 seconds; a
