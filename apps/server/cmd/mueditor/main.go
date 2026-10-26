@@ -1,7 +1,7 @@
 // Command mueditor is the web character editor: it edits stats, zen and
 // inventory / vault items of offline characters directly in PostgreSQL.
 //
-//	mueditor -db postgres://... [-data data] [-addr 127.0.0.1:8080] [-password x]
+//	mueditor -db postgres://... [-config config] [-instance gameserver] [-addr 127.0.0.1:8080] [-password x]
 package main
 
 import (
@@ -35,7 +35,7 @@ func main() {
 }
 
 type config struct {
-	dataDir     string
+	configDir   string
 	databaseURL string
 	addr        string
 	password    string
@@ -45,11 +45,11 @@ type config struct {
 func parseFlags(args []string) (*config, error) {
 	fs := flag.NewFlagSet("mueditor", flag.ContinueOnError)
 	c := &config{}
-	fs.StringVar(&c.dataDir, "data", "data", "directory mirroring MuServer/ (Data, 4.GameServer, ...)")
+	fs.StringVar(&c.configDir, "config", "config", "TOML configuration directory")
 	fs.StringVar(&c.databaseURL, "db", os.Getenv("MU_DATABASE_URL"), "PostgreSQL URL (required)")
 	fs.StringVar(&c.addr, "addr", "127.0.0.1:8080", "HTTP listen address")
 	fs.StringVar(&c.password, "password", os.Getenv("MU_EDITOR_PASSWORD"), "HTTP basic auth password (empty = no auth)")
-	fs.StringVar(&c.instance, "instance", "4.GameServer", "game server directory whose ServerMaxLevel limits the level")
+	fs.StringVar(&c.instance, "instance", "gameserver", "game server instance (<config>/gameserver/<instance>.toml) whose ServerMaxLevel limits the level")
 	if err := fs.Parse(args); err != nil {
 		return nil, err
 	}
@@ -60,16 +60,16 @@ func parseFlags(args []string) (*config, error) {
 }
 
 // newEditor loads the item data and wires the editor over st.
-func newEditor(dataDir, instance string, st editor.Store) (*editor.Editor, error) {
-	items, err := gamedata.LoadItems(filepath.Join(dataDir, "Data"))
+func newEditor(configDir, instance string, st editor.Store) (*editor.Editor, error) {
+	items, err := gamedata.LoadItems(configDir)
 	if err != nil {
-		return nil, fmt.Errorf("Item.txt: %w", err)
+		return nil, err
 	}
-	opts, err := gamedata.LoadItemOptions(filepath.Join(dataDir, "Data"))
+	opts, err := gamedata.LoadItemOptions(configDir)
 	if err != nil {
-		return nil, fmt.Errorf("ItemOption.txt: %w", err)
+		return nil, err
 	}
-	gcfg, err := gsconfig.Load(filepath.Join(dataDir, instance, "DATA"))
+	gcfg, err := gsconfig.Load(filepath.Join(configDir, "gameserver", instance+".toml"))
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", instance, err)
 	}
@@ -94,7 +94,7 @@ func run(ctx context.Context, args []string, log *slog.Logger, ready chan<- stri
 		return err
 	}
 	defer st.Close()
-	ed, err := newEditor(cfg.dataDir, cfg.instance, st)
+	ed, err := newEditor(cfg.configDir, cfg.instance, st)
 	if err != nil {
 		return err
 	}

@@ -1,28 +1,32 @@
-// Package gsconfig loads the "GameServerInfo - *.dat" files of one game
-// server instance (4.GameServer/DATA, 5.GameServerCS/DATA). Every key lives
-// in section [GameServerInfo]; the original reads each with
-// GetPrivateProfileIntA/StringA (CServerInfo loaders 0x4ecb40, 0x4eff70,
-// 0x4eda70, 0x4eeee0, 0x4ecf70, ... — the offset/key dictionary is in
-// .re/cfgmap.txt).
+// Package gsconfig loads the configuration of one game server instance,
+// config/gameserver/<instance>.toml. Each table is one of the original
+// "GameServerInfo - <name>.dat" files of the instance DATA folder
+// (4.GameServer, 5.GameServerCS), with its keys unchanged. The original
+// reads each key with GetPrivateProfileIntA/StringA (CServerInfo loaders
+// 0x4ecb40, 0x4eff70, 0x4eda70, 0x4eeee0, 0x4ecf70, ... — the offset/key
+// dictionary is in .re/cfgmap.txt), so lookups stay case-insensitive and
+// a number read from a string value follows the GetPrivateProfileIntA rules.
 package gsconfig
 
 import (
 	"fmt"
 	"os"
-	"path/filepath"
+	"strconv"
+	"strings"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/ini"
+	toml "github.com/pelletier/go-toml/v2"
+
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/tomlconf"
 )
 
-const section = "GameServerInfo"
-
-// Files are the eight per-instance configuration files.
+// Files are the tables of an instance file, one per original
+// "GameServerInfo - <name>.dat".
 var Files = []string{"Common", "Character", "ChaosMix", "Command", "Custom", "Event", "Item", "Skill"}
 
 // Config gives typed access to the instance configuration.
 type Config struct {
-	files map[string]*ini.File
-	Dir   string
+	tables map[string]map[string]any // lower-case table -> lower-case key -> int64 | string
+	Path   string                    // the instance .toml file
 
 	CustomerName       string
 	ServerName         string // 0x20 buffer
@@ -46,17 +50,50 @@ type Config struct {
 	DLCreateLevel      [4]int
 }
 
-// Load reads every file under dir. Missing files are an error: the
-// original refuses to start without them.
-func Load(dir string) (*Config, error) {
-	c := &Config{files: map[string]*ini.File{}, Dir: dir}
-	for _, name := range Files {
-		path := filepath.Join(dir, "GameServerInfo - "+name+".dat")
-		f, err := ini.Load(path)
-		if err != nil {
-			return nil, err
+// Load reads an instance file. Every table of Files must be present: the
+// original refuses to start without any of its files.
+func Load(path string) (*Config, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	c, err := Parse(b)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	c.Path = path
+	return c, nil
+}
+
+// Parse decodes the contents of an instance file.
+func Parse(data []byte) (*Config, error) {
+	var raw map[string]any
+	if err := toml.Unmarshal(data, &raw); err != nil {
+		return nil, err
+	}
+	c := &Config{tables: map[string]map[string]any{}}
+	for name, t := range raw {
+		tab, ok := t.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("%s: expected a table", name)
 		}
-		c.files[name] = f
+		keys := map[string]any{}
+		for k, v := range tab {
+			switch v := v.(type) {
+			case int64:
+				keys[strings.ToLower(k)] = v
+			case string:
+				keys[strings.ToLower(k)] = tomlconf.ANSI(v)
+			default:
+				return nil, fmt.Errorf("%s.%s: expected an integer or a string, got %T", name, k, v)
+			}
+		}
+		c.tables[strings.ToLower(name)] = keys
+	}
+	for _, name := range Files {
+		if c.tables[strings.ToLower(name)] == nil {
+			return nil, fmt.Errorf("missing table [%s]", name)
+		}
 	}
 	c.fill()
 	return c, nil
@@ -92,33 +129,135 @@ func (c *Config) fill() {
 	}
 }
 
-// Int reads a key from one of the files (GetPrivateProfileIntA semantics).
-func (c *Config) Int(file, key string, def int) int {
-	f := c.files[file]
-	if f == nil {
+func (c *Config) lookup(table, key string) (any, bool) {
+	t := c.tables[strings.ToLower(table)]
+	if t == nil {
+		return nil, false
+	}
+	v, ok := t[strings.ToLower(key)]
+	return v, ok
+}
+
+// Int reads a key (GetPrivateProfileIntA semantics): def when missing, the
+// leading digits of a string value.
+func (c *Config) Int(table, key string, def int) int {
+	v, ok := c.lookup(table, key)
+	if !ok {
 		return def
 	}
-	return f.Int(section, key, def)
+	switch v := v.(type) {
+	case int64:
+		return int(v)
+	case string:
+		return ProfileInt(v)
+	}
+	return def
 }
 
 // String reads a key; size mirrors the destination buffer size of the
-// original (0 = unlimited).
-func (c *Config) String(file, key string, size int) string {
-	f := c.files[file]
-	if f == nil {
+// original (0 = unlimited), the value is cut to size-1 bytes.
+func (c *Config) String(table, key string, size int) string {
+	v, ok := c.lookup(table, key)
+	if !ok {
 		return ""
 	}
-	return f.String(section, key, "", size)
+	var s string
+	switch v := v.(type) {
+	case int64:
+		s = strconv.FormatInt(v, 10)
+	case string:
+		s = v
+	}
+	if size > 0 && len(s) > size-1 {
+		s = s[:size-1]
+	}
+	return s
 }
 
 // ALInt reads a "<key>_AL<level>" key, the per-account-level variant used
 // throughout the configuration.
-func (c *Config) ALInt(file, key string, accountLevel, def int) int {
-	return c.Int(file, fmt.Sprintf("%s_AL%d", key, accountLevel), def)
+func (c *Config) ALInt(table, key string, accountLevel, def int) int {
+	return c.Int(table, fmt.Sprintf("%s_AL%d", key, accountLevel), def)
 }
 
-// Exists reports whether the directory looks like a game server DATA dir.
-func Exists(dir string) bool {
-	_, err := os.Stat(filepath.Join(dir, "GameServerInfo - Common.dat"))
-	return err == nil
+// ProfileInt parses a value like GetPrivateProfileIntA: leading decimal
+// digits with an optional sign, the rest ignored ("10// x" is 10), 0 when
+// there are no digits.
+func ProfileInt(v string) int {
+	v = strings.TrimSpace(v)
+	neg := false
+	i := 0
+	if i < len(v) && (v[i] == '-' || v[i] == '+') {
+		neg = v[i] == '-'
+		i++
+	}
+	n := 0
+	for ; i < len(v) && v[i] >= '0' && v[i] <= '9'; i++ {
+		n = n*10 + int(v[i]-'0')
+	}
+	if neg {
+		return -n
+	}
+	return n
+}
+
+// SetInt rewrites "key = <n>" inside [table] of the instance file on disk
+// (the WritePrivateProfileStringA calls of the original), keeping the rest
+// of the file — comments included — as it is, and updates the loaded value.
+// A key missing from the table is appended to it.
+func (c *Config) SetInt(table, key string, n int) error {
+	if t := c.tables[strings.ToLower(table)]; t != nil {
+		t[strings.ToLower(key)] = int64(n)
+	}
+	if c.Path == "" {
+		return nil
+	}
+	b, err := os.ReadFile(c.Path)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(c.Path, setKey(b, table, key, strconv.Itoa(n)), 0o644)
+}
+
+// setKey replaces the value of key in [table], or inserts it at the end of
+// the table.
+func setKey(data []byte, table, key, value string) []byte {
+	lines := strings.Split(string(data), "\n")
+	in, last := false, -1
+	for i, l := range lines {
+		s := strings.TrimSpace(l)
+		if strings.HasPrefix(s, "[") {
+			if in {
+				break
+			}
+			end := strings.IndexByte(s, ']')
+			in = end > 0 && strings.EqualFold(strings.Trim(strings.TrimSpace(s[1:end]), `"`), table)
+			if in {
+				last = i
+			}
+			continue
+		}
+		if !in {
+			continue
+		}
+		if s != "" && s[0] != '#' {
+			last = i
+		}
+		k, _, ok := strings.Cut(s, "=")
+		if ok && strings.EqualFold(strings.Trim(strings.TrimSpace(k), `"`), key) {
+			cr := strings.HasSuffix(l, "\r")
+			lines[i] = strings.TrimSpace(k) + " = " + value
+			if cr {
+				lines[i] += "\r"
+			}
+			return []byte(strings.Join(lines, "\n"))
+		}
+	}
+	entry := key + " = " + value
+	if last < 0 {
+		lines = append(lines, "["+table+"]", entry)
+	} else {
+		lines = append(lines[:last+1], append([]string{entry}, lines[last+1:]...)...)
+	}
+	return []byte(strings.Join(lines, "\n"))
 }

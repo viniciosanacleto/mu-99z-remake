@@ -55,8 +55,8 @@ func loadCustomEventDrop(w *World) error {
 	w.wcx().edrop = nil
 	d := w.edrop()
 	d.on = w.cfg.Int("Custom", "CustomEventDropSwitch", 0) != 0
-	if w.dataDir != "" {
-		data, err := gamedata.LoadCustomEventDrop(w.dataDir)
+	if w.configDir != "" {
+		data, err := gamedata.LoadCustomEventDrop(w.configDir)
 		if err != nil {
 			return err
 		}

@@ -1,46 +1,14 @@
 package gamedata
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
-	"path/filepath"
 	"sort"
-
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/ini"
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
 // The remaining WizardTeam world customs of Data/Custom (block 12, doc
-// 10f): CustomArena, CustomEventDrop, CustomLukeHelper, CustomHealthBar,
-// CustomMonsterKillCount, SummonScroll, CreationGold, DailyReward and
-// CustomPatente. The sectioned files are read by the standard reader
-// (FUN_004e0cb0 / FUN_004e0d70: numbered sections closed by "end",
-// "*" = -1).
-
-func customSections(dataDir, name string) (map[int][]mutext.Line, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Custom", name))
-	if err != nil {
-		return nil, err
-	}
-	secs, err := mutext.Sections(lines)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", name, err)
-	}
-	out := map[int][]mutext.Line{}
-	for _, s := range secs {
-		out[s.Index] = append(out[s.Index], s.Rows...)
-	}
-	return out, nil
-}
-
-func scheduleOf(l mutext.Line, first int) (Schedule, error) {
-	v, err := lineInts(l, []int{first, first + 1, first + 2, first + 3, first + 4, first + 5, first + 6})
-	if err != nil {
-		return Schedule{}, err
-	}
-	return Schedule{v[0], v[1], v[2], v[3], v[4], v[5], v[6]}, nil
-}
+// 10f, now in config/data/custom.toml): CustomArena, CustomEventDrop,
+// CustomLukeHelper, CustomHealthBar, CustomMonsterKillCount, SummonScroll,
+// CreationGold, DailyReward and CustomPatente.
 
 // --- CustomArena --------------------------------------------------------------------------
 
@@ -73,46 +41,29 @@ type CustomArena struct {
 	Rules    [CustomArenaCount]CustomArenaRule
 }
 
-// LoadCustomArena reads Custom/CustomArena.txt. Rows with an index out of
-// 0..29 are ignored.
-func LoadCustomArena(dataDir string) (*CustomArena, error) {
-	secs, err := customSections(dataDir, "CustomArena.txt")
+// LoadCustomArena reads the CustomArena table of config/data/custom.toml.
+// Rows with an index out of 0..29 are ignored.
+func LoadCustomArena(configDir string) (*CustomArena, error) {
+	f, err := LoadCustomConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	a := &CustomArena{}
-	for _, l := range secs[0] {
-		idx, err := l.Int(0)
-		if err != nil {
-			return nil, err
-		}
-		s, err := scheduleOf(l, 1)
-		if err != nil {
-			return nil, err
-		}
-		if idx >= 0 && idx < CustomArenaCount {
-			a.Schedule[idx] = append(a.Schedule[idx], s)
+	for _, r := range f.CustomArena.Schedule {
+		if r.EventIndex >= 0 && r.EventIndex < CustomArenaCount {
+			a.Schedule[r.EventIndex] = append(a.Schedule[r.EventIndex], r.Schedule())
 		}
 	}
-	for _, l := range secs[1] {
-		if len(l.Tokens) < 23 {
-			return nil, fmt.Errorf("CustomArena.txt line %d: %d columns", l.No, len(l.Tokens))
-		}
-		v, err := lineInts(l, []int{0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22})
-		if err != nil {
-			return nil, err
-		}
-		if v[0] < 0 || v[0] >= CustomArenaCount {
+	for _, r := range f.CustomArena.Rule {
+		if r.EventIndex < 0 || r.EventIndex >= CustomArenaCount {
 			continue
 		}
-		name := l.Tokens[1]
-		if len(name) > 0x1F {
-			name = name[:0x1F]
-		}
-		a.Rules[v[0]] = CustomArenaRule{Name: name, AlarmTime: v[1], StandTime: v[2], EventTime: v[3],
-			CloseTime: v[4], StartGate: v[5], FinalGate: v[6], MinUser: v[7], MaxUser: v[8], MaxDeath: v[9],
-			MinLevel: v[10], MaxLevel: v[11], MinReset: v[12], MaxReset: v[13], MinMasterReset: v[14],
-			MaxMasterReset: v[15], RewardBag: v[16], Class: [5]int{v[17], v[18], v[19], v[20], v[21]}, Loaded: true}
+		a.Rules[r.EventIndex] = CustomArenaRule{Name: cutString(r.Name, 0x1F), AlarmTime: r.AlarmTime,
+			StandTime: r.StandTime, EventTime: r.EventTime, CloseTime: r.CloseTime, StartGate: r.StartGate,
+			FinalGate: r.FinalGate, MinUser: r.MinUser, MaxUser: r.MaxUser, MaxDeath: r.MaxDeath, MinLevel: r.MinLevel,
+			MaxLevel: r.MaxLevel, MinReset: r.MinReset, MaxReset: r.MaxReset, MinMasterReset: r.MinMasterReset,
+			MaxMasterReset: r.MaxMasterReset, RewardBag: r.RewardBagIndex, Class: [5]int{r.DW, r.DK, r.FE, r.MG, r.DL},
+			Loaded: true}
 	}
 	return a, nil
 }
@@ -143,60 +94,36 @@ type CustomEventDrop struct {
 	Items    [CustomEventDropCount][]CustomEventDropItem
 }
 
-// LoadCustomEventDrop reads Custom/CustomEventDrop.txt. An item reference
-// outside 0..0x1FFF becomes -1 (the loader's range test).
-func LoadCustomEventDrop(dataDir string) (*CustomEventDrop, error) {
-	secs, err := customSections(dataDir, "CustomEventDrop.txt")
+// LoadCustomEventDrop reads the CustomEventDrop table of
+// config/data/custom.toml. An item reference outside 0..0x1FFF becomes -1
+// (the loader's range test).
+func LoadCustomEventDrop(configDir string) (*CustomEventDrop, error) {
+	f, err := LoadCustomConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	d := &CustomEventDrop{}
 	ok := func(i int) bool { return i >= 0 && i < CustomEventDropCount }
-	for _, l := range secs[0] {
-		idx, err := l.Int(0)
-		if err != nil {
-			return nil, err
-		}
-		s, err := scheduleOf(l, 1)
-		if err != nil {
-			return nil, err
-		}
-		if ok(idx) {
-			d.Schedule[idx] = append(d.Schedule[idx], s)
+	t := f.CustomEventDrop
+	for _, r := range t.Schedule {
+		if ok(r.EventIndex) {
+			d.Schedule[r.EventIndex] = append(d.Schedule[r.EventIndex], r.Schedule())
 		}
 	}
-	for _, l := range secs[1] {
-		if len(l.Tokens) < 8 {
-			return nil, fmt.Errorf("CustomEventDrop.txt line %d: %d columns", l.No, len(l.Tokens))
+	for _, r := range t.Rule {
+		if ok(r.EventIndex) {
+			d.Rules[r.EventIndex] = CustomEventDropRule{Name: cutString(r.Name, 0x1F), Map: r.MapNumber, X: r.LocationX,
+				Y: r.LocationY, Radius: r.DropRadius, AlarmTime: r.AlarmTime, EventTime: r.EventTime}
 		}
-		v, err := lineInts(l, []int{0, 2, 3, 4, 5, 6, 7})
-		if err != nil {
-			return nil, err
-		}
-		if !ok(v[0]) {
-			continue
-		}
-		name := l.Tokens[1]
-		if len(name) > 0x1F {
-			name = name[:0x1F]
-		}
-		d.Rules[v[0]] = CustomEventDropRule{Name: name, Map: v[1], X: v[2], Y: v[3], Radius: v[4], AlarmTime: v[5],
-			EventTime: v[6]}
 	}
-	for _, l := range secs[2] {
-		if len(l.Tokens) < 5 {
-			return nil, fmt.Errorf("CustomEventDrop.txt line %d: %d columns", l.No, len(l.Tokens))
-		}
-		v, err := lineInts(l, []int{0, 2, 3, 4})
+	for i, r := range t.Item {
+		item, err := parseShopIndex(r.ItemIndex)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("CustomEventDrop.Item row %d: %w", i+1, err)
 		}
-		item, err := parseShopIndex(l.Tokens[1])
-		if err != nil {
-			return nil, err
-		}
-		if ok(v[0]) {
-			d.Items[v[0]] = append(d.Items[v[0]], CustomEventDropItem{Index: item, Level: v[1], Count: v[2], Delay: v[3]})
+		if ok(r.EventIndex) {
+			d.Items[r.EventIndex] = append(d.Items[r.EventIndex], CustomEventDropItem{Index: item, Level: r.ItemLevel,
+				Count: r.DropCount, Delay: r.DropDelay})
 		}
 	}
 	return d, nil
@@ -221,32 +148,24 @@ type CustomLukeHelper struct {
 	Schedule  []Schedule
 }
 
-// LoadCustomLukeHelper reads Custom/CustomLukeHelper.txt.
-func LoadCustomLukeHelper(dataDir string) (*CustomLukeHelper, error) {
-	secs, err := customSections(dataDir, "CustomLukeHelper.txt")
+// LoadCustomLukeHelper reads the CustomLukeHelper table of
+// config/data/custom.toml.
+func LoadCustomLukeHelper(configDir string) (*CustomLukeHelper, error) {
+	f, err := LoadCustomConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
+	t := f.CustomLukeHelper
 	h := &CustomLukeHelper{}
-	for _, l := range secs[0] {
-		if h.EventTime, err = l.Int(0); err != nil {
-			return nil, err
-		}
+	for _, v := range t.EventTime {
+		h.EventTime = v
 	}
-	for _, l := range secs[1] {
-		v, err := lineInts(l, []int{0, 1, 2, 3, 4, 5, 6})
-		if err != nil {
-			return nil, err
-		}
-		h.Spots = append(h.Spots, LukeSpot{Key: len(h.Spots), Map: v[0], Class: v[1], StartX: v[2], StartY: v[3],
-			EndX: v[4], EndY: v[5], Bag: v[6]})
+	for _, r := range t.Spot {
+		h.Spots = append(h.Spots, LukeSpot{Key: len(h.Spots), Map: r.MapNumber, Class: r.MonsterClass,
+			StartX: r.RangeStartX, StartY: r.RangeStartY, EndX: r.RangeEndX, EndY: r.RangeEndY, Bag: r.BagSpecial})
 	}
-	for _, l := range secs[2] {
-		s, err := scheduleOf(l, 0)
-		if err != nil {
-			return nil, err
-		}
-		h.Schedule = append(h.Schedule, s)
+	for _, r := range t.Schedule {
+		h.Schedule = append(h.Schedule, r.Schedule())
 	}
 	return h, nil
 }
@@ -259,19 +178,16 @@ type HealthBarRow struct {
 	Class, Map, Switch int
 }
 
-// LoadCustomHealthBar reads Custom/CustomHealthBar.txt (one table).
-func LoadCustomHealthBar(dataDir string) ([]HealthBarRow, error) {
-	rows, err := customTable(dataDir, "CustomHealthBar.txt")
+// LoadCustomHealthBar reads the CustomHealthBar table of
+// config/data/custom.toml.
+func LoadCustomHealthBar(configDir string) ([]HealthBarRow, error) {
+	f, err := LoadCustomConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]HealthBarRow, 0, len(rows))
-	for _, l := range rows {
-		v, err := lineInts(l, []int{0, 1, 2})
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, HealthBarRow{Class: v[0], Map: v[1], Switch: v[2]})
+	out := make([]HealthBarRow, 0, len(f.CustomHealthBar.Rows))
+	for _, r := range f.CustomHealthBar.Rows {
+		out = append(out, HealthBarRow{Class: r.MonsterIndex, Map: r.MapNumber, Switch: r.BarSwitch})
 	}
 	return out, nil
 }
@@ -309,45 +225,34 @@ type KillCountRow struct {
 	Items            []KillCountItem
 }
 
-// LoadCustomMonsterKillCount reads Custom/CustomMonsterKillCount.txt
-// (FUN_004b8920), sorted by DBIndex. Item rows of an unknown DBIndex are
-// dropped.
-func LoadCustomMonsterKillCount(dataDir string) ([]KillCountRow, error) {
-	secs, err := customSections(dataDir, "CustomMonsterKillCount.txt")
+// LoadCustomMonsterKillCount reads the CustomMonsterKillCount table of
+// config/data/custom.toml (FUN_004b8920), sorted by DBIndex. Item rows of an
+// unknown DBIndex are dropped.
+func LoadCustomMonsterKillCount(configDir string) ([]KillCountRow, error) {
+	f, err := LoadCustomConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	byKey := map[int]*KillCountRow{}
 	var out []*KillCountRow
-	for _, l := range secs[0] {
-		v, err := lineInts(l, []int{0, 1, 2, 3, 4, 5, 6, 7})
-		if err != nil {
-			return nil, err
-		}
-		if byKey[v[0]] != nil {
+	for _, r := range f.CustomMonsterKillCount.Kill {
+		if byKey[r.DBIndex] != nil {
 			continue
 		}
-		msg, _ := l.String(8)
-		if len(msg) > 0x7F {
-			msg = msg[:0x7F]
-		}
-		r := &KillCountRow{DBIndex: v[0], Monster: v[1], AL: [4]int{v[2], v[3], v[4], v[5]}, KillCount: v[6],
-			Money: v[7], Message: msg}
-		byKey[v[0]] = r
-		out = append(out, r)
+		k := &KillCountRow{DBIndex: r.DBIndex, Monster: r.MonsterIndex, AL: [4]int{r.AL0, r.AL1, r.AL2, r.AL3},
+			KillCount: r.KillCount, Money: r.Money, Message: cutString(r.Message, 0x7F)}
+		byKey[r.DBIndex] = k
+		out = append(out, k)
 	}
-	for _, l := range secs[1] {
-		v, err := lineInts(l, []int{0, 2, 3, 4, 5, 6, 7, 8, 9})
+	for i, r := range f.CustomMonsterKillCount.Item {
+		item, err := parseShopIndex(r.ItemIndex)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("CustomMonsterKillCount.Item row %d: %w", i+1, err)
 		}
-		item, err := parseShopIndex(l.Tokens[1])
-		if err != nil {
-			return nil, err
-		}
-		if r := byKey[v[0]]; r != nil {
-			r.Items = append(r.Items, KillCountItem{Index: item, Level: v[1], Durability: v[2], Skill: v[3], Luck: v[4],
-				Option: v[5], Excellent: v[6], SetOption: v[7], Duration: v[8]})
+		if k := byKey[r.DBIndex]; k != nil {
+			k.Items = append(k.Items, KillCountItem{Index: item, Level: r.ItemLevel, Durability: r.Durability,
+				Skill: r.SkillSwitch, Luck: r.LuckSwitch, Option: r.Aditional, Excellent: r.Excellent,
+				SetOption: r.SetOption, Duration: r.Duration})
 		}
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].DBIndex < out[j].DBIndex })
@@ -373,34 +278,23 @@ type SummonScroll struct {
 	Monsters []SummonScrollMonster
 }
 
-// LoadSummonScroll reads Custom/SummonScroll.txt.
-func LoadSummonScroll(dataDir string) (*SummonScroll, error) {
-	secs, err := customSections(dataDir, "SummonScroll.txt")
+// LoadSummonScroll reads the SummonScroll table of config/data/custom.toml.
+func LoadSummonScroll(configDir string) (*SummonScroll, error) {
+	f, err := LoadCustomConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	s := &SummonScroll{}
-	for _, l := range secs[0] {
-		idx, err := l.Int(0)
+	for i, r := range f.SummonScroll.Scroll {
+		item, err := parseShopIndex(r.ItemIndex)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("SummonScroll.Scroll row %d: %w", i+1, err)
 		}
-		tok, err := l.String(1)
-		if err != nil {
-			return nil, err
-		}
-		item, err := parseShopIndex(tok)
-		if err != nil {
-			return nil, err
-		}
-		s.Scrolls = append(s.Scrolls, SummonScrollItem{Index: idx, Item: item})
+		s.Scrolls = append(s.Scrolls, SummonScrollItem{Index: r.Index, Item: item})
 	}
-	for _, l := range secs[1] {
-		v, err := lineInts(l, []int{0, 1, 2, 3})
-		if err != nil {
-			return nil, err
-		}
-		s.Monsters = append(s.Monsters, SummonScrollMonster{Index: v[0], Group: v[1], Class: v[2], Rate: v[3]})
+	for _, r := range f.SummonScroll.Monster {
+		s.Monsters = append(s.Monsters, SummonScrollMonster{Index: r.Index, Group: r.Group, Class: r.MonsterClass,
+			Rate: r.CreateRate})
 	}
 	return s, nil
 }
@@ -408,13 +302,14 @@ func LoadSummonScroll(dataDir string) (*SummonScroll, error) {
 // --- CreationGold -------------------------------------------------------------------------
 
 // CreationGoldValue is GetPrivateProfileInt("CreationGold", "GoldValue",
-// 50, "Custom\CreationGold.txt"), read on every use (FUN_0049a690).
-func CreationGoldValue(dataDir string) int {
-	f, err := ini.Load(filepath.Join(dataDir, "Custom", "CreationGold.txt"))
+// 50, "Custom\CreationGold.txt"), read on every use (FUN_0049a690): the
+// CreationGold table of config/data/custom.toml, 50 when it cannot be read.
+func CreationGoldValue(configDir string) int {
+	f, err := LoadCustomConfig(configDir)
 	if err != nil {
 		return 0x32
 	}
-	return f.Int("CreationGold", "GoldValue", 0x32)
+	return f.CreationGold.GoldValue
 }
 
 // --- DailyReward --------------------------------------------------------------------------
@@ -430,90 +325,48 @@ type DailyRewardRow struct {
 	Info1, Info2               string // 100 bytes each
 }
 
-// LoadDailyReward reads Custom/DailyReward.txt by day (the first row of a
-// day wins).
-func LoadDailyReward(dataDir string) (map[int]DailyRewardRow, error) {
-	secs, err := customSections(dataDir, "DailyReward.txt")
+// LoadDailyReward reads the DailyReward table of config/data/custom.toml by
+// day (the first row of a day wins).
+func LoadDailyReward(configDir string) (map[int]DailyRewardRow, error) {
+	f, err := LoadCustomConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	out := map[int]DailyRewardRow{}
-	for _, l := range secs[0] {
-		if len(l.Tokens) < 12 {
-			return nil, fmt.Errorf("DailyReward.txt line %d: %d columns", l.No, len(l.Tokens))
-		}
-		v, err := lineInts(l, []int{0, 2, 3, 4, 5, 6, 7, 8, 9})
+	for i, r := range f.DailyReward.Rows {
+		item, err := parseShopIndex(r.Item)
 		if err != nil {
-			return nil, err
-		}
-		item, err := parseShopIndex(l.Tokens[1])
-		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("DailyReward row %d: %w", i+1, err)
 		}
 		if item < 0 {
 			item = 0xFFFF
 		}
-		if _, dup := out[v[0]]; dup {
+		if _, dup := out[r.Day]; dup {
 			continue
 		}
-		cut := func(s string) string {
-			if len(s) > 99 {
-				return s[:99]
-			}
-			return s
-		}
-		out[v[0]] = DailyRewardRow{Day: v[0], Index: item, Level: v[1], Skill: v[2], Luck: v[3], Option: v[4],
-			Durability: v[5], Excellent: v[6], Ancient: v[7], Duration: v[8], Info1: cut(l.Tokens[10]),
-			Info2: cut(l.Tokens[11])}
+		out[r.Day] = DailyRewardRow{Day: r.Day, Index: item, Level: r.Level, Skill: r.Skill, Luck: r.Luck,
+			Option: r.AddOption, Durability: r.Dur, Excellent: r.Exc, Ancient: r.Anc, Duration: r.Duration,
+			Info1: cutString(r.Info1, 99), Info2: cutString(r.Info2, 99)}
 	}
 	return out, nil
 }
 
 // --- CustomPatente ------------------------------------------------------------------------
 
-// LoadCustomPatente reads Custom/CustomPatente.txt with the script reader
-// (FUN_00451f90 -> FUN_00409600 / FUN_00451390): the first cell of each
-// section-0 row is a patente value, its position (1-based) is the rank
-// shown by C1 0C F3 E5. At most 50 values. A missing file gives an empty
-// list, as in this installation.
-func LoadCustomPatente(dataDir string) ([]int, error) {
-	secs, err := LoadEventScript(filepath.Join(dataDir, "Custom", "CustomPatente.txt"))
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
-	}
+// LoadCustomPatente reads the CustomPatente table of config/data/custom.toml
+// (FUN_00451f90): the position (1-based) of a value is the rank shown by
+// C1 0C F3 E5. At most 50 values.
+func LoadCustomPatente(configDir string) ([]int, error) {
+	f, err := LoadCustomConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
-	var out []int
-	for _, s := range secs {
-		if s.Index != 0 {
-			continue
-		}
-		for _, r := range s.Rows {
-			if len(out) == 50 {
-				break
-			}
-			out = append(out, atoiC(r[0]))
-		}
+	out := f.CustomPatente.Value
+	if len(out) > 50 {
+		out = out[:50]
 	}
-	return out, nil
-}
-
-// atoiC is the C atoi: leading blanks, sign, digits; anything else stops.
-func atoiC(s string) int {
-	i, n, neg := 0, 0, false
-	for i < len(s) && (s[i] == ' ' || s[i] == '\t') {
-		i++
+	if len(out) == 0 {
+		return nil, nil
 	}
-	if i < len(s) && (s[i] == '-' || s[i] == '+') {
-		neg = s[i] == '-'
-		i++
-	}
-	for ; i < len(s) && s[i] >= '0' && s[i] <= '9'; i++ {
-		n = n*10 + int(s[i]-'0')
-	}
-	if neg {
-		return -n
-	}
-	return n
+	return append([]int(nil), out...), nil
 }

@@ -98,8 +98,8 @@ func init() {
 			}
 		}
 		w.ev().bc = bc
-		if w.dataDir != "" {
-			d, err := gamedata.LoadBloodCastle(w.dataDir)
+		if w.configDir != "" {
+			d, err := gamedata.LoadBloodCastle(w.configDir)
 			if err != nil {
 				return err
 			}

@@ -3,7 +3,7 @@ package gamedata
 import "testing"
 
 func TestLoadCustomQuiz(t *testing.T) {
-	q, err := LoadCustomQuiz(dataDir())
+	q, err := LoadCustomQuiz(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,5 +1,6 @@
-// Package serverlist loads the ConnectServer ServerList.dat
-// (docs/server-plan/03-connect-server.md §1):
+// Package serverlist builds the ConnectServer server list from the
+// ServerList rows of config/server.toml (ServerList.dat of the original,
+// docs/server-plan/03-connect-server.md §1):
 //
 //	ServerCode   ServerName   IpAddress   Port   Visible
 package serverlist
@@ -7,7 +8,7 @@ package serverlist
 import (
 	"fmt"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/servercfg"
 )
 
 // Entry is one game server shown to clients.
@@ -19,52 +20,28 @@ type Entry struct {
 	Visible bool
 }
 
-// Load reads ServerList.dat.
-func Load(path string) ([]Entry, error) {
-	lines, err := mutext.LoadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return Parse(lines)
-}
-
-// Parse converts tokenized lines into entries.
-func Parse(lines []mutext.Line) ([]Entry, error) {
+// Build validates the configured rows and converts them into entries.
+func Build(rows []servercfg.ServerRow) ([]Entry, error) {
 	var out []Entry
 	seen := map[int]bool{}
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) != 5 {
-			return nil, fmt.Errorf("line %d: expected 5 columns, got %d", l.No, len(l.Tokens))
-		}
-		code, err := l.Int(0)
-		if err != nil {
-			return nil, err
-		}
-		port, err := l.Int(3)
-		if err != nil {
-			return nil, err
-		}
-		visible, err := l.Int(4)
-		if err != nil {
-			return nil, err
-		}
-		if code < 0 || code > 0xFF {
+	for i, r := range rows {
+		if r.ServerCode < 0 || r.ServerCode > 0xFF {
 			// F4 03 carries the code as a single byte (ConnectServer FUN_004035f0).
-			return nil, fmt.Errorf("line %d: server code %d out of range 0..255", l.No, code)
+			return nil, fmt.Errorf("ServerList row %d: server code %d out of range 0..255", i+1, r.ServerCode)
 		}
-		if port < 1 || port > 0xFFFF {
-			return nil, fmt.Errorf("line %d: port %d out of range", l.No, port)
+		if r.Port < 1 || r.Port > 0xFFFF {
+			return nil, fmt.Errorf("ServerList row %d: port %d out of range", i+1, r.Port)
 		}
-		if seen[code] {
-			return nil, fmt.Errorf("line %d: duplicate server code %d", l.No, code)
+		if seen[r.ServerCode] {
+			return nil, fmt.Errorf("ServerList row %d: duplicate server code %d", i+1, r.ServerCode)
 		}
-		seen[code] = true
+		seen[r.ServerCode] = true
 		out = append(out, Entry{
-			Code:    code,
-			Name:    l.Tokens[1],
-			Address: l.Tokens[2],
-			Port:    port,
-			Visible: visible != 0,
+			Code:    r.ServerCode,
+			Name:    r.ServerName,
+			Address: r.IpAddress,
+			Port:    r.Port,
+			Visible: r.Visible != 0,
 		})
 	}
 	return out, nil

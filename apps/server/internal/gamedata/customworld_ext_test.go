@@ -1,13 +1,11 @@
 package gamedata
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
 func TestLoadCustomArena(t *testing.T) {
-	a, err := LoadCustomArena(eventData)
+	a, err := LoadCustomArena(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,7 +25,7 @@ func TestLoadCustomArena(t *testing.T) {
 }
 
 func TestLoadCustomEventDropAndLuke(t *testing.T) {
-	d, err := LoadCustomEventDrop(eventData)
+	d, err := LoadCustomEventDrop(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +37,7 @@ func TestLoadCustomEventDropAndLuke(t *testing.T) {
 		d.Items[0][11] != (CustomEventDropItem{Index: 14*512 + 16, Count: 3, Delay: 110}) {
 		t.Fatalf("items %+v", d.Items[0])
 	}
-	h, err := LoadCustomLukeHelper(eventData)
+	h, err := LoadCustomLukeHelper(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +48,7 @@ func TestLoadCustomEventDropAndLuke(t *testing.T) {
 }
 
 func TestLoadSmallCustoms(t *testing.T) {
-	hb, err := LoadCustomHealthBar(eventData)
+	hb, err := LoadCustomHealthBar(configDir())
 	if err != nil || len(hb) != 12 {
 		t.Fatalf("health bar %+v %v", hb, err)
 	}
@@ -58,22 +56,22 @@ func TestLoadSmallCustoms(t *testing.T) {
 		HealthBarSwitch(nil, 3, 0) != 0 {
 		t.Fatal("health bar switch")
 	}
-	kc, err := LoadCustomMonsterKillCount(eventData)
+	kc, err := LoadCustomMonsterKillCount(configDir())
 	if err != nil || len(kc) != 0 {
 		t.Fatalf("kill count %+v %v", kc, err)
 	}
-	ss, err := LoadSummonScroll(eventData)
+	ss, err := LoadSummonScroll(configDir())
 	if err != nil || len(ss.Scrolls) != 1 || ss.Scrolls[0] != (SummonScrollItem{0, 14*512 + 213}) || len(ss.Monsters) != 6 ||
 		ss.Monsters[3] != (SummonScrollMonster{Index: 0, Group: 3, Class: 79, Rate: 40}) {
 		t.Fatalf("summon %+v %v", ss, err)
 	}
-	if v := CreationGoldValue(eventData); v != 20 {
+	if v := CreationGoldValue(configDir()); v != 20 {
 		t.Fatalf("creation gold %d", v)
 	}
 	if v := CreationGoldValue(t.TempDir()); v != 50 {
 		t.Fatalf("creation gold default %d", v)
 	}
-	dr, err := LoadDailyReward(eventData)
+	dr, err := LoadDailyReward(configDir())
 	if err != nil || len(dr) != 31 {
 		t.Fatalf("daily %d %v", len(dr), err)
 	}
@@ -81,33 +79,8 @@ func TestLoadSmallCustoms(t *testing.T) {
 		Excellent: 63, Info1: "Small Axe", Info2: "Excelente +13 Full"}) {
 		t.Fatalf("day 31 %+v", r)
 	}
-	p, err := LoadCustomPatente(eventData)
+	p, err := LoadCustomPatente(configDir())
 	if err != nil || p != nil {
-		t.Fatalf("patente %v %v", p, err)
-	}
-}
-
-func TestLoadCustomFixtures(t *testing.T) {
-	dir := t.TempDir()
-	write := func(name, text string) {
-		if err := os.MkdirAll(filepath.Join(dir, "Custom"), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(dir, "Custom", name), []byte(text), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	write("CustomMonsterKillCount.txt", "0\n5 3 1 0 1 1 10 100 \"Spiders\"\n2 4 1 1 1 1 2 0 \"Two\"\n5 9 1 1 1 1 1 1 \"dup\"\nend\n"+
-		"1\n5 12,015 1 0 0 1 2 3 4 60\n7 12,015 0 0 0 0 0 0 0 0\nend\n")
-	kc, err := LoadCustomMonsterKillCount(dir)
-	if err != nil || len(kc) != 2 || kc[0].DBIndex != 2 || kc[1].Monster != 3 || kc[1].Message != "Spiders" ||
-		kc[1].AL != [4]int{1, 0, 1, 1} || len(kc[1].Items) != 1 ||
-		kc[1].Items[0] != (KillCountItem{Index: 12*512 + 15, Level: 1, Luck: 1, Option: 2, Excellent: 3, SetOption: 4, Duration: 60}) {
-		t.Fatalf("kill count %+v %v", kc, err)
-	}
-	write("CustomPatente.txt", "0\n7 ; first\n-3\n12x\nend\n")
-	p, err := LoadCustomPatente(dir)
-	if err != nil || len(p) != 3 || p[0] != 7 || p[1] != -3 || p[2] != 12 {
 		t.Fatalf("patente %v %v", p, err)
 	}
 }

@@ -10,17 +10,18 @@ import (
 	"time"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/gsconfig"
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/ini"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/servercfg"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/crypto"
 )
 
-// Data coverage test (docs/server-plan/16-cobertura-dados.md): every file
-// under apps/server/data/Data and the instance DATA folders must be either
-// read by the original GameServer.exe / CastleSiege.exe and parsed by a Go
-// loader (which must succeed on the shipped file), listed as pending (read
-// by the original, no Go parser yet), or ignored with a reason. A new file
-// that is none of these fails the test.
+// Data coverage test (docs/server-plan/16-cobertura-dados.md). The text
+// configuration of the original lives in apps/server/config (TOML, see
+// cmd/configconv): every config/data/<group>.toml must have the Go loaders
+// of the original files it holds, and they must read the shipped file.
+// apps/server/data keeps only the binary files (terrain, keys, Lua
+// scripts, images): each must be read by a Go loader or ignored with a
+// reason. A new file that is none of these fails the test.
 //
 // The test lives in package game because several loaders are unexported
 // here; the rest are in internal/gamedata and internal/config.
@@ -29,6 +30,7 @@ import (
 type covEnv struct {
 	t    *testing.T
 	data string // apps/server/data/Data
+	cfg  string // apps/server/config
 	w    *World
 }
 
@@ -43,280 +45,41 @@ func ld(name, orig string, f func(c *covEnv) error) covLoader { return covLoader
 
 func errOnly[T any](_ T, err error) error { return err }
 
-// Loaders by file (paths relative to apps/server/data). optionalFiles may be
-// absent from this installation (the original reads them if present).
-var (
-	ldClassInfo = ld("gamedata.LoadClassInfo", "FUN_004e85f0", func(c *covEnv) error {
-		return errOnly(gamedata.LoadClassInfo(c.data))
-	})
-)
+// ldg is a gamedata loader taking the config directory.
+func ldg[T any](name, orig string, f func(string) (T, error)) covLoader {
+	return ld("gamedata."+name, orig, func(c *covEnv) error { return errOnly(f(c.cfg)) })
+}
 
+// --- data/Data: the binary files ---------------------------------------------------
+
+var ldSkillWorld = ld("game.loadSkillWorld", "FUN_004ec0f0", func(c *covEnv) error {
+	return errOnly(loadSkillWorld(c.data, c.cfg))
+})
+
+var ldTerrains = ld("gamedata.LoadTerrains", "FUN_004eb3a0 (Terrain\\terrain%d.att, maps 1..100)", func(c *covEnv) error {
+	return errOnly(gamedata.LoadTerrains(c.data))
+})
+
+// coveredFiles are the binary files and their Go loaders (paths relative
+// to apps/server/data).
 var coveredFiles = map[string]covLoader{
-	"Data/BlackList.txt": ld("gamedata.LoadBlackList", "FUN_004e8520 -> FUN_00411ae0", func(c *covEnv) error {
-		return errOnly(gamedata.LoadBlackList(c.data))
-	}),
-	"Data/Character/DefaultClassFreebies.txt": ld("gamedata.LoadDefaultClassFreebies", "FUN_004e85f0 -> FUN_0046cb40", func(c *covEnv) error {
-		return errOnly(gamedata.LoadDefaultClassFreebies(c.data))
-	}),
-	"Data/Character/DefaultClassInfo.txt": ldClassInfo,
-	"Data/CommandManager.txt": ld("game.loadCommands", "FUN_004e86f0", func(c *covEnv) error {
-		return errOnly(loadCommands(c.data))
-	}),
-	"Data/CommandRequirement.txt": ld("gamedata.LoadCommandRequirement", "FUN_004e86f0 -> FUN_004402a0", func(c *covEnv) error {
-		return errOnly(gamedata.LoadCommandRequirement(c.data))
-	}),
-	"Data/ConnectMember.txt": ld("game.loadNameList", "FUN_004e8860", func(c *covEnv) error {
-		return errOnly(loadNameList(filepath.Join(c.data, "ConnectMember.txt")))
-	}),
-	"Data/MapManager.txt": ld("gamedata.LoadMapManager", "FUN_004e8860", func(c *covEnv) error {
-		return errOnly(gamedata.LoadMapManager(c.data))
-	}),
-	"Data/MapRateInfo.txt": ld("gamedata.LoadMapRateInfo", "FUN_004e8860", func(c *covEnv) error {
-		return errOnly(gamedata.LoadMapRateInfo(c.data))
-	}),
-
-	// FUN_004e8a50: Custom.
-	"Data/Custom/CustomArena.txt":      ldc("CustomArena", gamedata.LoadCustomArena),
-	"Data/Custom/CustomAttack.txt":     ldc("CustomAttack", gamedata.LoadCustomAttack),
-	"Data/Custom/CustomBuyVip.txt":     ldc("CustomBuyVip", gamedata.LoadCustomBuyVip),
-	"Data/Custom/CustomEventDrop.txt":  ldc("CustomEventDrop", gamedata.LoadCustomEventDrop),
-	"Data/Custom/CustomGift.txt":       ldc("CustomGift", gamedata.LoadCustomGift),
-	"Data/Custom/CustomHealthBar.txt":  ldc("CustomHealthBar", gamedata.LoadCustomHealthBar),
-	"Data/Custom/CustomJewel.txt":      ldc("CustomJewel", gamedata.LoadCustomJewel),
-	"Data/Custom/CustomLukeHelper.txt": ldc("CustomLukeHelper", gamedata.LoadCustomLukeHelper),
-	"Data/Custom/CustomMarriage.txt":   ldc("CustomMarriage", gamedata.LoadCustomMarriage),
-	"Data/Custom/CustomMonster.txt": ld("gamedata.LoadCustomMonsters + LoadCustomMonsterRows", "FUN_004e8a50 -> FUN_00466b30", func(c *covEnv) error {
-		if _, err := gamedata.LoadCustomMonsters(c.data); err != nil {
-			return err
-		}
-		return errOnly(gamedata.LoadCustomMonsterRows(c.data))
-	}),
-	"Data/Custom/CustomMonsterKillCount.txt": ldc("CustomMonsterKillCount", gamedata.LoadCustomMonsterKillCount),
-	"Data/Custom/CustomPick.txt":             ldc("CustomPick", gamedata.LoadCustomPick),
-	"Data/Custom/CustomWing.txt": ld("gamedata.LoadCustomWings + game.loadCustomTables", "FUN_004e8a50", func(c *covEnv) error {
-		if _, err := gamedata.LoadCustomWings(c.data); err != nil {
-			return err
-		}
-		return errOnly(loadCustomTables(c.data))
-	}),
-	"Data/Custom/CustomPet.txt": ld("game.loadCustomTables", "FUN_004e8a50", func(c *covEnv) error {
-		return errOnly(loadCustomTables(c.data))
-	}),
-	"Data/Custom/CustomXShop.txt": ld("gamedata.LoadXShopPrices", "FUN_004e8a50", func(c *covEnv) error {
-		_, ok, err := gamedata.LoadXShopPrices(filepath.Join(c.data, "Custom", "CustomXShop.txt"))
-		if err == nil && !ok {
-			c.t.Error("CustomXShop.txt not opened")
-		}
-		return err
-	}),
-	"Data/Custom/CustomXShopRecharge.txt": ld("game.rechargeBlock", "FUN_00404a60 (read on request, next to CustomXShop.txt)", func(c *covEnv) error {
-		path := c.w.rechargePath()
-		if _, err := ini.Load(path); err != nil {
-			return err
-		}
-		c.w.rechargeBlock(path)
-		return nil
-	}),
-	"Data/Custom/CreationGold.txt": ld("gamedata.CreationGoldValue", "FUN_0049a690 (read on use)", func(c *covEnv) error {
-		_, err := ini.Load(filepath.Join(c.data, "Custom", "CreationGold.txt"))
-		gamedata.CreationGoldValue(c.data)
-		return err
-	}),
-	"Data/Custom/CustomRespawn.txt":      ldc("CustomRespawn", gamedata.LoadCustomRespawn),
-	"Data/Custom/CustomMove.txt":         ldc("CustomMove", gamedata.LoadCustomMove),
-	"Data/Custom/CustomGate.txt":         ldc("CustomGate", gamedata.LoadCustomGate),
-	"Data/Custom/CustomNPCCommand.txt":   ldc("CustomNPCCommand", gamedata.LoadCustomNPCCommand),
-	"Data/Custom/CustomDeathMessage.txt": ldc("CustomDeathMessage", gamedata.LoadCustomDeathMessage),
-	"Data/Custom/CustomAttribute.txt":    ldc("CustomAttributes", gamedata.LoadCustomAttributes),
-	"Data/Custom/SummonScroll.txt":       ldc("SummonScroll", gamedata.LoadSummonScroll),
-	"Data/Custom/Event/DuelEvent.txt":    ldc("DuelEvent", gamedata.LoadDuelEvent),
-	"Data/Custom/Event/DeathEvent.txt":   ldc("DeathEvent", gamedata.LoadDeathEvent),
-	"Data/Custom/Event/RoletaEvent.txt":  ldc("RoletaEvent", gamedata.LoadRoletaEvent),
-	"Data/Custom/Event/RaffleEvent.txt":  ldc("RaffleEvent", gamedata.LoadRaffleEvent),
-	"Data/Custom/Event/PairEvent.txt":    ldc("PairEvent", gamedata.LoadPairEvent),
-	"Data/Custom/Event/SobreEvent.txt":   ldc("SobreEvent", gamedata.LoadSobreEvent),
-	"Data/Custom/Event/TheftEvent.txt":   ldc("TheftEvent", gamedata.LoadTheftEvent),
-	"Data/Custom/CustomGuard.txt":        ldc("CustomGuard", gamedata.LoadCustomGuard),
-	"Data/Custom/CustomMobCombo.txt":     ldc("CustomMobCombo", gamedata.LoadCustomMobCombo),
-	"Data/Custom/CustomLuckyWheel.txt":   ldc("LuckyWheel", gamedata.LoadLuckyWheel),
-	"Data/Custom/DailyReward.txt":        ldc("DailyReward", gamedata.LoadDailyReward),
-	"Data/Custom/CustomPatente.txt":      ldc("CustomPatente", gamedata.LoadCustomPatente),
-	"Data/Custom/CustomEvolution.txt":    ldc("CustomEvolution", gamedata.LoadCustomEvolution),
-	"Data/Custom/CustomGHRS.ini": ld("gamedata.LoadCustomGHRS", "CastleSiege.exe FUN_00442c10", func(c *covEnv) error {
-		return errOnly(gamedata.LoadCustomGHRS(c.data))
-	}),
-
-	// FUN_004e9d30: Event.
-	"Data/Event/BloodCastle.dat":     lde("BloodCastle", gamedata.LoadBloodCastle),
-	"Data/Event/BonusManager.dat":    ld("gamedata.LoadBonusManager", "FUN_004e9d30", func(c *covEnv) error { _, _, err := gamedata.LoadBonusManager(c.data); return err }),
-	"Data/Event/CastleDeepEvent.dat": lde("CastleDeep", gamedata.LoadCastleDeep),
-	"Data/Event/CastleSiege.dat":     lde("CastleSiege", gamedata.LoadCastleSiege),
-	"Data/Event/ChaosCastle.dat":     lde("ChaosCastle", gamedata.LoadChaosCastle),
-	"Data/Event/DevilSquare.dat":     lde("DevilSquare", gamedata.LoadDevilSquare),
-	"Data/Event/DropEvent.dat":       ld("gamedata.LoadDropEvent", "FUN_004e9d30", func(c *covEnv) error { _, _, err := gamedata.LoadDropEvent(c.data); return err }),
-	"Data/Event/EventEntryLevel.dat": lde("EventEntryLevel", gamedata.LoadEventEntryLevel),
-	"Data/Event/EventStageSpawn.dat": lde("EventStageSpawn", gamedata.LoadEventStageSpawn),
-	"Data/Event/GoldenArcher.dat":    lde("GoldenArcher", gamedata.LoadGoldenArcher),
-	"Data/Event/InvasionManager.dat": lde("Invasions", gamedata.LoadInvasions),
-	"Data/Event/Kalima.dat":          lde("Kalima", gamedata.LoadKalima),
-	"Data/Custom/CustomQuiz.txt":     lde("CustomQuiz", gamedata.LoadCustomQuiz),
-
-	"Data/EventItemBagManager.txt": ld("gamedata.LoadEventItemBags", "FUN_004ea4a0", func(c *covEnv) error {
-		return errOnly(gamedata.LoadEventItemBags(c.data))
-	}),
-
-	// FUN_004ea5d0: Hack.
-	"Data/Hack/HackPacketCheck.txt": ld("game.loadHackRules", "FUN_004ea5d0", func(c *covEnv) error {
-		return errOnly(loadHackRules(c.data))
-	}),
-	"Data/Hack/HackSkillSpeedCheck.txt": ld("gamedata.LoadHackSkillSpeedCheck", "FUN_004ea5d0 -> FUN_00488340", func(c *covEnv) error {
-		return errOnly(gamedata.LoadHackSkillSpeedCheck(c.data))
-	}),
+	// FUN_004ea5d0: the packet keys of Hack.
 	"Data/Hack/Enc2.dat": ld("crypto.LoadKeyFile", "FUN_004ea5d0", func(c *covEnv) error {
 		return errOnly(crypto.LoadKeyFile(filepath.Join(c.data, "Hack", "Enc2.dat")))
 	}),
 	"Data/Hack/Dec1.dat": ld("crypto.LoadKeyFile", "FUN_004ea5d0", func(c *covEnv) error {
 		return errOnly(crypto.LoadKeyFile(filepath.Join(c.data, "Hack", "Dec1.dat")))
 	}),
-
-	// FUN_004ea820: Item.
-	"Data/Item/Item.txt":                ldi("gamedata.LoadItems", gamedata.LoadItems),
-	"Data/Item/ExcellentOptionRate.txt": ldi("gamedata.LoadExcellentOptionRate", gamedata.LoadExcellentOptionRate),
-	"Data/Item/ItemDrop.txt":            ldi("gamedata.LoadItemDrop", gamedata.LoadItemDrop),
-	"Data/Item/ItemLevel.txt":           ldi("gamedata.LoadItemLevel", gamedata.LoadItemLevel),
-	"Data/Item/ItemLoot.txt":            ldi("gamedata.LoadItemLoot", gamedata.LoadItemLoot),
-	"Data/Item/ItemMoneyDrop.txt":       ldi("gamedata.LoadItemMoneyDrop", gamedata.LoadItemMoneyDrop),
-	"Data/Item/ItemMove.txt":            ldi("gamedata.LoadItemMove", gamedata.LoadItemMove),
-	"Data/Item/ItemOption.txt":          ldi("gamedata.LoadItemOptions", gamedata.LoadItemOptions),
-	"Data/Item/ItemOptionRate.txt":      ldi("gamedata.LoadItemOptionRate", gamedata.LoadItemOptionRate),
-	"Data/Item/ItemStack.txt":           ldi("gamedata.LoadItemStack", gamedata.LoadItemStack),
-	"Data/Item/ItemValue.txt":           ldi("gamedata.LoadItemValue", gamedata.LoadItemValue),
-	"Data/Item/SetItemOption.txt":       ldi("gamedata.LoadSetItemOption", gamedata.LoadSetItemOption),
-	"Data/Item/SetItemType.txt":         ldi("gamedata.LoadSetItemType", gamedata.LoadSetItemType),
-	"Data/Item/WingOption.txt":          ldi("gamedata.LoadWingOptions", gamedata.LoadWingOptions),
-
-	// FUN_004eb000: Lang.
-	"Data/Lang/Eng/Message.txt": ldMessages, "Data/Lang/Por/Message.txt": ldMessages, "Data/Lang/Spn/Message.txt": ldMessages,
-	"Data/Lang/Eng/Notice.txt": ldNotices, "Data/Lang/Por/Notice.txt": ldNotices, "Data/Lang/Spn/Notice.txt": ldNotices,
-
-	"Data/MapServerInfo.txt": ld("gamedata.LoadMapServer", "FUN_004eb520", func(c *covEnv) error {
-		return errOnly(gamedata.LoadMapServer(c.data))
-	}),
-
-	// FUN_004eb5f0: Monster.
-	"Data/Monster/MonsterList.txt": ld("gamedata.LoadMonsterList", "FUN_004eb5f0", func(c *covEnv) error {
-		return errOnly(gamedata.LoadMonsterList(c.data, gamedata.MonsterRates{}))
-	}),
-	"Data/Monster/MonsterMove.txt": ld("gamedata.LoadMonsterMove", "FUN_004eb5f0 -> FUN_004b1110", func(c *covEnv) error {
-		return errOnly(gamedata.LoadMonsterMove(c.data))
-	}),
-	"Data/Monster/MonsterSchedule.txt": ld("gamedata.LoadMonsterSchedule", "FUN_004eb5f0 -> FUN_004bb0c0", func(c *covEnv) error {
-		return errOnly(gamedata.LoadMonsterSchedule(c.data))
-	}),
-	"Data/Monster/Skill/MonsterSkillElement.txt": ldMonsterSkills,
-	"Data/Monster/Skill/MonsterSkillUnit.txt":    ldMonsterSkills,
-	"Data/Monster/Skill/MonsterSkill.txt":        ldMonsterSkills,
-	"Data/Monster/NpcTalk.txt": ld("gamedata.LoadNpcTalk", "FUN_004eb5f0", func(c *covEnv) error {
-		return errOnly(gamedata.LoadNpcTalk(c.data))
-	}),
-
-	// FUN_004eba60: Move.
-	"Data/Move/Gate.txt": ld("gamedata.LoadGates", "FUN_004eba60", func(c *covEnv) error {
-		return errOnly(gamedata.LoadGates(c.data))
-	}),
-	"Data/Move/Move.txt": ld("game.loadMoves", "FUN_004eba60", func(c *covEnv) error {
-		return errOnly(loadMoves(c.data))
-	}),
-	"Data/Move/MoveSummon.txt": ld("gamedata.LoadMoveSummon", "FUN_004eba60 -> FUN_004bfd00", func(c *covEnv) error {
-		return errOnly(gamedata.LoadMoveSummon(c.data))
-	}),
-
-	// FUN_004ebc50: Quest.
-	"Data/Quest/Quest.txt": ldQuests, "Data/Quest/QuestObjective.txt": ldQuests, "Data/Quest/QuestReward.txt": ldQuests,
-
-	"Data/ShopManager.txt": ld("gamedata.LoadShops", "FUN_004ebfc0", func(c *covEnv) error {
-		return errOnly(gamedata.LoadShops(c.data))
-	}),
-
 	// FUN_004ec0f0: Skill.
-	"Data/Skill/ComboSkill.txt": ldSkillWorld, "Data/Skill/SkillDamage.txt": ldSkillWorld,
-	"Data/Skill/SkillElect.hit": ldSkillWorld, "Data/Skill/SkillEnabler.txt": ldSkillWorld,
-	"Data/Skill/SkillUseArea.txt": ldSkillWorld,
-	"Data/Skill/EffectList.txt": ld("game.loadEffectList", "FUN_004ec0f0", func(c *covEnv) error {
-		return errOnly(loadEffectList(c.data))
-	}),
-	"Data/Skill/SkillList.txt": ld("gamedata.LoadSkills", "FUN_004ec0f0", func(c *covEnv) error {
-		return errOnly(gamedata.LoadSkills(c.data))
-	}),
-
-	// FUN_004ec4c0: Util.
-	"Data/Util/DamageTable.txt": ld("game.loadDamageTable", "FUN_004ec4c0", func(c *covEnv) error {
-		return errOnly(loadDamageTable(c.data))
-	}),
-	"Data/Util/ExperienceTable.txt": ld("gamedata.LoadExperienceTable", "FUN_004ec4c0 -> FUN_0047be80", func(c *covEnv) error {
-		return errOnly(gamedata.LoadExperienceTable(c.data))
-	}),
-	"Data/Util/Filter.txt":     ldMoveData,
-	"Data/Util/GameMaster.txt": ldMoveData,
-	"Data/Util/PetDamageTable.txt": ld("gamedata.LoadPetDamageTable", "FUN_004ec4c0 -> FUN_004d61d0", func(c *covEnv) error {
-		return errOnly(gamedata.LoadPetDamageTable(c.data))
-	}),
-	"Data/Util/ResetLimit.txt": ldCmdWorld,
-	"Data/Util/ResetTable.txt": ldCmdWorld,
-}
-
-// optionalFiles are read by the original when present but absent here.
-var optionalFiles = map[string]bool{
-	"Data/Custom/CustomPatente.txt": true, // FUN_00451f90; LoadCustomPatente accepts a missing file
-}
-
-var (
-	ldMessages = ld("game.loadMessages", "FUN_004eb000", func(c *covEnv) error { return errOnly(loadMessages(c.data)) })
-	ldNotices  = ld("game.loadNotices", "FUN_004eb000", func(c *covEnv) error {
-		return errOnly(loadNotices(c.data, time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)))
-	})
-	ldMonsterSkills = ld("game.loadMonsterSkills", "FUN_004eb5f0", func(c *covEnv) error { return errOnly(loadMonsterSkills(c.data)) })
-	ldQuests        = ld("gamedata.LoadQuests", "FUN_004ebc50", func(c *covEnv) error { return errOnly(gamedata.LoadQuests(c.data)) })
-	ldSkillWorld    = ld("game.loadSkillWorld", "FUN_004ec0f0", func(c *covEnv) error { return errOnly(loadSkillWorld(c.data)) })
-	ldMoveData      = ld("game.loadMoveData", "FUN_004ec4c0", func(c *covEnv) error { return loadMoveData(c.w) })
-	ldCmdWorld      = ld("game.loadCmdWorld", "FUN_004ec4c0", func(c *covEnv) error { return loadCmdWorld(c.w) })
-	ldSpawns        = ld("gamedata.LoadSpawns", "FUN_004bbaa0 (Monster\\Spawn\\NNN - *.txt, map known)", func(c *covEnv) error {
-		maps, err := gamedata.LoadMapManager(c.data)
-		if err != nil {
-			return err
+	"Data/Skill/SkillElect.hit": ldSkillWorld,
+	// FUN_00404a60: the QR image named by ImagemBMP in config/data/xshop.toml.
+	"Data/Custom/pixFE31.tmp.bmp": ld("game.rechargeBlock", "FUN_00404a60 -> FUN_00401bf0", func(c *covEnv) error {
+		if d := c.w.rechargeBlock(c.w.rechargePath()); d[rcQRSize] == 0 && d[rcQRSize+1] == 0 {
+			c.t.Error("ImagemBMP not loaded")
 		}
-		return errOnly(gamedata.LoadSpawns(c.data, func(m int) bool { _, ok := maps[m]; return ok }, func() int { return 0 }))
-	})
-	ldBags = ld("gamedata.LoadEventItemBags", "FUN_00491220 (EventItemBag\\%s.txt named by the manager)", func(c *covEnv) error {
-		return errOnly(gamedata.LoadEventItemBags(c.data))
-	})
-	ldShops = ld("gamedata.LoadShops", "FUN_004f55e0 (Shop\\%s.txt named by ShopManager)", func(c *covEnv) error {
-		return errOnly(gamedata.LoadShops(c.data))
-	})
-	ldTerrains = ld("gamedata.LoadTerrains", "FUN_004eb3a0 (Terrain\\terrain%d.att, maps 1..100)", func(c *covEnv) error {
-		return errOnly(gamedata.LoadTerrains(c.data))
-	})
-	ldGSConfig = func(inst string) covLoader {
-		return ld("gsconfig.Load", ".\\Data\\GameServerInfo - *.dat (GetPrivateProfile*)", func(c *covEnv) error {
-			return errOnly(gsconfig.Load(filepath.Join(c.data, "..", inst, "DATA")))
-		})
-	}
-)
-
-func ldc[T any](name string, f func(string) (T, error)) covLoader {
-	return ld("gamedata.Load"+strings.TrimPrefix(name, "Load"), "FUN_004e8a50", func(c *covEnv) error { return errOnly(f(c.data)) })
+		return nil
+	}),
 }
-
-func lde[T any](name string, f func(string) (T, error)) covLoader {
-	return ld("gamedata.Load"+name, "FUN_004e9d30", func(c *covEnv) error { return errOnly(f(c.data)) })
-}
-
-func ldi[T any](name string, f func(string) (T, error)) covLoader {
-	return ld(name, "FUN_004ea820", func(c *covEnv) error { return errOnly(f(c.data)) })
-}
-
-// pendingFiles are read by the original but have no Go parser yet.
-var pendingFiles = map[string]string{}
 
 // The Lua scripts run in the embedded VM (lua.go): ScriptMain.lua with the
 // files it requires (FUN_004ebe20 -> FUN_004e6860, require FUN_004a5220)
@@ -333,63 +96,20 @@ func init() {
 var ignoredFiles = map[string]string{
 	"Data/Common/Protect/Decrypt.dat":                       "not referenced by any server binary",
 	"Data/Common/Protect/Encrypt.dat":                       "not referenced by any server binary",
-	"Data/Custom/Crywolf.dat":                               "not referenced (no Crywolf system in this build)",
-	"Data/Custom/CustomDailyReward.txt":                     "not referenced (the original reads Custom\\DailyReward.txt)",
-	"Data/Custom/CustomMix.txt":                             "not referenced by any server binary",
-	"Data/Custom/pixFE31.tmp.bmp":                           "runtime output: GetTempFileName(\"pix\") + .bmp of CustomXShopRecharge (FUN_00404a60)",
-	"Data/Event/Crywolf.dat":                                "not referenced (no Crywolf system in this build)",
-	"Data/Event/IllusionTemple.dat":                         "not referenced (CIllusionTemple exists but loads no file)",
-	"Data/Event/Kanturu.dat":                                "not referenced (no Kanturu system in this build)",
-	"Data/Item/test_item.txt":                               "not referenced by any server binary",
-	"Data/Monster/BALANCE_CHANGELOG.txt":                    "documentation",
-	"Data/Shop/_ALTERACOES.txt":                             "documentation",
-	"Data/Shop/239 - Arena Guard.txt":                       "not named by ShopManager.txt",
 	"Data/Script/Script/TemplateScript.lua":                 "Lua example, not require'd by ScriptMain.lua",
 	"Data/Script/Script/CustomMonsterDie(Boss).lua":         "require commented out in ScriptMain.lua",
 	"Data/Script/Script/CustomMonsterDie(Boss) - Copia.lua": "copy, not require'd",
-	"Data/EventItemBag/AJUSTE_JOIAS_20_PORCENTO.txt":        "not named by EventItemBagManager.txt",
-	"Data/EventItemBag/Special/HideAndSeek.txt":             "not named by EventItemBagManager.txt",
-	"Data/EventItemBag/Special/Loteria.txt":                 "not named by EventItemBagManager.txt",
-	"Data/EventItemBag/Special/MataMata.txt":                "not named by EventItemBagManager.txt",
-	"Data/EventItemBag/Special/Quiz.txt":                    "not named by EventItemBagManager.txt",
-	"Data/EventItemBag/Special/Roleta.txt":                  "not named by EventItemBagManager.txt",
 }
 
-// dynamicLoader classifies the families of files the original finds through
-// a manager list or a name pattern.
-func dynamicLoader(rel string, bags, shops map[string]bool, maps map[int]gamedata.MapInfo) (covLoader, bool) {
-	switch {
-	case strings.HasPrefix(rel, "Data/Monster/Spawn/") && strings.Count(rel, "/") == 3:
-		n := filepath.Base(rel)
-		if len(n) > 6 && n[3:6] == " - " {
-			if mp, err := strconv.Atoi(n[:3]); err == nil {
-				if _, ok := maps[mp]; ok {
-					return ldSpawns, true
-				}
-			}
-		}
-	case strings.HasPrefix(rel, "Data/EventItemBag/"):
-		if bags[strings.TrimSuffix(strings.TrimPrefix(rel, "Data/EventItemBag/"), ".txt")] {
-			return ldBags, true
-		}
-	case strings.HasPrefix(rel, "Data/Shop/"):
-		if shops[strings.TrimSuffix(strings.TrimPrefix(rel, "Data/Shop/"), ".txt")] {
-			return ldShops, true
-		}
-	case strings.HasPrefix(rel, "Data/Terrain/"):
+// dynamicLoader classifies the files the original finds through a name
+// pattern.
+func dynamicLoader(rel string) (covLoader, bool) {
+	if strings.HasPrefix(rel, "Data/Terrain/") {
 		base := strings.ToLower(filepath.Base(rel)) // the original opens "terrain%d.att"
 		if strings.HasPrefix(base, "terrain") && strings.HasSuffix(base, ".att") {
 			n, err := strconv.Atoi(strings.TrimSuffix(strings.TrimPrefix(base, "terrain"), ".att"))
 			if err == nil && n >= 1 && n <= gamedata.MaxMaps {
 				return ldTerrains, true
-			}
-		}
-	case strings.HasPrefix(rel, "4.GameServer/DATA/GameServerInfo - "), strings.HasPrefix(rel, "5.GameServerCS/DATA/GameServerInfo - "):
-		inst := rel[:strings.Index(rel, "/")]
-		name := strings.TrimSuffix(strings.TrimPrefix(filepath.Base(rel), "GameServerInfo - "), ".dat")
-		for _, f := range gsconfig.Files {
-			if f == name {
-				return ldGSConfig(inst), true
 			}
 		}
 	}
@@ -398,61 +118,37 @@ func dynamicLoader(rel string, bags, shops map[string]bool, maps map[int]gamedat
 
 func TestDataFileCoverage(t *testing.T) {
 	root := repoData()
-	data := repoData("Data")
 	b := newBareWorld(t) // game.New runs every start hook on the shipped data
-	env := &covEnv{t: t, data: data, w: b.World}
-
-	bagList, err := gamedata.LoadEventItemBags(data)
-	if err != nil {
-		t.Fatal(err)
-	}
-	bags := map[string]bool{}
-	for _, e := range bagList {
-		bags[strings.ReplaceAll(e.Path, "\\", "/")] = true
-	}
-	shopList, err := gamedata.LoadShops(data)
-	if err != nil {
-		t.Fatal(err)
-	}
-	shops := map[string]bool{}
-	for _, s := range shopList {
-		shops[s.Path] = true
-	}
-	maps, err := gamedata.LoadMapManager(data)
-	if err != nil {
-		t.Fatal(err)
-	}
+	env := &covEnv{t: t, data: repoData("Data"), cfg: repoConfig(), w: b.World}
 
 	var files []string
-	for _, dir := range []string{"Data", "4.GameServer/DATA", "5.GameServerCS/DATA"} {
-		err := filepath.WalkDir(filepath.Join(root, dir), func(p string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			if d.IsDir() || d.Name() == ".DS_Store" {
-				return nil
-			}
-			rel, err := filepath.Rel(root, p)
-			if err != nil {
-				return err
-			}
-			files = append(files, filepath.ToSlash(rel))
-			return nil
-		})
+	err := filepath.WalkDir(filepath.Join(root, "Data"), func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
-			t.Fatal(err)
+			return err
 		}
+		if d.IsDir() || d.Name() == ".DS_Store" {
+			return nil
+		}
+		rel, err := filepath.Rel(root, p)
+		if err != nil {
+			return err
+		}
+		files = append(files, filepath.ToSlash(rel))
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 	sort.Strings(files)
 
 	seen := map[string]bool{}
 	called := map[string]error{}
-	var loaded, ignored, pending int
+	var loaded, ignored int
 	for _, rel := range files {
 		seen[rel] = true
 		l, ok := coveredFiles[rel]
 		if !ok {
-			l, ok = dynamicLoader(rel, bags, shops, maps)
+			l, ok = dynamicLoader(rel)
 		}
 		switch {
 		case ok:
@@ -466,55 +162,269 @@ func TestDataFileCoverage(t *testing.T) {
 			}
 		case ignoredFiles[rel] != "":
 			ignored++
-		case pendingFiles[rel] != "":
-			pending++
-			t.Logf("pending: %s (%s)", rel, pendingFiles[rel])
 		default:
-			t.Errorf("unknown data file %s: add it to coveredFiles (with its Go loader), pendingFiles or ignoredFiles", rel)
+			t.Errorf("unknown data file %s: text configuration belongs in config/ (cmd/configconv); "+
+				"add a binary file to coveredFiles (with its Go loader) or ignoredFiles", rel)
 		}
 	}
 	for rel := range coveredFiles {
-		if !seen[rel] && !optionalFiles[rel] {
+		if !seen[rel] {
 			t.Errorf("coveredFiles lists %s, which does not exist", rel)
 		}
 	}
-	for _, m := range []map[string]string{ignoredFiles, pendingFiles} {
-		for rel := range m {
-			if !seen[rel] {
-				t.Errorf("stale entry %s: file does not exist", rel)
-			}
+	for rel := range ignoredFiles {
+		if !seen[rel] {
+			t.Errorf("stale entry %s: file does not exist", rel)
 		}
 	}
-	t.Logf("%d files: %d loaded by Go, %d pending, %d ignored", len(files), loaded, pending, ignored)
+	t.Logf("%d files: %d loaded by Go, %d ignored", len(files), loaded, ignored)
 }
 
 // TestDataFileCoverageUnknown checks the classification rejects a file
-// nobody claims and accepts the dynamic families.
+// nobody claims and accepts the terrain family.
 func TestDataFileCoverageUnknown(t *testing.T) {
-	maps := map[int]gamedata.MapInfo{0: {}}
-	bags := map[string]bool{"Item/Box of Luck": true}
-	shops := map[string]bool{"253 - Potion Girl Amy": true}
 	cases := map[string]bool{
-		"Data/Monster/Spawn/000 - Lorencia.txt":         true,
-		"Data/Monster/Spawn/077 - Unknown.txt":          false, // map not in MapManager
-		"Data/Monster/Spawn/backup/006 - Arena.txt":     false, // subfolders are skipped
-		"Data/EventItemBag/Item/Box of Luck.txt":        true,
-		"Data/EventItemBag/Item/New Box.txt":            false,
-		"Data/Shop/253 - Potion Girl Amy.txt":           true,
-		"Data/Shop/999 - New.txt":                       false,
-		"Data/Terrain/Terrain12.att":                    true,
-		"Data/Terrain/Terrain101.att":                   false,
-		"4.GameServer/DATA/GameServerInfo - Common.dat": true,
-		"4.GameServer/DATA/GameServerInfo - New.dat":    false,
-		"Data/Brand/New.txt":                            false,
+		"Data/Terrain/Terrain12.att":  true,
+		"Data/Terrain/Terrain101.att": false,
+		"Data/Item/Item.txt":          false,
+		"Data/Brand/New.txt":          false,
 	}
 	for rel, want := range cases {
-		_, ok := dynamicLoader(rel, bags, shops, maps)
+		_, ok := dynamicLoader(rel)
 		if _, c := coveredFiles[rel]; c {
 			ok = true
 		}
 		if ok != want {
 			t.Errorf("%s: classified %v, want %v", rel, ok, want)
+		}
+	}
+}
+
+// --- config/data: the tables -----------------------------------------------------------
+
+var (
+	ldMoveData = ld("game.loadMoveData", "FUN_004ec4c0", func(c *covEnv) error { return loadMoveData(c.w) })
+	ldCmdWorld = ld("game.loadCmdWorld", "FUN_004ec4c0", func(c *covEnv) error { return loadCmdWorld(c.w) })
+)
+
+// configLoaders are the Go loaders of each config/data/<group>.toml file
+// (one per original Data/ file it holds).
+var configLoaders = map[string][]covLoader{
+	// Files at the root of Data/ (FUN_004e8520, FUN_004e86f0, FUN_004e8860, FUN_004eb520).
+	"common": {
+		ldg("LoadMapManager", "FUN_004e8860", gamedata.LoadMapManager),
+		ldg("LoadMapRateInfo", "FUN_004e8860", gamedata.LoadMapRateInfo),
+		ldg("LoadMapServer", "FUN_004eb520", gamedata.LoadMapServer),
+		ldg("LoadBlackList", "FUN_004e8520 -> FUN_00411ae0", gamedata.LoadBlackList),
+		ld("game.loadCommands", "FUN_004e86f0", func(c *covEnv) error { return errOnly(loadCommands(c.cfg)) }),
+		ldg("LoadCommandRequirement", "FUN_004e86f0 -> FUN_004402a0", gamedata.LoadCommandRequirement),
+		ld("game.loadConnectMembers", "FUN_004e8860", func(c *covEnv) error { return errOnly(loadConnectMembers(c.cfg)) }),
+	},
+	// FUN_004e85f0: Character.
+	"character": {
+		ldg("LoadClassInfo", "FUN_004e85f0", gamedata.LoadClassInfo),
+		ldg("LoadDefaultClassFreebies", "FUN_004e85f0 -> FUN_0046cb40", gamedata.LoadDefaultClassFreebies),
+	},
+	// FUN_004e8a50: Custom (CreationGold is read on use by FUN_0049a690,
+	// CustomGHRS.ini by CastleSiege.exe FUN_00442c10).
+	"custom": {
+		ldg("LoadCustomArena", "FUN_004e8a50", gamedata.LoadCustomArena),
+		ldg("LoadCustomAttack", "FUN_004e8a50", gamedata.LoadCustomAttack),
+		ldg("LoadCustomAttributes", "FUN_004e8a50", gamedata.LoadCustomAttributes),
+		ldg("LoadCustomBuyVip", "FUN_004e8a50", gamedata.LoadCustomBuyVip),
+		ldg("LoadCustomDeathMessage", "FUN_004e8a50", gamedata.LoadCustomDeathMessage),
+		ldg("LoadCustomEventDrop", "FUN_004e8a50", gamedata.LoadCustomEventDrop),
+		ldg("LoadCustomEvolution", "FUN_004e8a50", gamedata.LoadCustomEvolution),
+		ldg("LoadCustomGHRS", "CastleSiege.exe FUN_00442c10", gamedata.LoadCustomGHRS),
+		ldg("LoadCustomGate", "FUN_004e8a50", gamedata.LoadCustomGate),
+		ldg("LoadCustomGift", "FUN_004e8a50", gamedata.LoadCustomGift),
+		ldg("LoadCustomGuard", "FUN_004e8a50", gamedata.LoadCustomGuard),
+		ldg("LoadCustomHealthBar", "FUN_004e8a50", gamedata.LoadCustomHealthBar),
+		ldg("LoadCustomJewel", "FUN_004e8a50", gamedata.LoadCustomJewel),
+		ldg("LoadLuckyWheel", "FUN_004e8a50", gamedata.LoadLuckyWheel),
+		ldg("LoadCustomLukeHelper", "FUN_004e8a50", gamedata.LoadCustomLukeHelper),
+		ldg("LoadCustomMarriage", "FUN_004e8a50", gamedata.LoadCustomMarriage),
+		ldg("LoadCustomMobCombo", "FUN_004e8a50", gamedata.LoadCustomMobCombo),
+		ldg("LoadCustomMonsters", "FUN_004e8a50 -> FUN_00466b30", gamedata.LoadCustomMonsters),
+		ldg("LoadCustomMonsterRows", "FUN_004e8a50 -> FUN_00466b30", gamedata.LoadCustomMonsterRows),
+		ldg("LoadCustomMonsterKillCount", "FUN_004e8a50", gamedata.LoadCustomMonsterKillCount),
+		ldg("LoadCustomMove", "FUN_004e8a50", gamedata.LoadCustomMove),
+		ldg("LoadCustomNPCCommand", "FUN_004e8a50", gamedata.LoadCustomNPCCommand),
+		ldg("LoadCustomPatente", "FUN_00451f90", gamedata.LoadCustomPatente),
+		ldg("LoadCustomPick", "FUN_004e8a50", gamedata.LoadCustomPick),
+		ldg("LoadCustomQuiz", "FUN_004e9d30", gamedata.LoadCustomQuiz),
+		ldg("LoadCustomRespawn", "FUN_004e8a50", gamedata.LoadCustomRespawn),
+		ldg("LoadCustomWings", "FUN_004e8a50", gamedata.LoadCustomWings),
+		ld("game.loadCustomTables", "FUN_004e8a50 (CustomWing, CustomPet)", func(c *covEnv) error {
+			return errOnly(loadCustomTables(c.cfg))
+		}),
+		ldg("LoadDailyReward", "FUN_0045a200", gamedata.LoadDailyReward),
+		ldg("LoadSummonScroll", "FUN_00505d20", gamedata.LoadSummonScroll),
+		ld("gamedata.CreationGoldValue", "FUN_0049a690 (read on use)", func(c *covEnv) error {
+			if gamedata.CreationGoldValue(c.cfg) != 20 {
+				c.t.Error("CreationGold GoldValue not read")
+			}
+			return nil
+		}),
+	},
+	// The Custom/Event loaders of FUN_004e8390.
+	"custom-event": {
+		ldg("LoadDeathEvent", "FUN_0045b890", gamedata.LoadDeathEvent),
+		ldg("LoadDuelEvent", "FUN_0045d1f0", gamedata.LoadDuelEvent),
+		ldg("LoadPairEvent", "FUN_004cebf0", gamedata.LoadPairEvent),
+		ldg("LoadRaffleEvent", "FUN_004e0350", gamedata.LoadRaffleEvent),
+		ldg("LoadRoletaEvent", "FUN_004e42e0", gamedata.LoadRoletaEvent),
+		ldg("LoadSobreEvent", "FUN_00502c70", gamedata.LoadSobreEvent),
+		ldg("LoadTheftEvent", "FUN_00505fa0", gamedata.LoadTheftEvent),
+	},
+	// FUN_004e9d30: Event (Crywolf.dat, IllusionTemple.dat and Kanturu.dat are not read).
+	"event": {
+		ldg("LoadBloodCastle", "FUN_004e9d30", gamedata.LoadBloodCastle),
+		ld("gamedata.LoadBonusManager", "FUN_004e9d30", func(c *covEnv) error { _, _, err := gamedata.LoadBonusManager(c.cfg); return err }),
+		ldg("LoadCastleDeep", "FUN_004e9d30", gamedata.LoadCastleDeep),
+		ldg("LoadCastleSiege", "FUN_004e9d30", gamedata.LoadCastleSiege),
+		ldg("LoadChaosCastle", "FUN_004e9d30", gamedata.LoadChaosCastle),
+		ldg("LoadDevilSquare", "FUN_004e9d30", gamedata.LoadDevilSquare),
+		ld("gamedata.LoadDropEvent", "FUN_004e9d30", func(c *covEnv) error { _, _, err := gamedata.LoadDropEvent(c.cfg); return err }),
+		ldg("LoadEventEntryLevel", "FUN_004e9d30", gamedata.LoadEventEntryLevel),
+		ldg("LoadEventStageSpawn", "FUN_004e9d30", gamedata.LoadEventStageSpawn),
+		ldg("LoadGoldenArcher", "FUN_004e9d30", gamedata.LoadGoldenArcher),
+		ldg("LoadInvasions", "FUN_004e9d30", gamedata.LoadInvasions),
+		ldg("LoadKalima", "FUN_004e9d30", gamedata.LoadKalima),
+	},
+	// FUN_004ea4a0: EventItemBagManager.txt and the EventItemBag\%s.txt bags it names.
+	"eventitembag": {
+		ldg("LoadEventItemBags", "FUN_004ea4a0 -> FUN_00491220", gamedata.LoadEventItemBags),
+	},
+	// FUN_004ea5d0: Hack (Enc2.dat / Dec1.dat are binary keys in data/Data/Hack).
+	"hack": {
+		ld("game.loadHackRules", "FUN_004ea5d0", func(c *covEnv) error { return errOnly(loadHackRules(c.cfg)) }),
+		ldg("LoadHackSkillSpeedCheck", "FUN_004ea5d0 -> FUN_00488340", gamedata.LoadHackSkillSpeedCheck),
+	},
+	// FUN_004ea820: Item.
+	"item": {
+		ldg("LoadItems", "FUN_004ea820", gamedata.LoadItems),
+		ldg("LoadExcellentOptionRate", "FUN_004ea820", gamedata.LoadExcellentOptionRate),
+		ldg("LoadItemDrop", "FUN_004ea820", gamedata.LoadItemDrop),
+		ldg("LoadItemLevel", "FUN_004ea820", gamedata.LoadItemLevel),
+		ldg("LoadItemLoot", "FUN_004ea820", gamedata.LoadItemLoot),
+		ldg("LoadItemMoneyDrop", "FUN_004ea820", gamedata.LoadItemMoneyDrop),
+		ldg("LoadItemMove", "FUN_004ea820", gamedata.LoadItemMove),
+		ldg("LoadItemOptions", "FUN_004ea820", gamedata.LoadItemOptions),
+		ldg("LoadItemOptionRate", "FUN_004ea820", gamedata.LoadItemOptionRate),
+		ldg("LoadItemStack", "FUN_004ea820", gamedata.LoadItemStack),
+		ldg("LoadItemValue", "FUN_004ea820", gamedata.LoadItemValue),
+		ldg("LoadSetItemOption", "FUN_004ea820", gamedata.LoadSetItemOption),
+		ldg("LoadSetItemType", "FUN_004ea820", gamedata.LoadSetItemType),
+		ldg("LoadWingOptions", "FUN_004ea820", gamedata.LoadWingOptions),
+	},
+	// FUN_004eb000: Lang.
+	"lang": {
+		ld("game.loadMessages", "FUN_004eb000", func(c *covEnv) error { return errOnly(loadMessages(c.cfg)) }),
+		ld("game.loadNotices", "FUN_004eb000", func(c *covEnv) error {
+			return errOnly(loadNotices(c.cfg, time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)))
+		}),
+	},
+	// FUN_004eb5f0: Monster (and Monster/Skill).
+	"monster": {
+		ld("gamedata.LoadMonsterList", "FUN_004eb5f0", func(c *covEnv) error {
+			return errOnly(gamedata.LoadMonsterList(c.cfg, gamedata.MonsterRates{}))
+		}),
+		ldg("LoadMonsterMove", "FUN_004eb5f0 -> FUN_004b1110", gamedata.LoadMonsterMove),
+		ldg("LoadMonsterSchedule", "FUN_004eb5f0 -> FUN_004bb0c0", gamedata.LoadMonsterSchedule),
+		ldg("LoadNpcTalk", "FUN_004eb5f0", gamedata.LoadNpcTalk),
+		ld("game.loadMonsterSkills", "FUN_004eb5f0", func(c *covEnv) error { return errOnly(loadMonsterSkills(c.cfg)) }),
+	},
+	// FUN_004eba60: Move.
+	"move": {
+		ldg("LoadGates", "FUN_004eba60", gamedata.LoadGates),
+		ld("game.loadMoves", "FUN_004eba60", func(c *covEnv) error { return errOnly(loadMoves(c.cfg)) }),
+		ldg("LoadMoveSummon", "FUN_004eba60 -> FUN_004bfd00", gamedata.LoadMoveSummon),
+		ld("game.loadMoveSummon", "FUN_004bfd00", func(c *covEnv) error { return errOnly(loadMoveSummon(c.cfg)) }),
+	},
+	// FUN_004ebc50: Quest.
+	"quest": {ldg("LoadQuests", "FUN_004ebc50", gamedata.LoadQuests)},
+	// FUN_004ebfc0: ShopManager.txt and the Shop\%s.txt files it names.
+	"shop": {ldg("LoadShops", "FUN_004ebfc0 -> FUN_004f55e0", gamedata.LoadShops)},
+	// FUN_004ec0f0: Skill.
+	"skill": {
+		ldSkillWorld,
+		ld("game.loadEffectList", "FUN_004ec0f0", func(c *covEnv) error { return errOnly(loadEffectList(c.cfg)) }),
+		ldg("LoadSkills", "FUN_004ec0f0", gamedata.LoadSkills),
+	},
+	// FUN_004bbaa0: Monster\Spawn\NNN - *.txt (map known to MapManager).
+	"spawn": {
+		ld("gamedata.LoadSpawns", "FUN_004bbaa0", func(c *covEnv) error {
+			maps, err := gamedata.LoadMapManager(c.cfg)
+			if err != nil {
+				return err
+			}
+			return errOnly(gamedata.LoadSpawns(c.cfg, func(m int) bool { _, ok := maps[m]; return ok }, func() int { return 0 }))
+		}),
+	},
+	// FUN_004ec4c0: Util.
+	"util": {
+		ld("game.loadDamageTable", "FUN_004ec4c0", func(c *covEnv) error { return errOnly(loadDamageTable(c.cfg)) }),
+		ldg("LoadExperienceTable", "FUN_004ec4c0 -> FUN_0047be80", gamedata.LoadExperienceTable),
+		ldg("LoadPetDamageTable", "FUN_004ec4c0 -> FUN_004d61d0", gamedata.LoadPetDamageTable),
+		ld("game.loadPetDamageTable", "FUN_004d61d0", func(c *covEnv) error { return errOnly(loadPetDamageTable(c.cfg)) }),
+		ldMoveData, // Filter.txt, GameMaster.txt
+		ldCmdWorld, // ResetTable.txt, ResetLimit.txt
+	},
+	// FUN_004026e0 (CustomXShop.txt) and FUN_00404a60 (CustomXShopRecharge.txt).
+	"xshop": {
+		ld("gamedata.LoadXShopPrices", "FUN_004026e0", func(c *covEnv) error {
+			_, ok, err := gamedata.LoadXShopPrices(filepath.Join(c.cfg, "data", "xshop.toml"))
+			if err == nil && !ok {
+				c.t.Error("xshop.toml not opened")
+			}
+			return err
+		}),
+		ldg("LoadXShopConfig", "FUN_00404a60", func(dir string) (*gamedata.XShopConfig, error) {
+			return gamedata.LoadXShopConfig(filepath.Join(dir, "data", "xshop.toml"))
+		}),
+	},
+}
+
+// TestConfigFileCoverage checks every config/data file has its loaders and
+// that they read the shipped file, and that the server and instance files
+// load.
+func TestConfigFileCoverage(t *testing.T) {
+	b := newBareWorld(t)
+	env := &covEnv{t: t, data: repoData("Data"), cfg: repoConfig(), w: b.World}
+	files, err := filepath.Glob(repoConfig("data", "*.toml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := map[string]bool{}
+	for _, f := range files {
+		group := strings.TrimSuffix(filepath.Base(f), ".toml")
+		seen[group] = true
+		ls, ok := configLoaders[group]
+		if !ok {
+			t.Errorf("config/data/%s.toml has no loaders in configLoaders", group)
+		}
+		for _, l := range ls {
+			if err := l.load(env); err != nil {
+				t.Errorf("%s: %s failed: %v", group, l.name, err)
+			}
+		}
+	}
+	for group := range configLoaders {
+		if !seen[group] {
+			t.Errorf("configLoaders lists %s, but config/data/%s.toml does not exist", group, group)
+		}
+	}
+	if _, err := servercfg.Load(repoConfig("server.toml")); err != nil {
+		t.Error(err)
+	}
+	instances, _ := filepath.Glob(repoConfig("gameserver", "*.toml"))
+	if len(instances) != 2 {
+		t.Errorf("%d instance files", len(instances))
+	}
+	for _, f := range instances {
+		if _, err := gsconfig.Load(f); err != nil {
+			t.Error(err)
 		}
 	}
 }

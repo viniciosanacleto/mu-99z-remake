@@ -33,7 +33,7 @@ type testEnv struct {
 
 func newTestEnv(t *testing.T) *testEnv {
 	t.Helper()
-	cfg, err := gsconfig.Load(repoData("4.GameServer", "DATA"))
+	cfg, err := gsconfig.Load(repoConfig("gameserver", "gameserver.toml"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +46,7 @@ func newTestEnv(t *testing.T) *testEnv {
 		t.Fatal(err)
 	}
 	a := auth.New(mem, auth.Config{})
-	w, err := New(Options{DataDir: repoData("Data"), Config: cfg, Store: mem, Auth: a,
+	w, err := New(Options{DataDir: repoData("Data"), ConfigDir: repoConfig(), Config: cfg, Store: mem, Auth: a,
 		Log: slog.New(slog.NewTextHandler(io.Discard, nil))})
 	if err != nil {
 		t.Fatal(err)

@@ -1,13 +1,8 @@
 package gamedata
 
-import (
-	"fmt"
-	"path/filepath"
+import ()
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
-)
-
-// Quest data (CQuest, CQuestObjective, CQuestReward; Data/Quest/*.txt).
+// Quest data (CQuest, CQuestObjective, CQuestReward; Quest/*.txt).
 // "*" reads as -1.
 
 // QuestInfo is a Quest.txt row: Index MonsterClass CurrentState
@@ -42,29 +37,6 @@ type QuestReward struct {
 	Class                       [5]int
 }
 
-func loadIntTable(path string, cols int) ([][]int, error) {
-	lines, err := mutext.LoadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	var out [][]int
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) < cols {
-			return nil, fmt.Errorf("%s line %d: %d columns, want %d", filepath.Base(path), l.No, len(l.Tokens), cols)
-		}
-		v := make([]int, cols)
-		for i := range v {
-			if v[i], err = l.Int(i); err != nil {
-				return nil, err
-			}
-		}
-		out = append(out, v)
-	}
-	return out, nil
-}
-
-func class5(v []int) [5]int { return [5]int{v[0], v[1], v[2], v[3], v[4]} }
-
 // Quests holds the three quest tables.
 type Quests struct {
 	Quests     []QuestInfo
@@ -72,30 +44,25 @@ type Quests struct {
 	Rewards    []QuestReward
 }
 
-// LoadQuests reads Data/Quest/Quest.txt, QuestObjective.txt and QuestReward.txt.
-func LoadQuests(dataDir string) (*Quests, error) {
-	dir := filepath.Join(dataDir, "Quest")
-	q := &Quests{}
-	rows, err := loadIntTable(filepath.Join(dir, "Quest.txt"), 12)
+// LoadQuests reads config/data/quest.toml.
+func LoadQuests(configDir string) (*Quests, error) {
+	f, err := loadConfig[QuestConfig](configDir, "quest")
 	if err != nil {
 		return nil, err
 	}
-	for _, v := range rows {
-		q.Quests = append(q.Quests, QuestInfo{v[0], v[1], v[2], v[3], v[4], v[5], v[6], class5(v[7:])})
+	q := &Quests{}
+	for _, r := range f.Quest.Rows {
+		q.Quests = append(q.Quests, QuestInfo{r.Index, r.MonsterClass, r.CurrentState, r.RequireIndex, r.RequireState,
+			r.RequireMinLevel, r.RequireMaxLevel, [5]int{r.DW, r.DK, r.FE, r.MG, r.DL}})
 	}
-	if rows, err = loadIntTable(filepath.Join(dir, "QuestObjective.txt"), 20); err != nil {
-		return nil, err
+	for _, r := range f.QuestObjective.Rows {
+		q.Objectives = append(q.Objectives, QuestObjective{r.Sort, r.Type, r.Index, r.Quantity, r.Level, r.Option1,
+			r.Option2, r.Option3, r.NewOption, r.MapNumber, r.DropMinLevel, r.DropMaxLevel, r.ItemDropRate,
+			r.RequireIndex, r.RequireState, [5]int{r.DW, r.DK, r.FE, r.MG, r.DL}})
 	}
-	for _, v := range rows {
-		q.Objectives = append(q.Objectives, QuestObjective{v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8],
-			v[9], v[10], v[11], v[12], v[13], v[14], class5(v[15:])})
-	}
-	if rows, err = loadIntTable(filepath.Join(dir, "QuestReward.txt"), 16); err != nil {
-		return nil, err
-	}
-	for _, v := range rows {
-		q.Rewards = append(q.Rewards, QuestReward{v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8],
-			v[9], v[10], class5(v[11:])})
+	for _, r := range f.QuestReward.Rows {
+		q.Rewards = append(q.Rewards, QuestReward{r.Sort, r.Type, r.Index, r.Quantity, r.Level, r.Option1, r.Option2,
+			r.Option3, r.NewOption, r.RequireIndex, r.RequireState, [5]int{r.DW, r.DK, r.FE, r.MG, r.DL}})
 	}
 	return q, nil
 }

@@ -2,11 +2,8 @@ package gamedata
 
 import (
 	"fmt"
-	"path/filepath"
 	"strconv"
 	"strings"
-
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
 // ParseItemRef parses the "cc,iii" item reference used by the item, shop
@@ -33,7 +30,7 @@ func ParseItemRef(s string) (int, error) {
 	return c*512 + i, nil
 }
 
-// ItemStackRule is a section 0 row of Item/ItemStack.txt (CItemStack):
+// ItemStackRule is a section 0 row of ItemStack.txt (CItemStack):
 // ItemIndex ItemLevel(-1 any) MaxStack.
 type ItemStackRule struct {
 	Index, Level, MaxStack int
@@ -44,7 +41,7 @@ type ItemStackPack struct {
 	Index, Count, Next int
 }
 
-// ItemStack holds Item/ItemStack.txt.
+// ItemStack holds ItemStack.txt.
 type ItemStack struct {
 	Rules []ItemStackRule
 	Packs []ItemStackPack
@@ -64,43 +61,30 @@ func (s *ItemStack) Max(index, level int) int {
 	return 0
 }
 
-// LoadItemStack reads Data/Item/ItemStack.txt.
-func LoadItemStack(dataDir string) (*ItemStack, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "ItemStack.txt"))
+// LoadItemStack reads the ItemStack table of config/data/item.toml.
+func LoadItemStack(configDir string) (*ItemStack, error) {
+	f, err := loadItemConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
-	secs, err := mutext.Sections(lines)
-	if err != nil {
-		return nil, fmt.Errorf("ItemStack.txt: %w", err)
-	}
 	out := &ItemStack{}
-	for _, s := range secs {
-		for _, l := range s.Rows {
-			if len(l.Tokens) < 3 {
-				return nil, fmt.Errorf("ItemStack.txt line %d: %d columns", l.No, len(l.Tokens))
-			}
-			idx, err := ParseItemRef(l.Tokens[0])
-			if err != nil {
-				return nil, fmt.Errorf("ItemStack.txt line %d: %w", l.No, err)
-			}
-			switch s.Index {
-			case 0:
-				lvl, err1 := l.Int(1)
-				mx, err2 := l.Int(2)
-				if err1 != nil || err2 != nil {
-					return nil, fmt.Errorf("ItemStack.txt line %d: bad row", l.No)
-				}
-				out.Rules = append(out.Rules, ItemStackRule{idx, lvl, mx})
-			case 1:
-				cnt, err1 := l.Int(1)
-				next, err2 := ParseItemRef(l.Tokens[2])
-				if err1 != nil || err2 != nil {
-					return nil, fmt.Errorf("ItemStack.txt line %d: bad row", l.No)
-				}
-				out.Packs = append(out.Packs, ItemStackPack{idx, cnt, next})
-			}
+	for i, r := range f.ItemStack.Stack {
+		idx, err := ParseItemRef(r.ItemIndex)
+		if err != nil {
+			return nil, fmt.Errorf("ItemStack.Stack row %d: %w", i+1, err)
 		}
+		out.Rules = append(out.Rules, ItemStackRule{idx, r.ItemLevel, r.MaxStack})
+	}
+	for i, r := range f.ItemStack.Pack {
+		idx, err := ParseItemRef(r.ItemIndex)
+		if err != nil {
+			return nil, fmt.Errorf("ItemStack.Pack row %d: %w", i+1, err)
+		}
+		next, err := ParseItemRef(r.NextItemIndex)
+		if err != nil {
+			return nil, fmt.Errorf("ItemStack.Pack row %d: %w", i+1, err)
+		}
+		out.Packs = append(out.Packs, ItemStackPack{idx, r.ItemCount, next})
 	}
 	return out, nil
 }
@@ -113,28 +97,19 @@ type ItemValueRule struct {
 	Value               int64
 }
 
-// LoadItemValue reads Data/Item/ItemValue.txt.
-func LoadItemValue(dataDir string) ([]ItemValueRule, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "ItemValue.txt"))
+// LoadItemValue reads the ItemValue table of config/data/item.toml.
+func LoadItemValue(configDir string) ([]ItemValueRule, error) {
+	f, err := loadItemConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	var out []ItemValueRule
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) < 4 {
-			return nil, fmt.Errorf("ItemValue.txt line %d: %d columns", l.No, len(l.Tokens))
-		}
-		idx, err := ParseItemRef(l.Tokens[0])
+	for i, r := range f.ItemValue.Rows {
+		idx, err := ParseItemRef(r.ItemIndex)
 		if err != nil {
-			return nil, fmt.Errorf("ItemValue.txt line %d: %w", l.No, err)
+			return nil, fmt.Errorf("ItemValue row %d: %w", i+1, err)
 		}
-		lvl, err1 := l.Int(1)
-		grade, err2 := l.Int(2)
-		v, err3 := strconv.ParseInt(l.Tokens[3], 10, 64)
-		if err1 != nil || err2 != nil || err3 != nil {
-			return nil, fmt.Errorf("ItemValue.txt line %d: bad row", l.No)
-		}
-		out = append(out, ItemValueRule{idx, lvl, grade, v})
+		out = append(out, ItemValueRule{idx, r.ItemLevel, r.ItemGrade, r.MoneyValue})
 	}
 	return out, nil
 }
@@ -144,29 +119,20 @@ type ItemMoveRule struct {
 	AllowDrop, AllowSell, AllowTrade, AllowVault bool
 }
 
-// LoadItemMove reads Data/Item/ItemMove.txt; items without a row are
-// allowed everywhere (FUN_004f42b0 lookup returning end()).
-func LoadItemMove(dataDir string) (map[int]ItemMoveRule, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "ItemMove.txt"))
+// LoadItemMove reads the ItemMove table of config/data/item.toml; items
+// without a row are allowed everywhere (FUN_004f42b0 lookup returning end()).
+func LoadItemMove(configDir string) (map[int]ItemMoveRule, error) {
+	f, err := loadItemConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	out := map[int]ItemMoveRule{}
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) < 5 {
-			return nil, fmt.Errorf("ItemMove.txt line %d: %d columns", l.No, len(l.Tokens))
-		}
-		idx, err := ParseItemRef(l.Tokens[0])
+	for i, r := range f.ItemMove.Rows {
+		idx, err := ParseItemRef(r.ItemIndex)
 		if err != nil {
-			return nil, fmt.Errorf("ItemMove.txt line %d: %w", l.No, err)
+			return nil, fmt.Errorf("ItemMove row %d: %w", i+1, err)
 		}
-		var v [4]int
-		for i := range v {
-			if v[i], err = l.Int(1 + i); err != nil {
-				return nil, err
-			}
-		}
-		out[idx] = ItemMoveRule{v[0] != 0, v[1] != 0, v[2] != 0, v[3] != 0}
+		out[idx] = ItemMoveRule{r.AllowDrop != 0, r.AllowSell != 0, r.AllowTrade != 0, r.AllowVault != 0}
 	}
 	return out, nil
 }
@@ -178,32 +144,24 @@ type ItemLootRule struct {
 	AllowLoot    bool
 }
 
-// LoadItemLoot reads Data/Item/ItemLoot.txt.
-func LoadItemLoot(dataDir string) ([]ItemLootRule, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "ItemLoot.txt"))
+// LoadItemLoot reads the ItemLoot table of config/data/item.toml.
+func LoadItemLoot(configDir string) ([]ItemLootRule, error) {
+	f, err := loadItemConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	var out []ItemLootRule
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) < 3 {
-			return nil, fmt.Errorf("ItemLoot.txt line %d: %d columns", l.No, len(l.Tokens))
-		}
-		idx, err := ParseItemRef(l.Tokens[0])
+	for i, r := range f.ItemLoot.Rows {
+		idx, err := ParseItemRef(r.ItemIndex)
 		if err != nil {
-			return nil, fmt.Errorf("ItemLoot.txt line %d: %w", l.No, err)
+			return nil, fmt.Errorf("ItemLoot row %d: %w", i+1, err)
 		}
-		lvl, err1 := l.Int(1)
-		allow, err2 := l.Int(2)
-		if err1 != nil || err2 != nil {
-			return nil, fmt.Errorf("ItemLoot.txt line %d: bad row", l.No)
-		}
-		out = append(out, ItemLootRule{idx, lvl, allow != 0})
+		out = append(out, ItemLootRule{idx, r.ItemLevel, r.AllowLoot != 0})
 	}
 	return out, nil
 }
 
-// ShopItem is one Data/Shop/*.txt row.
+// ShopItem is one Shop/*.txt row.
 type ShopItem struct {
 	Index      int
 	Level      int
@@ -215,7 +173,7 @@ type ShopItem struct {
 	SetOption  int
 }
 
-// ShopInfo is one Data/ShopManager.txt row (CShopManager, FUN_004f5300).
+// ShopInfo is one ShopManager.txt row (CShopManager, FUN_004f5300).
 // Number is the row index (stored in the NPC's obj+0x31c).
 type ShopInfo struct {
 	Number   int
@@ -229,58 +187,31 @@ type ShopInfo struct {
 	Items    []ShopItem
 }
 
-// LoadShops reads Data/ShopManager.txt and every Data/Shop/<path>.txt it
-// names.
-func LoadShops(dataDir string) ([]ShopInfo, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "ShopManager.txt"))
+// LoadShops reads config/data/shop.toml: the ShopManager rows and the item
+// list of the shop each one names (FUN_004f5300, items FUN_004f4aa0).
+func LoadShops(configDir string) ([]ShopInfo, error) {
+	f, err := LoadShopConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	var out []ShopInfo
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) != 11 {
-			return nil, fmt.Errorf("ShopManager.txt line %d: %d columns", l.No, len(l.Tokens))
+	for _, r := range f.ShopManager.Rows {
+		s := ShopInfo{Number: len(out), NPCClass: r.NPCIndex, Map: r.MapNumber, X: r.LocationX, Y: r.LocationY,
+			Dir: r.Direction, AL: [4]bool{r.AL0 != 0, r.AL1 != 0, r.AL2 != 0, r.AL3 != 0}, GMLevel: r.GMLevel, Path: r.ShopPath}
+		shop, ok := f.Shop[r.ShopPath]
+		if !ok {
+			return nil, fmt.Errorf("ShopManager: shop %q not found in Shop", r.ShopPath)
 		}
-		var v [10]int
-		for i := range v {
-			if v[i], err = l.Int(i); err != nil {
-				return nil, err
+		for i, it := range shop.Rows {
+			idx, err := parseShopIndex(it.ItemIndex)
+			if err != nil {
+				return nil, fmt.Errorf("Shop.%q row %d: %w", r.ShopPath, i+1, err)
 			}
-		}
-		s := ShopInfo{Number: len(out), NPCClass: v[0], Map: v[1], X: v[2], Y: v[3], Dir: v[4],
-			AL: [4]bool{v[5] != 0, v[6] != 0, v[7] != 0, v[8] != 0}, GMLevel: v[9], Path: l.Tokens[10]}
-		if s.Items, err = loadShopItems(filepath.Join(dataDir, "Shop", s.Path+".txt")); err != nil {
-			return nil, err
+			s.Items = append(s.Items, ShopItem{Index: idx, Level: it.ItemLevel, Durability: it.Durability,
+				Skill: it.SkillSwitch != 0, Luck: it.LuckSwitch != 0, Option: it.Aditional, Excellent: it.Excellent,
+				SetOption: it.SetOption})
 		}
 		out = append(out, s)
-	}
-	return out, nil
-}
-
-// loadShopItems is FUN_004f4aa0: ItemIndex ItemLevel Durability
-// SkillSwitch LuckSwitch Aditional Excellent SetOption.
-func loadShopItems(path string) ([]ShopItem, error) {
-	lines, err := mutext.LoadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	var out []ShopItem
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) < 8 {
-			return nil, fmt.Errorf("%s line %d: %d columns", filepath.Base(path), l.No, len(l.Tokens))
-		}
-		idx, err := parseShopIndex(l.Tokens[0])
-		if err != nil {
-			return nil, fmt.Errorf("%s line %d: %w", filepath.Base(path), l.No, err)
-		}
-		var v [7]int
-		for i := range v {
-			if v[i], err = l.Int(1 + i); err != nil {
-				return nil, err
-			}
-		}
-		out = append(out, ShopItem{Index: idx, Level: v[0], Durability: v[1], Skill: v[2] != 0,
-			Luck: v[3] != 0, Option: v[4], Excellent: v[5], SetOption: v[6]})
 	}
 	return out, nil
 }

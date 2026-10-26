@@ -58,23 +58,23 @@ func loadWorldCustoms(w *World) error {
 		c.x = old.x
 	}
 	w.cev().world = c
-	if w.dataDir == "" {
+	if w.configDir == "" {
 		return nil
 	}
 	var err error
-	if c.moves, err = gamedata.LoadCustomMove(w.dataDir); err != nil {
+	if c.moves, err = gamedata.LoadCustomMove(w.configDir); err != nil {
 		return err
 	}
-	if c.gates, err = gamedata.LoadCustomGate(w.dataDir); err != nil {
+	if c.gates, err = gamedata.LoadCustomGate(w.configDir); err != nil {
 		return err
 	}
-	if c.respawn, err = gamedata.LoadCustomRespawn(w.dataDir); err != nil {
+	if c.respawn, err = gamedata.LoadCustomRespawn(w.configDir); err != nil {
 		return err
 	}
-	if c.npcCmds, err = gamedata.LoadCustomNPCCommand(w.dataDir); err != nil {
+	if c.npcCmds, err = gamedata.LoadCustomNPCCommand(w.configDir); err != nil {
 		return err
 	}
-	c.deathMsg, err = gamedata.LoadCustomDeathMessage(w.dataDir)
+	c.deathMsg, err = gamedata.LoadCustomDeathMessage(w.configDir)
 	return err
 }
 

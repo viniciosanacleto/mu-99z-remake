@@ -2,10 +2,9 @@ package gamedata
 
 import (
 	"fmt"
-	"path/filepath"
 )
 
-// CustomQuiz is Data/Custom/CustomQuiz.txt (CCustomQuiz::Load,
+// CustomQuiz is CustomQuiz.txt (CCustomQuiz::Load,
 // FUN_00456d30): section 0 Index + start schedule, section 1 Index Name
 // AlarmTime EventTime (minutes), section 2 the questions ID Money
 // "Question" "Answer". Up to 50 quiz slots.
@@ -31,70 +30,41 @@ type QuizQuestion struct {
 	Question, Answer string
 }
 
-// LoadCustomQuiz reads Data/Custom/CustomQuiz.txt.
-func LoadCustomQuiz(dataDir string) (*CustomQuiz, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Custom", "CustomQuiz.txt"))
+// LoadCustomQuiz reads the CustomQuiz table of config/data/custom.toml; a
+// slot index outside 0..49 is an error, the first row of a question ID wins.
+func LoadCustomQuiz(configDir string) (*CustomQuiz, error) {
+	f, err := LoadCustomConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	q := &CustomQuiz{Questions: map[int]QuizQuestion{}}
-	slot := func(i, line int) (*CustomQuizSlot, error) {
+	slot := func(i int) (*CustomQuizSlot, error) {
 		if i < 0 || i >= CustomQuizSlots {
-			return nil, fmt.Errorf("CustomQuiz.txt line %d: index %d", line, i)
+			return nil, fmt.Errorf("CustomQuiz: index %d", i)
 		}
 		return &q.Slots[i], nil
 	}
-	for _, s := range secs {
-		for _, l := range s.Rows {
-			switch s.Index {
-			case 0:
-				v, err := rowInts(l, 8)
-				if err != nil {
-					return nil, err
-				}
-				sl, err := slot(v[0], l.No)
-				if err != nil {
-					return nil, err
-				}
-				sl.Schedule = append(sl.Schedule, Schedule{v[1], v[2], v[3], v[4], v[5], v[6], v[7]})
-			case 1:
-				if len(l.Tokens) < 4 {
-					return nil, fmt.Errorf("CustomQuiz.txt line %d: %d columns", l.No, len(l.Tokens))
-				}
-				i, err := l.Int(0)
-				if err != nil {
-					return nil, err
-				}
-				sl, err := slot(i, l.No)
-				if err != nil {
-					return nil, err
-				}
-				if sl.AlarmTime, err = l.Int(2); err != nil {
-					return nil, err
-				}
-				if sl.EventTime, err = l.Int(3); err != nil {
-					return nil, err
-				}
-				sl.Name = cutString(l.Tokens[1], 0x1F)
-			case 2:
-				if len(l.Tokens) < 4 {
-					return nil, fmt.Errorf("CustomQuiz.txt line %d: %d columns", l.No, len(l.Tokens))
-				}
-				id, err := l.Int(0)
-				if err != nil {
-					return nil, err
-				}
-				money, err := l.Int(1)
-				if err != nil {
-					return nil, err
-				}
-				if _, dup := q.Questions[id]; dup {
-					continue
-				}
-				q.Questions[id] = QuizQuestion{ID: id, Money: money,
-					Question: cutString(l.Tokens[2], 0x7F), Answer: cutString(l.Tokens[3], 0x7F)}
-			}
+	t := f.CustomQuiz
+	for _, r := range t.Schedule {
+		sl, err := slot(r.EventIndex)
+		if err != nil {
+			return nil, err
 		}
+		sl.Schedule = append(sl.Schedule, r.Schedule())
+	}
+	for _, r := range t.Quiz {
+		sl, err := slot(r.Index)
+		if err != nil {
+			return nil, err
+		}
+		sl.AlarmTime, sl.EventTime, sl.Name = r.AlarmTime, r.EventTime, cutString(r.Name, 0x1F)
+	}
+	for _, r := range t.Question {
+		if _, dup := q.Questions[r.ID]; dup {
+			continue
+		}
+		q.Questions[r.ID] = QuizQuestion{ID: r.ID, Money: r.Money, Question: cutString(r.Question, 0x7F),
+			Answer: cutString(r.Answer, 0x7F)}
 	}
 	return q, nil
 }

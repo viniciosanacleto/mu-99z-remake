@@ -52,11 +52,11 @@ var (
 
 func init() {
 	startHooks = append(startHooks, func(w *World) error {
-		if w.dataDir == "" {
+		if w.configDir == "" {
 			w.quests = &gamedata.Quests{}
 			return nil
 		}
-		q, err := gamedata.LoadQuests(w.dataDir)
+		q, err := gamedata.LoadQuests(w.configDir)
 		if err != nil {
 			return err
 		}

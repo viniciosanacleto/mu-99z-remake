@@ -49,10 +49,10 @@ func (w *World) kalima() *kalimaState {
 func init() {
 	startHooks = append(startHooks, func(w *World) error {
 		w.ev().kalima = nil
-		if w.dataDir == "" {
+		if w.configDir == "" {
 			return nil
 		}
-		next, err := gamedata.LoadKalima(w.dataDir)
+		next, err := gamedata.LoadKalima(w.configDir)
 		w.kalima().next = next
 		return err
 	})

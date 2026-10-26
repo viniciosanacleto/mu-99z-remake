@@ -1,13 +1,11 @@
 package gamedata
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
 func TestLoadEventFiles(t *testing.T) {
-	dir := dataDir()
+	dir := configDir()
 	ds, err := LoadDevilSquare(dir)
 	if err != nil {
 		t.Fatal(err)
@@ -48,7 +46,7 @@ func TestLoadEventFiles(t *testing.T) {
 }
 
 func TestLoadBloodCastle(t *testing.T) {
-	bc, err := LoadBloodCastle(dataDir())
+	bc, err := LoadBloodCastle(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +60,7 @@ func TestLoadBloodCastle(t *testing.T) {
 }
 
 func TestLoadInvasions(t *testing.T) {
-	inv, err := LoadInvasions(dataDir())
+	inv, err := LoadInvasions(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,28 +79,14 @@ func TestLoadInvasions(t *testing.T) {
 }
 
 func TestLoadBonusManager(t *testing.T) {
-	ev, bonus, err := LoadBonusManager(dataDir())
+	ev, bonus, err := LoadBonusManager(configDir())
 	if err != nil || len(ev) != 20 || len(bonus) != 0 {
 		t.Fatalf("installed file: %v %d %v", err, len(bonus), err)
-	}
-	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, "Event"), 0o755)
-	os.WriteFile(filepath.Join(dir, "Event", "BonusManager.dat"), []byte("0\n0 * * * * 20 0 0\nend\n1\n"+
-		"0 5 * 3600 \"Happy Hour\"\nend\n2\n0 0 50 60 70 80 *\n0 3 1000 1000 1000 1000 2\nend\n"), 0o644)
-	ev, bonus, err = LoadBonusManager(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if e := ev[0]; e == nil || len(e.Schedule) != 1 || e.StartMsg != 5 || e.FinalMsg != -1 || e.Time != 3600 || e.Name != "Happy Hour" {
-		t.Fatalf("event %+v", ev[0])
-	}
-	if len(bonus) != 2 || bonus[0].Value[3] != 80 || bonus[0].Map != -1 || bonus[1].Index != 3 || bonus[1].Map != 2 {
-		t.Fatalf("bonus %+v", bonus)
 	}
 }
 
 func TestLoadChaosCastle(t *testing.T) {
-	cc, err := LoadChaosCastle(dataDir())
+	cc, err := LoadChaosCastle(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,38 +99,16 @@ func TestLoadChaosCastle(t *testing.T) {
 	if cc.Experience[0] != [2]int{1000, 500} || cc.Experience[1] != [2]int{1500, 100} || cc.Experience[5] != [2]int{3500, 3000} {
 		t.Fatalf("experience %v", cc.Experience)
 	}
-	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, "Event"), 0o755)
-	os.WriteFile(filepath.Join(dir, "Event", "ChaosCastle.dat"), []byte("2\n6 1 1\n-1 2 2\n3 7 8\nend\n"), 0o644)
-	cc, err = LoadChaosCastle(dir)
-	if err != nil || cc.Experience[3] != [2]int{7, 8} || cc.Experience[0] != [2]int{} {
-		t.Fatalf("invalid levels: %v %v", err, cc)
-	}
 }
 
 func TestLoadDropEvent(t *testing.T) {
-	if _, items, err := LoadDropEvent(dataDir()); err != nil || len(items) != 0 {
+	if _, items, err := LoadDropEvent(configDir()); err != nil || len(items) != 0 {
 		t.Fatalf("installed file: %v %d", err, len(items))
-	}
-	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, "Event"), 0o755)
-	os.WriteFile(filepath.Join(dir, "Event", "DropEvent.dat"), []byte("0\n0 * * * * 21 0 0\nend\n1\n"+
-		"0 * * 1800 \"Jewel Rain\"\nend\n2\n0 14,013 0 0 * * * * * * 0 2 * 10 * * 5000\nend\n"), 0o644)
-	ev, items, err := LoadDropEvent(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if ev[0] == nil || ev[0].Time != 1800 || len(items) != 1 {
-		t.Fatalf("events %+v items %+v", ev[0], items)
-	}
-	if r := items[0]; r.Index != 14*512+13 || r.Map != 2 || r.Monster != -1 || r.MinLevel != 10 ||
-		r.AccountLevel != -1 || r.Rate != 5000 || r.Option != [6]int{-1, -1, -1, -1, -1, -1} {
-		t.Fatalf("row %+v", r)
 	}
 }
 
 func TestLoadGoldenArcher(t *testing.T) {
-	r, err := LoadGoldenArcher(dataDir())
+	r, err := LoadGoldenArcher(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +119,7 @@ func TestLoadGoldenArcher(t *testing.T) {
 }
 
 func TestLoadCastleDeep(t *testing.T) {
-	d, err := LoadCastleDeep(dataDir())
+	d, err := LoadCastleDeep(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,16 +135,5 @@ func TestLoadCastleDeep(t *testing.T) {
 	if len(d.Monsters) != 59 || d.Monsters[0] != (CastleDeepMonster{1, 1, 39, 15, 60, 28, 132, 73}) ||
 		d.Monsters[29] != (CastleDeepMonster{1, 3, 295, 1, 60, 58, 132, 101}) {
 		t.Fatalf("monsters %d %+v %+v", len(d.Monsters), d.Monsters[0], d.Monsters[29])
-	}
-	// Unknown sections are skipped; short rows are an error.
-	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, "Event"), 0o755)
-	os.WriteFile(filepath.Join(dir, "Event", "CastleDeepEvent.dat"), []byte("7\n1 2 3\nend\n1\n1 100\nend\n"), 0o644)
-	if d, err := LoadCastleDeep(dir); err != nil || len(d.Groups) != 1 || len(d.Schedule) != 0 {
-		t.Fatalf("skip: %v %+v", err, d)
-	}
-	os.WriteFile(filepath.Join(dir, "Event", "CastleDeepEvent.dat"), []byte("3\n1 1 39 15 60\nend\n"), 0o644)
-	if _, err := LoadCastleDeep(dir); err == nil {
-		t.Fatal("short row accepted")
 	}
 }

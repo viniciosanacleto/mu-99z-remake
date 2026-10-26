@@ -2,20 +2,15 @@ package gamedata
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
 	"strconv"
-	"strings"
-
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
 // MaxMonsterClass is the size of the CMonsterManager table (FUN_004ba3b0
 // ignores indexes >= 1000).
 const MaxMonsterClass = 1000
 
-// MonsterInfo is one Data/Monster/MonsterList.txt row (CMonsterManager
+// MonsterInfo is one MonsterList.txt row (CMonsterManager
 // entry of 0x9c bytes, FUN_004ba0c0). Offsets are those of the original
 // struct.
 type MonsterInfo struct {
@@ -70,34 +65,24 @@ func monsterRate(v, rate int) int {
 	return int(r)
 }
 
-// LoadMonsterList reads Data/Monster/MonsterList.txt (FUN_004ba0c0: 31
-// columns, rows until "end"; index >= 1000 is ignored by FUN_004ba3b0).
-func LoadMonsterList(dataDir string, rates MonsterRates) (map[int]*MonsterInfo, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Monster", "MonsterList.txt"))
+// LoadMonsterList reads the MonsterList table of config/data/monster.toml
+// (FUN_004ba0c0; an index >= 1000 is ignored by FUN_004ba3b0) and applies
+// the CServerInfo rates.
+func LoadMonsterList(configDir string, rates MonsterRates) (map[int]*MonsterInfo, error) {
+	f, err := LoadMonsterConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	out := map[int]*MonsterInfo{}
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) < 31 {
-			return nil, fmt.Errorf("MonsterList.txt line %d: %d columns", l.No, len(l.Tokens))
-		}
-		v := make([]int, 31)
-		for i := range v {
-			if i == 2 {
-				continue
-			}
-			if v[i], err = l.Int(i); err != nil {
-				return nil, fmt.Errorf("MonsterList.txt: %w", err)
-			}
-		}
-		m := &MonsterInfo{Index: v[0], Type: v[1], Name: l.Tokens[2], Level: v[3], MaxLife: v[4],
-			MaxMana: v[5], DamageMin: v[6], DamageMax: v[7], Defense: v[8], MagicDefense: v[9],
-			AttackRate: v[10], DefenseRate: v[11], MoveRange: v[12], AttackType: v[13],
-			AttackRange: v[14], ViewRange: v[15], MoveSpeed: v[16], AttackSpeed: v[17],
-			RegenTime: v[18], Attribute: v[19], ItemRate: v[20], MoneyRate: v[21],
-			MaxItemLevel: v[22], MonsterSkill: v[23]}
-		copy(m.Resistance[:], v[24:31])
+	for _, r := range f.MonsterList.Rows {
+		m := &MonsterInfo{Index: r.Index, Type: r.Type, Name: r.Name, Level: r.Level, MaxLife: r.MaxLife,
+			MaxMana: r.MaxMana, DamageMin: r.DamageMin, DamageMax: r.DamageMax, Defense: r.Defense,
+			MagicDefense: r.MagicDefense, AttackRate: r.AttackRate, DefenseRate: r.DefenseRate,
+			MoveRange: r.MoveRange, AttackType: r.AttackType, AttackRange: r.AttackRange, ViewRange: r.ViewRange,
+			MoveSpeed: r.MoveSpeed, AttackSpeed: r.AttackSpeed, RegenTime: r.RegenTime, Attribute: r.Attribute,
+			ItemRate: r.ItemRate, MoneyRate: r.MoneyRate, MaxItemLevel: r.MaxItemLevel, MonsterSkill: r.MonsterSkill,
+			Resistance: [7]int{r.Resistance1, r.Resistance2, r.Resistance3, r.Resistance4, r.Resistance5,
+				r.Resistance6, r.Resistance7}}
 		if m.Index < 0 || m.Index >= MaxMonsterClass {
 			continue
 		}
@@ -113,7 +98,7 @@ func LoadMonsterList(dataDir string, rates MonsterRates) (map[int]*MonsterInfo, 
 	return out, nil
 }
 
-// Spawn sections of Data/Monster/Spawn/*.txt (CMonsterSetBase).
+// Spawn sections of the Monster/Spawn files (CMonsterSetBase).
 const (
 	SpawnNPC      = 0 // fixed position
 	SpawnArea     = 1 // random cell inside (X,Y)-(TX,TY), one record per Quantity
@@ -137,131 +122,77 @@ type SpawnRecord struct {
 	TX, TY  int // section 1 only
 }
 
-// LoadSpawns reads every Data/Monster/Spawn/"NNN - Name.txt" whose map is
-// accepted (FUN_004bbaa0: three digits, " - ", map known to MapManager),
-// in file-name order. rnd returns a non-negative random int (the original
-// Mersenne generator FUN_005138d0); it decides random directions (-1 =>
-// rand&7, FUN_004bbf10) and the +-3 offset of section 2 (FUN_004bbc70).
-func LoadSpawns(dataDir string, mapOK func(int) bool, rnd func() int) ([]SpawnRecord, error) {
-	dir := filepath.Join(dataDir, "Monster", "Spawn")
-	entries, err := os.ReadDir(dir)
+// LoadSpawns reads config/data/spawn.toml: the spawn files ("NNN - Name",
+// NNN the map) whose map is accepted, in file-name order (FUN_004bbaa0).
+// rnd returns a non-negative random int (the original Mersenne generator
+// FUN_005138d0); it decides random directions (-1 => rand&7, FUN_004bbf10)
+// and the +-3 offset of section 2 (FUN_004bbc70).
+func LoadSpawns(configDir string, mapOK func(int) bool, rnd func() int) ([]SpawnRecord, error) {
+	f, err := loadSpawnConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
-	var names []string
-	for _, e := range entries {
-		n := e.Name()
-		if e.IsDir() || len(n) < 6 || !isDigit(n[0]) || !isDigit(n[1]) || !isDigit(n[2]) ||
-			n[3] != ' ' || n[4] != '-' || n[5] != ' ' {
-			continue
+	names := make([]string, 0, len(f.Spawn))
+	for n := range f.Spawn {
+		if !IsSpawnFileName(n) {
+			return nil, fmt.Errorf("Spawn.%q: want \"NNN - Name\" (NNN = map)", n)
 		}
 		names = append(names, n)
 	}
-	sort.Strings(names)
+	// The original sorts the file names, ".txt" included.
+	sort.Slice(names, func(i, j int) bool { return names[i]+".txt" < names[j]+".txt" })
 	var out []SpawnRecord
 	for _, n := range names {
 		mp, _ := strconv.Atoi(n[:3])
 		if mapOK != nil && !mapOK(mp) {
 			continue
 		}
-		data, err := os.ReadFile(filepath.Join(dir, n))
-		if err != nil {
-			return nil, err
-		}
-		if out, err = parseSpawnFile(data, mp, rnd, out); err != nil {
-			return nil, fmt.Errorf("Spawn/%s: %w", n, err)
-		}
+		out = buildSpawns(f.Spawn[n].Rows, mp, rnd, out)
 	}
 	return out, nil
 }
 
+// IsSpawnFileName is the FUN_004bbaa0 file name test: three digits and " - ".
+func IsSpawnFileName(n string) bool {
+	return len(n) >= 6 && isDigit(n[0]) && isDigit(n[1]) && isDigit(n[2]) && n[3] == ' ' && n[4] == '-' && n[5] == ' '
+}
+
 func isDigit(b byte) bool { return b >= '0' && b <= '9' }
 
-// parseSpawnFile reproduces the token-stream reader of FUN_004bbc70: every
-// row of sections 0, 2, 3 and 4 is five numbers (section 3 rows written with
-// more columns are therefore re-read as further records, exactly like the
-// original), section 1 rows are eight numbers and expand to Quantity
-// records, and section 5 is skipped.
-func parseSpawnFile(data []byte, mp int, rnd func() int, out []SpawnRecord) ([]SpawnRecord, error) {
-	lines, err := mutext.Tokenize(data)
-	if err != nil {
-		return nil, err
-	}
-	var toks []string
-	for _, l := range lines {
-		toks = append(toks, l.Tokens...)
-	}
-	pos := 0
-	next := func() (string, bool) {
-		if pos >= len(toks) {
-			return "", false
+// buildSpawns turns the rows of one file into records like FUN_004bbc70:
+// section 1 rows expand to Quantity records, section 2 positions move by
+// +-3 and Direction -1 is random; section 5 rows are not records.
+func buildSpawns(rows []SpawnRow, mp int, rnd func() int, out []SpawnRecord) []SpawnRecord {
+	for _, row := range rows {
+		if row.Section == spawnSkipped {
+			continue
 		}
-		pos++
-		return toks[pos-1], true
-	}
-	num := func() int {
-		t, _ := next()
-		return tokenNumber(t)
-	}
-	for {
-		t, ok := next()
-		if !ok {
-			return out, nil
+		r := SpawnRecord{Section: row.Section, Class: row.MonsterIndex, Map: mp, Dis: row.SpawnRadius,
+			X: row.LocationX, Y: row.LocationY, Dir: row.Direction}
+		count := 1
+		switch row.Section {
+		case SpawnArea:
+			r.TX, r.TY = row.LocationTX, row.LocationTY
+			count = row.Quantity
+		case SpawnSingle:
+			r.X += -3 + rnd()%7
+			r.Y += -3 + rnd()%7
 		}
-		section := tokenNumber(t)
-		for {
-			t, ok = next()
-			if !ok {
-				return out, nil
-			}
-			if strings.EqualFold(t, "end") {
+		for i := 0; i < count; i++ {
+			if len(out) >= MaxSpawnRecords {
 				break
 			}
-			if section == spawnSkipped {
-				continue
+			rec := r
+			if rec.Dir == -1 {
+				rec.Dir = rnd() & 7
 			}
-			r := SpawnRecord{Section: section, Class: tokenNumber(t), Map: mp}
-			r.Dis = num()
-			r.X = num()
-			r.Y = num()
-			switch section {
-			case SpawnArea:
-				r.TX = num()
-				r.TY = num()
-			case SpawnSingle:
-				r.X += -3 + rnd()%7
-				r.Y += -3 + rnd()%7
-			}
-			r.Dir = num()
-			count := 1
-			if section == SpawnArea {
-				count = num()
-			}
-			for i := 0; i < count; i++ {
-				if len(out) >= MaxSpawnRecords {
-					break
-				}
-				rec := r
-				if rec.Dir == -1 {
-					rec.Dir = rnd() & 7
-				}
-				out = append(out, rec)
-			}
+			out = append(out, rec)
 		}
 	}
+	return out
 }
 
-// tokenNumber converts a token the way the original tokenizer does (numbers
-// are read as float and truncated, FUN_00534ff0); non-numbers read as 0.
-func tokenNumber(t string) int {
-	f, err := strconv.ParseFloat(t, 64)
-	if err != nil {
-		return 0
-	}
-	return int(f)
-}
-
-// NpcTalkEntry is one Data/Monster/NpcTalk.txt row (FUN_004c12e0):
+// NpcTalkEntry is one NpcTalk.txt row (FUN_004c12e0):
 // NPCIndex Map CordX CordY Message ("*" = any, stored as -1).
 type NpcTalkEntry struct {
 	Class   int
@@ -270,24 +201,15 @@ type NpcTalkEntry struct {
 	Message string // at most 59 bytes are sent (FUN_004d9c60)
 }
 
-// LoadNpcTalk reads Data/Monster/NpcTalk.txt.
-func LoadNpcTalk(dataDir string) ([]NpcTalkEntry, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Monster", "NpcTalk.txt"))
+// LoadNpcTalk reads the NpcTalk table of config/data/monster.toml.
+func LoadNpcTalk(configDir string) ([]NpcTalkEntry, error) {
+	f, err := LoadMonsterConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	var out []NpcTalkEntry
-	for _, l := range mutext.Table(lines) {
-		if len(l.Tokens) < 5 {
-			return nil, fmt.Errorf("NpcTalk.txt line %d: %d columns", l.No, len(l.Tokens))
-		}
-		var v [4]int
-		for i := range v {
-			if v[i], err = l.Int(i); err != nil {
-				return nil, fmt.Errorf("NpcTalk.txt: %w", err)
-			}
-		}
-		out = append(out, NpcTalkEntry{Class: v[0], Map: v[1], X: v[2], Y: v[3], Message: l.Tokens[4]})
+	for _, r := range f.NpcTalk.Rows {
+		out = append(out, NpcTalkEntry{Class: r.NPCIndex, Map: r.Map, X: r.CordX, Y: r.CordY, Message: r.Message})
 	}
 	return out, nil
 }

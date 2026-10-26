@@ -74,8 +74,8 @@ func init() {
 			}
 		}
 		w.ev().ds = ds
-		if w.dataDir != "" {
-			d, err := gamedata.LoadDevilSquare(w.dataDir)
+		if w.configDir != "" {
+			d, err := gamedata.LoadDevilSquare(w.configDir)
 			if err != nil {
 				return err
 			}

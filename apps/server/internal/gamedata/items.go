@@ -2,13 +2,11 @@ package gamedata
 
 import (
 	"fmt"
-	"path/filepath"
+	"reflect"
 	"strconv"
-
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
-// ItemInfo is one Item/Item.txt row (CItemManager). Columns that a
+// ItemInfo is one Item.txt row (CItemManager). Columns that a
 // category does not have stay zero. "*" reads as -1.
 type ItemInfo struct {
 	Index      int // category*512 + Type
@@ -55,30 +53,24 @@ type ItemInfo struct {
 	Class         [5]int // DW DK FE MG DL
 }
 
-// itemColumns lists, per category, the column names after the common
-// "Type Slot Skill Width Height HaveSerial HaveOption DropItem Name" prefix
-// (headers of Item.txt).
-var itemColumns = map[int][]string{
-	0: weaponColumns, 1: weaponColumns, 2: weaponColumns, 3: weaponColumns, 4: weaponColumns, 5: weaponColumns,
-	6: {"Level", "Defense", "DefenseSuccessRate", "Durability", "ReqLevel", "ReqStrength", "ReqDexterity", "ReqEnergy", "ReqVitality", "ReqLeadership", "Attr", "DW", "DK", "FE", "MG", "DL"},
-	7: armorColumns, 8: armorColumns, 9: armorColumns,
-	10: {"Level", "Defense", "AttackSpeed", "Durability", "ReqLevel", "ReqStrength", "ReqDexterity", "ReqEnergy", "ReqVitality", "ReqLeadership", "Attr", "DW", "DK", "FE", "MG", "DL"},
-	11: {"Level", "Defense", "WalkSpeed", "Durability", "ReqLevel", "ReqStrength", "ReqDexterity", "ReqEnergy", "ReqVitality", "ReqLeadership", "Attr", "DW", "DK", "FE", "MG", "DL"},
-	12: {"Level", "Defense", "Durability", "ReqLevel", "ReqEnergy", "ReqStrength", "ReqDexterity", "ReqLeadership", "BuyMoney", "DW", "DK", "FE", "MG", "DL"},
-	13: {"Level", "Durability", "Resistance1", "Resistance2", "Resistance3", "Resistance4", "Resistance5", "Resistance6", "Resistance7", "Attr", "DW", "DK", "FE", "MG", "DL"},
-	14: {"Value", "Level"},
-	15: {"Level", "ReqLevel", "ReqEnergy", "BuyMoney", "DW", "DK", "FE", "MG", "DL"},
-}
-
-var weaponColumns = []string{"Level", "DamageMin", "DamageMax", "AttackSpeed", "Durability", "MagicDurability",
-	"MagicDamageRate", "ReqLevel", "ReqStrength", "ReqDexterity", "ReqEnergy", "ReqVitality", "ReqLeadership",
-	"Attr", "DW", "DK", "FE", "MG", "DL"}
-
-var armorColumns = []string{"Level", "Defense", "MagicDefense", "Durability", "ReqLevel", "ReqStrength",
-	"ReqDexterity", "ReqEnergy", "ReqVitality", "ReqLeadership", "Attr", "DW", "DK", "FE", "MG", "DL"}
-
 func (it *ItemInfo) set(col string, v int) {
 	switch col {
+	case "Type":
+		it.Type = v
+	case "Slot":
+		it.Slot = v
+	case "Skill":
+		it.Skill = v
+	case "Width":
+		it.Width = v
+	case "Height":
+		it.Height = v
+	case "HaveSerial":
+		it.HaveSerial = v
+	case "HaveOption":
+		it.HaveOption = v
+	case "DropItem":
+		it.DropItem = v
 	case "Level":
 		it.Level = v
 	case "DamageMin":
@@ -136,54 +128,57 @@ func (it *ItemInfo) set(col string, v int) {
 	}
 }
 
-// LoadItems reads Data/Item/Item.txt. The file is a sequence of numbered
-// category sections; categories may appear more than once (the WizardTeam
-// additions at the end) and later rows override earlier ones.
-func LoadItems(dataDir string) (map[int]ItemInfo, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "Item.txt"))
+// LoadItems reads the Item table of config/data/item.toml (Item.txt).
+// Later rows of a category override earlier ones with the same Type.
+func LoadItems(configDir string) (map[int]ItemInfo, error) {
+	f, err := loadItemConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
-	secs, err := mutext.Sections(lines)
-	if err != nil {
-		return nil, fmt.Errorf("Item.txt: %w", err)
-	}
+	return BuildItems(&f.Item)
+}
+
+// BuildItems converts the Item table into ItemInfo by index.
+func BuildItems(t *ItemTable) (map[int]ItemInfo, error) {
 	out := map[int]ItemInfo{}
-	for _, s := range secs {
-		cols, ok := itemColumns[s.Index]
-		if !ok {
-			return nil, fmt.Errorf("Item.txt: unknown category %d", s.Index)
-		}
-		for _, l := range s.Rows {
-			if len(l.Tokens) != 9+len(cols) {
-				return nil, fmt.Errorf("Item.txt line %d: %d columns, want %d", l.No, len(l.Tokens), 9+len(cols))
-			}
-			var it ItemInfo
-			it.Category = s.Index
-			head := [8]int{}
-			for i := 0; i < 8; i++ {
-				if head[i], err = l.Int(i); err != nil {
-					return nil, err
-				}
-			}
-			it.Type, it.Slot, it.Skill, it.Width, it.Height = head[0], head[1], head[2], head[3], head[4]
-			it.HaveSerial, it.HaveOption, it.DropItem = head[5], head[6], head[7]
-			it.Name = l.Tokens[8]
-			for i, c := range cols {
-				v, err := l.Int(9 + i)
-				if err != nil {
-					return nil, err
-				}
-				it.set(c, v)
-			}
+	for cat, rows := range t.Categories() {
+		for i := 0; i < rows.Len(); i++ {
+			it := ItemInfo{Category: cat}
+			setItemFields(&it, rows.Index(i))
 			if it.Type < 0 || it.Type >= 512 {
-				return nil, fmt.Errorf("Item.txt line %d: type %d", l.No, it.Type)
+				return nil, fmt.Errorf("Item category %d row %d: type %d", cat, i+1, it.Type)
 			}
-			it.Index = s.Index*512 + it.Type
+			it.Index = cat*512 + it.Type
 			out[it.Index] = it
 		}
 	}
 	return out, nil
+}
+
+// Categories returns the arrays of the table by category number.
+func (t *ItemTable) Categories() [16]reflect.Value {
+	v := reflect.ValueOf(t).Elem()
+	var out [16]reflect.Value
+	for i := range out {
+		out[i] = v.Field(i)
+	}
+	return out
+}
+
+// setItemFields copies a category row into it by column name.
+func setItemFields(it *ItemInfo, row reflect.Value) {
+	t := row.Type()
+	for i := 0; i < t.NumField(); i++ {
+		f, fv := t.Field(i), row.Field(i)
+		switch {
+		case f.Anonymous:
+			setItemFields(it, fv)
+		case f.Name == "Name":
+			it.Name = fv.String()
+		case fv.Kind() == reflect.Int:
+			it.set(f.Name, int(fv.Int()))
+		}
+	}
 }
 
 // ItemName formats an index as "cc,iii" for logs.

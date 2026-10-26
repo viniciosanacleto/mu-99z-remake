@@ -1,12 +1,9 @@
 package game
 
 import (
-	"fmt"
 	"math"
-	"path/filepath"
 	"time"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
@@ -664,39 +661,21 @@ type damageRule struct {
 	Rate               int
 }
 
-func loadDamageTable(dataDir string) ([2][]damageRule, error) {
+// loadDamageTable reads the DamageTable table of config/data/util.toml.
+func loadDamageTable(configDir string) ([2][]damageRule, error) {
 	var out [2][]damageRule
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Util", "DamageTable.txt"))
+	f, err := gamedata.LoadUtilConfig(configDir)
 	if err != nil {
 		return out, err
 	}
-	secs, err := mutext.Sections(lines)
-	if err != nil {
-		return out, fmt.Errorf("DamageTable.txt: %w", err)
+	for _, r := range f.DamageTable.Monster {
+		out[0] = append(out[0], damageRule{Map: r.MapNumber, MinLevel: r.MinLevel, MaxLevel: r.MaxLevel, MinReset: r.MinReset,
+			MaxReset: r.MaxReset, Class: -1, MinMLevel: r.MinDefense, MaxMLevel: r.MaxDefense, Rate: r.DamageRate})
 	}
-	for _, s := range secs {
-		if s.Index < 0 || s.Index > 1 {
-			continue
-		}
-		for _, l := range s.Rows {
-			n := 8 + s.Index
-			if len(l.Tokens) < n {
-				return out, fmt.Errorf("DamageTable.txt line %d: %d columns", l.No, len(l.Tokens))
-			}
-			v := make([]int, n)
-			for i := range v {
-				if v[i], err = l.Int(i); err != nil {
-					return out, fmt.Errorf("DamageTable.txt: %w", err)
-				}
-			}
-			r := damageRule{Map: v[0], MinLevel: v[1], MaxLevel: v[2], MinReset: v[3], MaxReset: v[4], Class: -1}
-			if s.Index == 0 {
-				r.MinMLevel, r.MaxMLevel, r.Rate = v[5], v[6], v[7]
-			} else {
-				r.Class, r.MinMLevel, r.MaxMLevel, r.Rate = v[5], v[6], v[7], v[8]
-			}
-			out[s.Index] = append(out[s.Index], r)
-		}
+	for _, r := range f.DamageTable.Player {
+		out[1] = append(out[1], damageRule{Map: r.MapNumber, MinLevel: r.MinLevel, MaxLevel: r.MaxLevel, MinReset: r.MinReset,
+			MaxReset: r.MaxReset, Class: r.MonsterIndex, MinMLevel: r.MonsterMinLevel, MaxMLevel: r.MonsterMaxLevel,
+			Rate: r.DamageRate})
 	}
 	return out, nil
 }

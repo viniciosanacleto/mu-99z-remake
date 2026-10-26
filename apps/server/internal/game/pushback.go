@@ -1,10 +1,9 @@
 package game
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
 	"time"
+
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
 // Push-back of skill hits (docs/server-plan/08c-skills-efeitos-pvp.md,
@@ -201,41 +200,18 @@ func (w *World) monsterPushMessage(o *Object, code, sender int) {
 	}
 }
 
-// loadMobCombo reads Custom/CustomMobCombo.txt section 0 (FUN_0044ef50,
-// at most 100 classes).
-func loadMobCombo(dataDir string) ([]int, error) {
-	path := filepath.Join(dataDir, "Custom", "CustomMobCombo.txt")
-	if _, err := os.Stat(path); err != nil {
-		return nil, nil
-	}
-	secs, err := loadSections(path)
-	if err != nil {
-		return nil, err
-	}
-	var out []int
-	for _, s := range secs {
-		if s.Index != 0 {
-			continue
-		}
-		for _, l := range s.Rows {
-			v, err := l.Int(0)
-			if err != nil {
-				return nil, fmt.Errorf("CustomMobCombo.txt: %w", err)
-			}
-			if len(out) < 100 {
-				out = append(out, v)
-			}
-		}
-	}
-	return out, nil
+// loadMobCombo reads the CustomMobCombo table of config/data/custom.toml
+// (FUN_0044ef50, at most 100 classes).
+func loadMobCombo(configDir string) ([]int, error) {
+	return gamedata.LoadCustomMobCombo(configDir)
 }
 
 func init() {
 	startHooks = append(startHooks, func(w *World) error {
-		if w.dataDir == "" {
+		if w.configDir == "" {
 			return nil
 		}
-		l, err := loadMobCombo(w.dataDir)
+		l, err := loadMobCombo(w.configDir)
 		if err != nil {
 			return err
 		}

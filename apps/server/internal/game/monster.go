@@ -135,7 +135,7 @@ func (w *World) mw() *monsterWorld {
 }
 
 // loadMonsterData is the start-up part of FUN_004eb5f0 for monsters.
-func (w *World) loadMonsterData(dataDir string) error {
+func (w *World) loadMonsterData() error {
 	mw := w.mw()
 	rates := gamedata.MonsterRates{
 		MaxLife:            w.cfg.Int("Common", "MonsterMaxLifeRate", 100),
@@ -145,17 +145,17 @@ func (w *World) loadMonsterData(dataDir string) error {
 		AttackSuccessRate:  w.cfg.Int("Common", "MonsterAttackSuccessRateRate", 100),
 	}
 	var err error
-	if mw.info, err = gamedata.LoadMonsterList(dataDir, rates); err != nil {
+	if mw.info, err = gamedata.LoadMonsterList(w.configDir, rates); err != nil {
 		return err
 	}
 	mapOK := func(mp int) bool { _, ok := w.data.Maps[mp]; return ok }
-	if mw.spawns, err = gamedata.LoadSpawns(dataDir, mapOK, monsterRand); err != nil {
+	if mw.spawns, err = gamedata.LoadSpawns(w.configDir, mapOK, monsterRand); err != nil {
 		return err
 	}
-	if mw.talk, err = gamedata.LoadNpcTalk(dataDir); err != nil {
+	if mw.talk, err = gamedata.LoadNpcTalk(w.configDir); err != nil {
 		return err
 	}
-	if mw.damage, err = loadDamageTable(dataDir); err != nil {
+	if mw.damage, err = loadDamageTable(w.configDir); err != nil {
 		return err
 	}
 	mw.drops = buildDropTable(w.data.Items)
@@ -524,7 +524,7 @@ func (w *World) monsterByClass(mp, class int) *Object {
 func init() {
 	monsterViewportHook = (*World).sendMonsterViewport
 	startHooks = append(startHooks, func(w *World) error {
-		if err := w.loadMonsterData(w.dataDir); err != nil {
+		if err := w.loadMonsterData(); err != nil {
 			return fmt.Errorf("monsters: %w", err)
 		}
 		w.spawnMonsters()

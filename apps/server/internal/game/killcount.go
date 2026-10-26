@@ -38,10 +38,10 @@ func (w *World) kills() *killCount {
 func init() {
 	startHooks = append(startHooks, func(w *World) error {
 		w.wcx().kills = nil
-		if w.dataDir == "" {
+		if w.configDir == "" {
 			return nil
 		}
-		rows, err := gamedata.LoadCustomMonsterKillCount(w.dataDir)
+		rows, err := gamedata.LoadCustomMonsterKillCount(w.configDir)
 		w.kills().rows = rows
 		return err
 	})

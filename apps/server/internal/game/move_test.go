@@ -27,7 +27,7 @@ type bareWorld struct {
 
 func newBareWorld(t *testing.T) *bareWorld {
 	t.Helper()
-	cfg, err := gsconfig.Load(repoData("4.GameServer", "DATA"))
+	cfg, err := gsconfig.Load(repoConfig("gameserver", "gameserver.toml"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +36,7 @@ func newBareWorld(t *testing.T) *bareWorld {
 		t.Fatal(err)
 	}
 	b := &bareWorld{t: t, clock: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}
-	w, err := New(Options{DataDir: repoData("Data"), Config: cfg, Store: mem, Auth: auth.New(mem, auth.Config{}),
+	w, err := New(Options{DataDir: repoData("Data"), ConfigDir: repoConfig(), Config: cfg, Store: mem, Auth: auth.New(mem, auth.Config{}),
 		Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Now: func() time.Time { return b.clock }})
 	if err != nil {
 		t.Fatal(err)

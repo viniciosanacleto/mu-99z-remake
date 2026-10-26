@@ -1,4 +1,0 @@
-0
-//MonsterClass
-835
-end

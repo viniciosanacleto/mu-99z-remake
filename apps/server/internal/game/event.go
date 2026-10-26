@@ -48,14 +48,14 @@ func (w *World) ev() *eventData {
 func init() {
 	startHooks = append(startHooks, func(w *World) error {
 		e := w.ev()
-		if w.dataDir == "" {
+		if w.configDir == "" {
 			return nil
 		}
 		var err error
-		if e.entry, err = gamedata.LoadEventEntryLevel(w.dataDir); err != nil {
+		if e.entry, err = gamedata.LoadEventEntryLevel(w.configDir); err != nil {
 			return err
 		}
-		e.stage, err = gamedata.LoadEventStageSpawn(w.dataDir)
+		e.stage, err = gamedata.LoadEventStageSpawn(w.configDir)
 		return err
 	})
 }

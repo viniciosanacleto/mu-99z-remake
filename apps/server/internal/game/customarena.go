@@ -114,8 +114,8 @@ func loadCustomArena(w *World) error {
 	a.mapNumber = w.cfg.Int("Custom", "CustomArenaMapNumber", 0)
 	a.victimDec = w.cfg.Int("Custom", "CustomArenaVictimScoreDecrease", 0)
 	a.killerInc = w.cfg.Int("Custom", "CustomArenaKillerScoreIncrease", 0)
-	if w.dataDir != "" {
-		d, err := gamedata.LoadCustomArena(w.dataDir)
+	if w.configDir != "" {
+		d, err := gamedata.LoadCustomArena(w.configDir)
 		if err != nil {
 			return err
 		}

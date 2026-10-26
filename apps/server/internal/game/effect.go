@@ -2,9 +2,8 @@ package game
 
 import (
 	"fmt"
-	"path/filepath"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
@@ -116,44 +115,25 @@ func effOpt(o *Object) effectOptions {
 	return o.Eff.Opt
 }
 
-// loadEffectList reads Data/Skill/EffectList.txt (FUN_004786c0).
-func loadEffectList(dataDir string) (map[int]effectInfo, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Skill", "EffectList.txt"))
+// loadEffectList reads the EffectList table of config/data/skill.toml
+// (FUN_004786c0): indexes 0..0x7f; an item outside 0..0x1fff is none.
+func loadEffectList(configDir string) (map[int]effectInfo, error) {
+	f, err := gamedata.LoadSkillConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
 	out := map[int]effectInfo{}
-	for _, l := range mutext.Table(lines) {
-		v := func(i int) int {
-			n, e := l.Int(i)
-			if e != nil && err == nil {
-				err = e
+	for i, r := range f.EffectList.Rows {
+		e := effectInfo{Index: r.Index, Group: r.Group, Item: -1, Name: r.Name, Save: r.Save, Type: r.Type, Flag: r.Flag,
+			Duration: r.Duration, Power: r.Power}
+		if r.ItemIndex != "*" {
+			cat, idx, err := gamedata.SplitItemRef(r.ItemIndex)
+			if err != nil {
+				return nil, fmt.Errorf("EffectList row %d: %w", i+1, err)
 			}
-			return n
-		}
-		e := effectInfo{Index: v(0), Group: v(1)}
-		col := 2
-		if cat := v(col); cat != -1 {
-			col++
-			idx := v(col)
-			e.Item = -1
-			if it := cat*0x200 + idx; it >= 0 && it < 0x2000 {
+			if it := cat*0x200 + idx; cat != -1 && it >= 0 && it < 0x2000 {
 				e.Item = it
 			}
-		} else {
-			e.Item = -1
-		}
-		col++
-		if col >= len(l.Tokens) {
-			return nil, fmt.Errorf("EffectList.txt line %d: missing name", l.No)
-		}
-		e.Name = l.Tokens[col]
-		e.Save, e.Type, e.Flag, e.Duration = v(col+1), v(col+2), v(col+3), v(col+4)
-		for i := range e.Power {
-			e.Power[i] = v(col + 5 + i)
-		}
-		if err != nil {
-			return nil, fmt.Errorf("EffectList.txt: %w", err)
 		}
 		if e.Index >= 0 && e.Index < 0x80 {
 			out[e.Index] = e

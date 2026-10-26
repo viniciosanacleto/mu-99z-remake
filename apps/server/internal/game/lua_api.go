@@ -288,17 +288,14 @@ func luaItemTable(l *lua.State, it item.Item) {
 }
 
 // luaProfilePath resolves a GetPrivateProfile* file name: relative paths
-// start in the instance folder (the process directory, parent of DATA).
+// start in the data root (the parent of Data, standing in for the process
+// directory of the original).
 func (w *World) luaProfilePath(name string) string {
 	p := filepath.FromSlash(strings.ReplaceAll(name, `\`, "/"))
 	if filepath.IsAbs(p) {
 		return p
 	}
-	base := filepath.Dir(w.dataDir)
-	if w.cfg != nil && w.cfg.Dir != "" {
-		base = filepath.Dir(filepath.Clean(w.cfg.Dir))
-	}
-	return filepath.Join(base, p)
+	return filepath.Join(filepath.Dir(w.dataDir), p)
 }
 
 // --- the table -------------------------------------------------------------------

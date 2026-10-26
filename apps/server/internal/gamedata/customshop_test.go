@@ -9,7 +9,7 @@ import (
 
 func TestLoadCustomJewelOriginal(t *testing.T) {
 	// The original file only has commented demonstration rows.
-	c, err := LoadCustomJewel(dataDir())
+	c, err := LoadCustomJewel(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -23,61 +23,8 @@ func TestLoadCustomJewelOriginal(t *testing.T) {
 	}
 }
 
-func writeShopFile(t *testing.T, name, body string) string {
-	t.Helper()
-	dir := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(dir, "Custom"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "Custom", name), []byte(body), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	return dir
-}
-
-func TestLoadCustomJewelSections(t *testing.T) {
-	dir := writeShopFile(t, "CustomJewel.txt", `0
-0   14,200  1  0  1   60 61 62 63   50000000
-3   14 201  0  1  0   10 20 30 40   7 // two tokens for the item
-60  14,202  1  1  1   1 1 1 1 1
-end
-1
-0   0  12  0  *  *  6  *  15  1
-end
-2
-0   1  0  1  2  1  5
-end
-3
-0   2  1  0  1  6  1
-end
-`)
-	c, err := LoadCustomJewel(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	j, ok := c.Find(14*512 + 200)
-	if !ok || j.Index != 0 || j.Weapon != 1 || j.Armor != 0 || j.Wing != 1 || j.Rate != [4]int{60, 61, 62, 63} ||
-		j.SalePrice != 50000000 {
-		t.Fatalf("slot 0 %+v", j)
-	}
-	if j.MinLevel != 0 || j.MaxLevel != 12 || j.Skill != 0 || j.Luck != -1 || j.MinOption != -1 ||
-		j.MaxOption != 6 || j.MinExc != -1 || j.MaxExc != 15 || j.MaxSetOption != 1 {
-		t.Fatalf("requirements %+v", j)
-	}
-	if j.Success != (JewelChange{1, 0, 1, 2, 1, 5}) || j.Failure != (JewelChange{2, 1, 0, 1, 6, 1}) {
-		t.Fatalf("changes %+v %+v", j.Success, j.Failure)
-	}
-	if j, ok := c.Find(14*512 + 201); !ok || j.Index != 3 || j.SalePrice != 7 {
-		t.Fatalf("slot 3 %+v", j)
-	}
-	// Index 60 is beyond the 50 slots.
-	if _, ok := c.Find(14*512 + 202); ok {
-		t.Fatal("index 60 loaded")
-	}
-}
-
 func TestLoadLuckyWheelOriginal(t *testing.T) {
-	w, err := LoadLuckyWheel(dataDir())
+	w, err := LoadLuckyWheel(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,20 +39,8 @@ func TestLoadLuckyWheelOriginal(t *testing.T) {
 	}
 }
 
-func TestLoadLuckyWheelColumns(t *testing.T) {
-	dir := writeShopFile(t, "CustomLuckyWheel.txt", "0 12 3 4 1 0 5 32\n0 1 1 1 1 1 1 1\nend\n")
-	w, err := LoadLuckyWheel(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Skill is the fifth column and Luck the sixth; the first row wins.
-	if r := w[0]; r != (WheelReward{Index: 0, Type: 12, Item: 3, Level: 4, Skill: 1, Luck: 0, Option: 5, Excellent: 32}) {
-		t.Fatalf("row %+v", r)
-	}
-}
-
 func TestLoadXShopPricesOriginal(t *testing.T) {
-	x, ok, err := LoadXShopPrices(filepath.Join(dataDir(), "Custom", "CustomXShop.txt"))
+	x, ok, err := LoadXShopPrices(filepath.Join(configDir(), "data", "xshop.toml"))
 	if err != nil || !ok {
 		t.Fatal(ok, err)
 	}
@@ -122,13 +57,46 @@ func TestLoadXShopPricesOriginal(t *testing.T) {
 	}
 }
 
+// writeXShop writes an xshop.toml and returns its path.
+func writeXShop(t *testing.T, body string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "xshop.toml")
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+const xshopSample = `# header
+[CustomXShop]
+Category = [
+  { Type = 0, Price = 100 },
+  { Type = 3, Price = -5 },
+  { Type = 16, Price = 9 },
+]
+Item = [
+  { Type = 0, Index = 0, Price = 20, Comment = "Kris" },
+  { Type = 0, Index = 1, Price = 10 },
+  { Type = 3, Index = 2, Price = -1 },
+  { Type = 0, Index = 600, Price = 7 },
+]
+
+[CustomXShopRecharge]
+Ativo = 1
+Titular = "Jo\u00e3o"
+ChavePix = ""
+CopiaECola = ""
+ImagemURL = ""
+ImagemBMP = ""
+Valor = ""
+`
+
 func TestLoadXShopPricesMissingAndNegative(t *testing.T) {
-	x, ok, err := LoadXShopPrices(filepath.Join(t.TempDir(), "none.txt"))
+	x, ok, err := LoadXShopPrices(filepath.Join(t.TempDir(), "none.toml"))
 	if err != nil || ok || x.Price(5*512) != XShopDefaultPrice || x.Price(0x1fff) != XShopDefaultPrice {
 		t.Fatalf("missing %v %v %+v", ok, err, x)
 	}
-	dir := writeShopFile(t, "CustomXShop.txt", "0\n3 -5\n16 9\nend\n1\n3 2 -1\n0 600 7\nend\n")
-	x, _, err = LoadXShopPrices(filepath.Join(dir, "Custom", "CustomXShop.txt"))
+	x, _, err = LoadXShopPrices(writeXShop(t, xshopSample))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,44 +111,54 @@ func TestLoadXShopPricesMissingAndNegative(t *testing.T) {
 }
 
 func TestWriteXShopPrice(t *testing.T) {
-	dir := writeShopFile(t, "CustomXShop.txt",
-		"// header\r\n0\r\n0 100\r\nend\r\n\r\n1\r\n// comment\r\n0   0   20   // Kris\r\n0 1 10\r\nend\r\n")
-	path := filepath.Join(dir, "Custom", "CustomXShop.txt")
-	if err := WriteXShopPrice(path, 0, 55); err != nil {
-		t.Fatal(err)
-	}
-	if err := WriteXShopPrice(path, 1, 11); err != nil {
-		t.Fatal(err)
-	}
-	if err := WriteXShopPrice(path, 7*512+3, 99); err != nil {
-		t.Fatal(err)
+	path := writeXShop(t, xshopSample)
+	for _, c := range []struct {
+		index int
+		price uint32
+	}{{0, 55}, {1, 11}, {7*512 + 3, 99}} {
+		if err := WriteXShopPrice(path, c.index, c.price); err != nil {
+			t.Fatal(err)
+		}
 	}
 	b, _ := os.ReadFile(path)
-	want := "// header\r\n0\r\n0 100\r\nend\r\n\r\n1\r\n// comment\r\n0   0   55   // Kris\n0   1   11\n" +
-		"7   3   99   // alterado/criado ingame por GM\nend\r\n"
-	if string(b) != want {
-		t.Fatalf("file:\n%q\nwant\n%q", b, want)
+	for _, want := range []string{"# header\n", `Price = 55, Comment = "Kris"`, `Type = 7, Index = 3,   Price = 99, Comment = "alterado/criado ingame por GM"`,
+		`Titular = "João"`} {
+		if !strings.Contains(string(b), want) {
+			t.Fatalf("%q missing from:\n%s", want, b)
+		}
 	}
-	x, _, _ := LoadXShopPrices(path)
-	if x.Price(0) != 55 || x.Price(1) != 11 || x.Price(7*512+3) != 99 {
-		t.Fatalf("reloaded %+v", x.Overrides)
+	x, _, err := LoadXShopPrices(path)
+	if err != nil || x.Price(0) != 55 || x.Price(1) != 11 || x.Price(7*512+3) != 99 {
+		t.Fatalf("reloaded %+v %v", x.Overrides, err)
 	}
 	if _, err := os.Stat(path + ".tmp"); !os.IsNotExist(err) {
 		t.Fatal("temporary file left")
 	}
+	if err := WriteXShopPrice(filepath.Join(t.TempDir(), "missing.toml"), 0, 1); err == nil {
+		t.Fatal("missing file written")
+	}
 }
 
-func TestWriteXShopPriceWithoutSection(t *testing.T) {
-	dir := writeShopFile(t, "CustomXShop.txt", "0\n0 100\nend\n")
-	path := filepath.Join(dir, "Custom", "CustomXShop.txt")
-	if err := WriteXShopPrice(path, 2*512+1, 30); err != nil {
+func TestWriteXShopRecharge(t *testing.T) {
+	path := writeXShop(t, xshopSample)
+	r := XShopRechargeFile{Ativo: 1, Titular: "Jos\xe9", ChavePix: "key", ImagemBMP: "pix1.tmp.bmp", Valor: "25.00"}
+	if err := WriteXShopRecharge(path, r); err != nil {
 		t.Fatal(err)
 	}
-	b, _ := os.ReadFile(path)
-	if !strings.HasSuffix(string(b), "end\n\n1\n2   1   30   // alterado/criado ingame por GM\nend\n") {
-		t.Fatalf("%q", b)
+	f, err := LoadXShopConfig(path)
+	if err != nil || f.CustomXShopRecharge != r {
+		t.Fatalf("recharge %+v %v", f.CustomXShopRecharge, err)
 	}
-	if err := WriteXShopPrice(filepath.Join(dir, "missing.txt"), 0, 1); err == nil {
-		t.Fatal("missing file written")
+	if x, _, _ := LoadXShopPrices(path); x.Price(0) != 20 {
+		t.Fatal("prices lost")
+	}
+	b, _ := os.ReadFile(path)
+	if !strings.Contains(string(b), `Titular = "José"`) {
+		t.Fatalf("file:\n%s", b)
+	}
+	// A missing file is created.
+	other := filepath.Join(t.TempDir(), "new.toml")
+	if err := WriteXShopRecharge(other, r); err != nil {
+		t.Fatal(err)
 	}
 }

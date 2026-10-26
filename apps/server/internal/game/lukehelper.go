@@ -58,8 +58,8 @@ func loadLukeHelper(w *World) error {
 	w.wcx().luke = nil
 	l := w.luke()
 	l.on = w.cfg.Int("Custom", "CustomLukeHelperSwitch", 0) != 0
-	if w.dataDir != "" {
-		d, err := gamedata.LoadCustomLukeHelper(w.dataDir)
+	if w.configDir != "" {
+		d, err := gamedata.LoadCustomLukeHelper(w.configDir)
 		if err != nil {
 			return err
 		}

@@ -1,12 +1,8 @@
 package game
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
 	"time"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -552,33 +548,25 @@ func (w *World) petDamageRate(o *Object, index, dmg int) int {
 	return dmg
 }
 
-// loadPetDamageTable reads Util/PetDamageTable.txt (missing file: empty).
-func loadPetDamageTable(dataDir string) ([]petDamageRow, error) {
-	path := filepath.Join(dataDir, "Util", "PetDamageTable.txt")
-	if _, err := os.Stat(path); err != nil {
-		return nil, nil
-	}
-	lines, err := mutext.LoadFile(path)
+// loadPetDamageTable reads the PetDamageTable table of config/data/util.toml.
+func loadPetDamageTable(configDir string) ([]petDamageRow, error) {
+	rows, err := gamedata.LoadPetDamageTable(configDir)
 	if err != nil {
 		return nil, err
 	}
 	var out []petDamageRow
-	for _, l := range mutext.Table(lines) {
-		v, err := intsOf(l, 6)
-		if err != nil {
-			return nil, fmt.Errorf("PetDamageTable.txt: %w", err)
-		}
-		out = append(out, petDamageRow{v[0], v[1], v[2], v[3], v[4], v[5]})
+	for _, r := range rows {
+		out = append(out, petDamageRow{r.Pet, r.MinLevel, r.MaxLevel, r.MinReset, r.MaxReset, r.DamageRate})
 	}
 	return out, nil
 }
 
 func init() {
 	startHooks = append(startHooks, func(w *World) error {
-		if w.dataDir == "" {
+		if w.configDir == "" {
 			return nil
 		}
-		rows, err := loadPetDamageTable(w.dataDir)
+		rows, err := loadPetDamageTable(w.configDir)
 		if err != nil {
 			return err
 		}

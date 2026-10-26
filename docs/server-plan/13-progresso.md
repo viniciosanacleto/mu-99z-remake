@@ -9,7 +9,7 @@ Legenda: `[x]` feito e testado · `[~]` em andamento/parcial · `[ ]` a fazer.
 1. Ler esta página e a seção "Próximo passo".
 2. `cd apps/server && go test ./...` deve passar antes de qualquer mudança.
 3. Fases e critérios de pronto: [12-roadmap-e-incognitas.md](12-roadmap-e-incognitas.md).
-4. Originais em `/Users/viniciosanacleto/Downloads/99zFREE-AM-VS2026`; dados copiados para `apps/server/data/` conforme a necessidade (mesmos caminhos relativos).
+4. Originais em `/Users/viniciosanacleto/Downloads/99zFREE-AM-VS2026`. A configuração em texto foi convertida para TOML em `apps/server/config/` (`cmd/configconv`, doc [11](11-arquivos-de-configuracao.md) seção 0); `apps/server/data/` guarda só os binários (mesmos caminhos relativos).
 
 ## Fase 0 — Fundação
 
@@ -19,8 +19,9 @@ Legenda: `[x]` feito e testado · `[~]` em andamento/parcial · `[ ]` a fazer.
 - [x] `internal/protocol/gscodec` — pipeline completo do socket do GameServer (fluxo → frame → SimpleModulus/serial → XOR32) nos dois sentidos
 - [x] `internal/config/ini` — leitor compatível com `GetPrivateProfile*`
 - [x] `internal/config/mutext` — tokenizer dos `.txt`/`.dat` de dados (`//`, aspas, `end`, seções numeradas)
-- [x] `internal/config/serverlist` — `ServerList.dat`
-- [x] Parsers de todos os arquivos de `Data/` (teste que carrega 100% dos arquivos): `game/datacoverage_test.go`, 296 arquivos = 274 lidos pelo original e carregados pelo Go (incluindo os 5 Lua, agente T), 22 ignorados com motivo; doc [16](16-cobertura-dados.md) (agente R)
+- [x] `internal/config/serverlist` — lista de servidores (`ServerList` de `config/server.toml`)
+- [x] Configuração em TOML (2026-10-26): `config/server.toml`, `config/gameserver/*.toml` e 17 grupos em `config/data/`; `cmd/configconv` converte os originais (`internal/config/legacy`), `internal/config/tomlconf` lê/grava, `servercfg` lê o `server.toml`; os textos de `apps/server/data/` foram removidos
+- [x] Parsers de todos os arquivos de `Data/` (teste que carrega 100% dos arquivos): `game/datacoverage_test.go`, 296 arquivos = 274 lidos pelo original e carregados pelo Go (incluindo os 5 Lua, agente T), 22 ignorados com motivo; doc [16](16-cobertura-dados.md) (agente R). Desde a conversão para TOML o teste cobre os grupos de `config/data/` e os 36 binários de `data/Data`
 - [x] Proxy de captura `cmd/muproxy` + `internal/capture` (decodifica CS e GS, log, sessões golden com `capture.Replay`, reescrita de endereço em `F4 03` e `C3 B1 00`); doc [15](15-captura.md) (agente R). Pendente: capturas reais com o `Main.exe`
 
 ## Fase 1 — Login
@@ -29,12 +30,12 @@ Legenda: `[x]` feito e testado · `[~]` em andamento/parcial · `[ ]` a fazer.
 - [x] `cmd/muserver` — bootstrap com listener do ConnectServer
 - [x] `internal/store` — PostgreSQL (pgx, migrations embutidas, seed de `DefaultClassType`) + implementação em memória; suíte de conformidade roda nas duas (`MU_TEST_DATABASE_URL`)
 - [x] `internal/auth` — login (códigos 0/1/2/3/4/7), sessão única (chave minúscula), kick com mesma senha, limite IP/HWID, expiração de VIP, tickets de troca de servidor, senhas `plain:` → argon2id
-- [x] `internal/config/gsconfig` — `GameServerInfo - *.dat` (dicionário offset→chave em `.re/cfgmap.txt`)
+- [x] `internal/config/gsconfig` — arquivo da instância (`GameServerInfo - *.dat` do original; dicionário offset→chave em `.re/cfgmap.txt`)
 - [x] `internal/game/item` — item 16 bytes (DB) e 7 bytes (cliente)
 - [x] `internal/game/charset` — CharSet de 18 bytes (lista de personagens e viewport), com asas/pets custom
 - [x] `internal/gamedata` — terrenos (100 mapas, reaproveita o último `.att`), MapManager, Gate, MapServerInfo, SkillList, tabela de EXP
 - [x] `internal/game` — sessão TCP (`gscodec`), mundo em goroutine única, timers 100 ms/1 s, índices 0x53FC..0x57E3, F1 00, F3 09 (verificação/HWID), F1 01, F1 02 (logout com contagem), 0E, F3 00 (+F3 F9, DE 00), F3 01, F3 02, F3 03 (+F3 10, F3 11, C2 12 próprio), viewport de jogadores (C2 12 / C1 14), troca de servidor (B1 00 / B1 01), mensagens Lang (Eng/Por/Spn) e notice `0D`
-- [x] `cmd/muserver` — sobe ConnectServer + instâncias `4.GameServer` (código 0) e `5.GameServerCS` (código 19); `-db` PostgreSQL ou memória; `account create`
+- [x] `cmd/muserver` — sobe ConnectServer + instâncias `gameserver` (código 0) e `gameserver-cs` (código 19); `-config`, `-db` PostgreSQL ou memória; `account create`
 - [x] `hackcheck.go` — HackPacketCheck (`0x488070`): regra obrigatória por head/sub, tipo C1/C3 exigido, serial de C3/C4, limites de contagem
 - [x] `options.go` — opções do cliente (`C1 13 F3 30`, carga na entrada, gravação pelo cliente)
 - [x] `hub.go` + `friend.go` + `store/friends*.go` (migração `0004_friends.sql`) — mapa de personagens online entre instâncias (DS 0x70/0x71), amigos e mail (C0–CB) com a semântica das SPs `WZ_*Friend*`/`WZ_*Mail`
@@ -69,7 +70,7 @@ Briefing comum em `.re/AGENT_BRIEF.md`. Pontos de extensão em `internal/game/ex
   - EXP solo aplica a taxa CustomMonster (`0x4670a0`) e o `9C` mostra 0 quando houve level up;
   - `samePartyHook`: direito de loot compartilhado na party;
   - `equipmentChanged` não chama mais `recalcHook` duas vezes (`rebuildCharSet` já recalcula, como `0x4c6ba0`).
-- **Ambiente local:** o `BlackList.txt` original lista `127.0.0.1`, então o ConnectServer recusa conexões do próprio host. Para testar com o cliente na mesma máquina, remova a linha de `apps/server/data/1.ConnectServer/BlackList.txt` ou aponte `-blacklist` para um arquivo sem entradas.
+- **Ambiente local:** o `BlackList.txt` original lista `127.0.0.1` (hoje a `BlackList` de `config/server.toml`), então o ConnectServer recusa conexões do próprio host. Para testar com o cliente na mesma máquina, tire o endereço do arquivo ou passe `-blacklist none`.
 - **Bloco 14, primeiro contato (2026-10-24):** o `Main.exe` original recebeu a lista de servidores do `muserver` (PostgreSQL local, `-public-ip 192.168.18.5`). O cliente ignora `127.0.0.1` no `License.wzt` (não abre socket), então use o IP da máquina na rede; procedimento no README do servidor e em `docs/client-plan/03-rede-e-protocolo.md`. Login e entrada no jogo funcionam. A janela C (tecla C) mostrava nível 0, resets = pontos livres e atributos com lixo: o `F3 03` tinha 116 bytes e o `Main.dll` lê 176 (corrigido, U-PROTO-09). Os textos `MuOriX`/`MuOrix`/`MuReaper` da cópia de `data/` viraram `MuJogatina` (Message 990, Notice, Quiz, Lua, XShopRecharge). Os `.txt` em Latin-1 (`Message.txt`, `CustomQuiz.txt`) precisam ser editados num editor que preserve essa codificação: ao salvar como UTF-8, os acentos viraram U+FFFD e foram restaurados a partir do git.
 
 Pendentes sem dono: guild (50..66, E1..EB, protocolo DS), quests (A0/A2), Chaos Machine (86–88), loja pessoal (3F), duelo (AA–AC), eventos (BC, DS, CC, Kalima, Golden Archer, invasões), Castle Siege, customs WizardTeam (XShop, JewelBank, LuckyWheel, attack/offline, reset).
@@ -139,22 +140,26 @@ Já refletidas em [02](02-protocolo-de-rede.md) e [03](03-connect-server.md):
 
 | Pacote | Conteúdo |
 |---|---|
-| `cmd/muserver` | `run()`: ConnectServer + uma instância de GameServer por pasta em `-instances` (padrão `4.GameServer,5.GameServerCS`), Hub compartilhado; subcomando `account create` |
+| `cmd/muserver` | `run()`: ConnectServer + uma instância de GameServer por arquivo em `-instances` (padrão `gameserver,gameserver-cs`, `config/gameserver/<nome>.toml`), Hub compartilhado; subcomando `account create` |
+| `cmd/configconv` | converte os `.ini`/`.dat`/`.txt` originais para os TOML de `config/` |
 | `internal/protocol/frame` | `Next` (parser incremental), `Build`, `Head`, `Sub`, `Payload`, limites `MaxSizeConnect/Game` |
 | `internal/protocol/crypto` | `Xor32Encrypt/Decrypt`, `ModulusKeys` (`LoadKeyFile`, `Encrypt`, `Decrypt`), `Bux`, `StreamKeys`/`DeriveStreamKeys` |
 | `internal/protocol/gscodec` | `Server` (Feed/Encode) e `Client` (inverso, para testes e bots) |
-| `internal/config/ini` | `Load/Parse`, `String(sec,key,def,size)`, `Int(sec,key,def)` |
-| `internal/config/mutext` | `Tokenize`, `Table`, `Sections`, `Line.Int/String` |
-| `internal/config/serverlist` | `Load` → `[]Entry` |
+| `internal/config/ini` | `Load/Parse`, `String(sec,key,def,size)`, `Int(sec,key,def)` (usado pelo `configconv` e pelos arquivos de perfil do Lua) |
+| `internal/config/tomlconf` | `Load` estrito com conversão para Windows-1252, `LoadUTF8`, `Save`, `Marshal` (uma linha por registro) |
+| `internal/config/legacy` | leitores dos formatos originais e a conversão de cada grupo (só o `configconv` usa) |
+| `internal/config/servercfg` | `config/server.toml` (ConnectServer, JoinServer, DataServer) |
+| `internal/config/mutext` | `Tokenize`, `Table`, `Sections`, `Line.Int/String`, `NumTok/NumFields/NumRow/StreamRows` (usado pelo `configconv`) |
+| `internal/config/serverlist` | `Build` (linhas da `ServerList`) → `[]Entry` |
 | `internal/connect` | `Registry` (estado vivo, `Report`, `MarkDown`, `SetAuthStatus`), builders `Hello/ServerNames/ServerList/ServerInfo`, `Handle`, `Server` TCP |
-| `internal/config/gsconfig` | `GameServerInfo - *.dat` + `Common.dat` de cada instância |
+| `internal/config/gsconfig` | arquivo TOML de cada instância (`Int/ALInt/String` por tabela e chave, `SetInt` grava no arquivo) |
 | `internal/store` | `Store` (memória e PostgreSQL), migrações, templates de classe, amigos/mail |
 | `internal/auth` | login/logout de contas, sessões, troca de servidor |
-| `internal/gamedata` | terreno, mapas/gates, EXP, skills, itens, quests, monstros/spawns, dados de personagem |
+| `internal/gamedata` | terreno e as tabelas de `config/data` (esquema TOML por grupo em `*_config.go`, cache do arquivo decodificado) |
 | `internal/game` | `World` (goroutine única por instância) e os módulos: login/personagens/entrada (`login.go`, `character.go`, `enterworld.go`), viewport, movimento/teleporte/chat/comandos (A), monstros/NPC/combate (B), itens/lojas/baú/trade (C), atributos/level/party/PK (D), amigos, avisos, HackPacketCheck, Hub |
 | `internal/game/item`, `internal/game/charset` | codecs de item (16 bytes DB / 7 bytes wire) e CharSet de 18 bytes |
 
-Dados copiados dos originais em `apps/server/data/`, com os caminhos originais: `Data/**`, `1.ConnectServer/`, `2.DataServer/BadSyntax.txt`, `3.JoinServer/JoinServer.ini`, `4.GameServer/DATA/`, `5.GameServerCS/DATA/`. Chaves do cliente usadas só em teste: `internal/protocol/crypto/testdata/{Enc1,Dec2}.dat`.
+Configuração em `apps/server/config/` (TOML gerado pelo `cmd/configconv` a partir dos originais) e binários em `apps/server/data/` com os caminhos originais (`Data/Terrain`, `Data/Script`, `Data/Hack/{Enc2,Dec1}.dat`, `Data/Skill/SkillElect.hit`, `Data/Custom/pixFE31.tmp.bmp`, `Data/Common/Protect`, `DB/MuOnline.sql`). Chaves do cliente usadas só em teste: `internal/protocol/crypto/testdata/{Enc1,Dec2}.dat`.
 
 ## Testes
 
@@ -170,6 +175,7 @@ Dados copiados dos originais em `apps/server/data/`, com os caminhos originais: 
 | 2026-10-23 | idem, após corrigir os bugs do original no JewelBank (U-JWL-03/04), LuckyWheel (U-LW-01/03) e GHRS (U-GHRS-01) | 19 pacotes, todos `ok`; `TestLuaAPIBasics` passou a usar a mensagem 993 como exemplo de inexistente (a 991 agora existe) |
 | 2026-10-24 | `go vet ./... && go test -p 2 -count=1 ./...` (Windows, sem `MU_TEST_DATABASE_URL`) após o editor e o vazamento de memória | 21 pacotes, todos `ok` (`internal/game` 96 s). Antes, `internal/game` caía com `fatal error: out of memory` (VirtualAlloc errno 1455): `chaosTables`, `petTables`, `castleSyncs` e `guildManagers` eram `sync.Map` globais com chave `*World`/`*Hub` e retinham cerca de 152 MB por World de teste. Agora ficam no `World` e no `Hub` (`hub_gc_test.go`) |
 | 2026-10-24 | idem, após o limite de atributos do editor e o `F3 03` de 176 bytes (U-PROTO-09) | 21 pacotes, todos `ok` |
+| 2026-10-26 | `go vet ./... && gofmt -l . && go test -race -count=1 -timeout 30m ./...` após a configuração em TOML | Todos `ok` (`internal/game` 274 s) menos `internal/capture` e `cmd/muproxy`, que já falhavam antes: os testes leem `apps/client/assets/Data/Enc1.dat`, removido no commit `6ae0638`. Um dump de todos os loaders bate com os leitores de texto anteriores, exceto o nome do item 12,203, agora em Windows-1252 |
 
 ## Bugs do original ainda reproduzidos (não corrigidos)
 
@@ -193,7 +199,7 @@ Comportamentos errados do binário original que o Go reproduz de propósito, à 
 
 Blocos 1–13 concluídos. Resta:
 
-1. **Bloco 14 — teste com o cliente original** (depende do usuário, Windows): subir `go run ./cmd/muserver -data data -db ...` com um `-blacklist` sem `127.0.0.1`, apontar o `Main.exe` para o ConnectServer (ou para o `cmd/muproxy`, doc [15](15-captura.md)) e gravar sessões golden em `internal/capture/testdata/golden/`. Dúvidas abertas: serial C3 após troca de servidor de mapa e endereço do ConnectServer no `License.wzt`.
+1. **Bloco 14 — teste com o cliente original** (depende do usuário, Windows): subir `go run ./cmd/muserver -db ... -blacklist none`, apontar o `Main.exe` para o ConnectServer (ou para o `cmd/muproxy`, doc [15](15-captura.md)) e gravar sessões golden em `internal/capture/testdata/golden/`. Dúvidas abertas: serial C3 após troca de servidor de mapa e endereço do ConnectServer no `License.wzt`.
 2. **Migração real**: restaurar o `MuOnline.bak` num SQL Server e rodar `cmd/migrate -from sqlserver://...`.
 3. ~~Decisões pendentes~~ **corrigidas em 2026-10-23** a pedido do usuário: saque de Chaos/Life do JewelBank (U-JWL-03/04), custo da LuckyWheel debitado dos créditos (U-LW-01/03), resposta `F8` do GHRS feita pelo próprio serviço (U-GHRS-01); mensagens 909/991/992 acrescentadas à cópia do `Message.txt`.
 4. Bugs do original ainda reproduzidos: ver a seção acima; corrigir só com aval do usuário.

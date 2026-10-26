@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -107,104 +106,42 @@ func sk(o *Object) *skillState {
 
 // --- data -------------------------------------------------------------------
 
-func loadSkillWorld(dataDir string) (*skillWorld, error) {
+// loadSkillWorld reads the Skill tables of config/data/skill.toml and the
+// binary SkillElect.hit of the data directory.
+func loadSkillWorld(dataDir, configDir string) (*skillWorld, error) {
 	sw := &skillWorld{damage: map[int][2]int{}, effectRate: map[int]int{}, combos: map[[2]int]comboRow{},
 		areaSkills: map[int]bool{}}
 	var err error
-	if sw.effects, err = loadEffectList(dataDir); err != nil {
+	if sw.effects, err = loadEffectList(configDir); err != nil {
 		return nil, err
 	}
-	dir := filepath.Join(dataDir, "Skill")
-	secs, err := loadSections(filepath.Join(dir, "SkillDamage.txt"))
+	f, err := gamedata.LoadSkillConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
-	for _, s := range secs {
-		for _, l := range s.Rows {
-			v, err := intsOf(l, 2)
-			if err != nil {
-				return nil, fmt.Errorf("SkillDamage.txt: %w", err)
-			}
-			switch s.Index {
-			case 0:
-				if len(l.Tokens) >= 3 {
-					pvp, err := l.Int(2)
-					if err != nil {
-						return nil, err
-					}
-					sw.damage[v[0]] = [2]int{v[1], pvp}
-				}
-			case 1:
-				sw.effectRate[v[0]] = v[1]
-			}
-		}
+	for _, r := range f.SkillDamage.Damage {
+		sw.damage[r.SkillIndex] = [2]int{r.DamageRatePvM, r.DamageRatePvP}
 	}
-	lines, err := mutext.LoadFile(filepath.Join(dir, "ComboSkill.txt"))
-	if err != nil {
-		return nil, err
+	for _, r := range f.SkillDamage.Effect {
+		sw.effectRate[r.SkillIndex] = r.EffectRate
 	}
-	for _, l := range mutext.Table(lines) {
-		v, err := intsOf(l, 4)
-		if err != nil {
-			return nil, fmt.Errorf("ComboSkill.txt: %w", err)
-		}
-		sw.combos[[2]int{v[0], v[1]}] = comboRow{Stage: v[2], Delay: v[3]}
+	for _, r := range f.ComboSkill.Rows {
+		sw.combos[[2]int{r.Class, r.SkillIndex}] = comboRow{Stage: r.Stage, Delay: r.Delay}
 	}
-	if lines, err = mutext.LoadFile(filepath.Join(dir, "SkillEnabler.txt")); err != nil {
-		return nil, err
+	for _, r := range f.SkillEnabler.Rows {
+		sw.enabler = append(sw.enabler, enablerRow{r.SkillIndex, r.MapNumber, r.UsePvM, r.UsePvP})
 	}
-	for _, l := range mutext.Table(lines) {
-		v, err := intsOf(l, 4)
-		if err != nil {
-			return nil, fmt.Errorf("SkillEnabler.txt: %w", err)
-		}
-		sw.enabler = append(sw.enabler, enablerRow{v[0], v[1], v[2], v[3]})
+	for _, r := range f.SkillUseArea.Skill {
+		sw.areaSkills[r.SkillIndex] = true
 	}
-	if secs, err = loadSections(filepath.Join(dir, "SkillUseArea.txt")); err != nil {
-		return nil, err
-	}
-	for _, s := range secs {
-		for _, l := range s.Rows {
-			switch s.Index {
-			case 0:
-				v, err := intsOf(l, 1)
-				if err != nil {
-					return nil, err
-				}
-				sw.areaSkills[v[0]] = true
-			case 1:
-				v, err := intsOf(l, 5)
-				if err != nil {
-					return nil, err
-				}
-				sw.areas = append(sw.areas, useArea{v[0], v[1], v[2], v[3], v[4]})
-			}
-		}
+	for _, r := range f.SkillUseArea.Area {
+		sw.areas = append(sw.areas, useArea{r.MapNumber, r.X1, r.Y1, r.X2, r.Y2})
 	}
 	// SkillElect.hit (FUN_004f7530): exactly 0x3e04 bytes.
-	if b, err := os.ReadFile(filepath.Join(dir, "SkillElect.hit")); err == nil && len(b) == 0x3e04 {
+	if b, err := os.ReadFile(filepath.Join(dataDir, "Skill", "SkillElect.hit")); err == nil && len(b) == 0x3e04 {
 		sw.hitbox = b
 	}
 	return sw, nil
-}
-
-func loadSections(path string) ([]mutext.Section, error) {
-	lines, err := mutext.LoadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return mutext.Sections(lines)
-}
-
-func intsOf(l mutext.Line, n int) ([]int, error) {
-	v := make([]int, n)
-	for i := range v {
-		var err error
-		if v[i], err = l.Int(i); err != nil {
-			return nil, err
-		}
-	}
-	return v, nil
 }
 
 // --- packets ------------------------------------------------------------------
@@ -1508,11 +1445,11 @@ func (w *World) skillMessages(o *Object) {
 
 func init() {
 	startHooks = append(startHooks, func(w *World) error {
-		if w.dataDir == "" {
+		if w.configDir == "" {
 			w.skills = &skillWorld{}
 			return nil
 		}
-		sw, err := loadSkillWorld(w.dataDir)
+		sw, err := loadSkillWorld(w.dataDir, w.configDir)
 		if err != nil {
 			return fmt.Errorf("skill data: %w", err)
 		}

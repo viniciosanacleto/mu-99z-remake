@@ -30,10 +30,10 @@ type goldenArcherState struct {
 func init() {
 	startHooks = append(startHooks, func(w *World) error {
 		w.ev().archer = nil
-		if w.dataDir == "" {
+		if w.configDir == "" {
 			return nil
 		}
-		r, err := gamedata.LoadGoldenArcher(w.dataDir)
+		r, err := gamedata.LoadGoldenArcher(w.configDir)
 		w.ev().archer = r
 		return err
 	})

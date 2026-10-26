@@ -54,7 +54,7 @@ func (w *World) quizOn() bool { return w.cfg.Int("Event", "CustomQuizSwitch", 0)
 
 // loadQuiz is FUN_00456d30 plus the start-up part of FUN_004baa20.
 func (w *World) loadQuiz() error {
-	d, err := gamedata.LoadCustomQuiz(w.dataDir)
+	d, err := gamedata.LoadCustomQuiz(w.configDir)
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package gamedata
 
 import (
+	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -9,6 +10,12 @@ import (
 func dataDir() string {
 	_, file, _, _ := runtime.Caller(0)
 	return filepath.Join(filepath.Dir(file), "..", "..", "data", "Data")
+}
+
+// configDir is apps/server/config.
+func configDir() string {
+	_, file, _, _ := runtime.Caller(0)
+	return filepath.Join(filepath.Dir(file), "..", "..", "config")
 }
 
 func TestLoadTerrains(t *testing.T) {
@@ -61,14 +68,14 @@ func TestParseTerrainErrors(t *testing.T) {
 }
 
 func TestMapManagerAndGates(t *testing.T) {
-	mm, err := LoadMapManager(dataDir())
+	mm, err := LoadMapManager(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
 	if mm[0].Name != "Lorencia" || mm[0].ViewRange != 12 || mm[0].NonPK != -1 || mm[6].ViewRange != 10 {
 		t.Fatalf("map manager = %+v / %+v", mm[0], mm[6])
 	}
-	gates, err := LoadGates(dataDir())
+	gates, err := LoadGates(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +83,7 @@ func TestMapManagerAndGates(t *testing.T) {
 	if g.Flag != 1 || g.Map != 0 || g.X1 != 121 || g.Y1 != 232 || g.TargetGate != 2 || g.MinLevel != 20 {
 		t.Fatalf("gate 1 = %+v", g)
 	}
-	ms, err := LoadMapServer(dataDir())
+	ms, err := LoadMapServer(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +109,7 @@ func TestExperience(t *testing.T) {
 }
 
 func TestSkills(t *testing.T) {
-	sk, err := LoadSkills(dataDir())
+	sk, err := LoadSkills(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +126,7 @@ func TestSkills(t *testing.T) {
 }
 
 func TestItems(t *testing.T) {
-	items, err := LoadItems(dataDir())
+	items, err := LoadItems(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,7 +148,7 @@ func TestItems(t *testing.T) {
 }
 
 func TestQuests(t *testing.T) {
-	q, err := LoadQuests(dataDir())
+	q, err := LoadQuests(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,5 +162,36 @@ func TestQuests(t *testing.T) {
 	r := q.Rewards[2]
 	if r.Sort != 1 || r.Type != 2 || r.Index != 201 || r.RequireIndex != 1 {
 		t.Fatalf("reward = %+v", r)
+	}
+}
+
+func TestLoadConfigCacheFollowsTheFile(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, "data"), 0o755)
+	path := filepath.Join(dir, "data", "quest.toml")
+	write := func(body string) {
+		if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("[Quest]\nRows = [{ Index = 1, MonsterClass = 235, CurrentState = 0, RequireIndex = -1, RequireState = -1, " +
+		"RequireMinLevel = 1, RequireMaxLevel = -1, DW = 1, DK = 1, FE = 1, MG = 0, DL = 0 }]\n" +
+		"[QuestObjective]\nRows = []\n[QuestReward]\nRows = []\n")
+	q, err := LoadQuests(dir)
+	if err != nil || len(q.Quests) != 1 || q.Quests[0].NPC != 235 {
+		t.Fatalf("%+v %v", q, err)
+	}
+	a, _ := loadConfig[QuestConfig](dir, "quest")
+	b, _ := loadConfig[QuestConfig](dir, "quest")
+	if a != b {
+		t.Fatal("the decoded file is not reused")
+	}
+	write("[Quest]\nRows = []\n[QuestObjective]\nRows = []\n[QuestReward]\nRows = []\n# changed\n")
+	if q, err = LoadQuests(dir); err != nil || len(q.Quests) != 0 {
+		t.Fatalf("edited file not reloaded: %+v %v", q, err)
+	}
+	os.Remove(path)
+	if _, err := LoadQuests(dir); err == nil {
+		t.Fatal("missing file served from the cache")
 	}
 }

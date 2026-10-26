@@ -11,10 +11,10 @@ func init() {
 }
 
 func loadDataFiles(w *World) error {
-	if w.dataDir == "" {
+	if w.configDir == "" {
 		return nil
 	}
 	var err error
-	w.expTable, err = gamedata.LoadExperienceTable(w.dataDir) // FUN_004ec4c0 -> FUN_0047be80
+	w.expTable, err = gamedata.LoadExperienceTable(w.configDir) // FUN_004ec4c0 -> FUN_0047be80
 	return err
 }

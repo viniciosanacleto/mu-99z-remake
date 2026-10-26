@@ -8,7 +8,8 @@ import (
 	"log/slog"
 	"net"
 	"os"
-	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -25,25 +26,9 @@ import (
 // minimum lowered so one-member test guilds can register.
 func csConfig(t *testing.T) *gsconfig.Config {
 	t.Helper()
-	dir := t.TempDir()
-	for _, name := range gsconfig.Files {
-		file := "GameServerInfo - " + name + ".dat"
-		b, err := os.ReadFile(repoData("5.GameServerCS", "DATA", file))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if name == "Event" {
-			b = bytes.Replace(b, []byte("CastleSiegeEvent = 0"), []byte("CastleSiegeEvent = 1"), 1)
-			b = bytes.Replace(b, []byte("CastleSiegeRegisterMinGuildMember = 10"), []byte("CastleSiegeRegisterMinGuildMember = 1"), 1)
-		}
-		if err := os.WriteFile(filepath.Join(dir, file), b, 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	cfg, err := gsconfig.Load(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	cfg := instanceConfig(t, "gameserver-cs", map[string]map[string]string{
+		"Event": {"CastleSiegeEvent": "1", "CastleSiegeRegisterMinGuildMember": "1"},
+	})
 	if cfg.ServerType != 1 || cfg.Int("Event", "CastleSiegeEvent", 0) != 1 {
 		t.Fatal("config not patched")
 	}
@@ -942,7 +927,7 @@ func newTestEnvWith(t *testing.T, cfg *gsconfig.Config) *testEnv {
 		t.Fatal(err)
 	}
 	a := auth.New(mem, auth.Config{})
-	w, err := New(Options{DataDir: repoData("Data"), Config: cfg, Store: mem, Auth: a,
+	w, err := New(Options{DataDir: repoData("Data"), ConfigDir: repoConfig(), Config: cfg, Store: mem, Auth: a,
 		Log: slog.New(slog.NewTextHandler(io.Discard, nil))})
 	if err != nil {
 		t.Fatal(err)
@@ -963,4 +948,47 @@ func newTestEnvWith(t *testing.T, cfg *gsconfig.Config) *testEnv {
 	}
 	t.Cleanup(env.stop)
 	return env
+}
+
+// TestCastleSiegeOverrideKeysReset checks the WritePrivateProfileStringA
+// block of FUN_0041ab60: the one-shot cycle / state overrides are read
+// and then written back as 0 in [Event] of the instance file, keeping
+// the rest of the file.
+func TestCastleSiegeOverrideKeysReset(t *testing.T) {
+	b := newBareWorld(t)
+	keys := []string{"CastleSiegeCycleStartYear", "CastleSiegeCycleStartMonth", "CastleSiegeCycleStartDay",
+		"CastleSiegeSpecificState", "CastleSiegeStateStartYear", "CastleSiegeStateStartMonth",
+		"CastleSiegeStateStartDay", "CastleSiegeStateStartHour", "CastleSiegeStateStartMinute"}
+	set := map[string]string{"CastleSiegeEvent": "1"}
+	for i, k := range keys {
+		set[k] = strconv.Itoa(i + 1)
+	}
+	b.cfg = instanceConfig(t, "gameserver-cs", map[string]map[string]string{"Event": set})
+	before, err := os.ReadFile(b.cfg.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b.clock = time.Now()
+	if err := b.csLoad(); err != nil {
+		t.Fatal(err)
+	}
+	after, err := os.ReadFile(b.cfg.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	re, err := gsconfig.Load(b.cfg.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, k := range keys {
+		if re.Int("Event", k, -1) != 0 || b.cfg.Int("Event", k, -1) != 0 {
+			t.Errorf("%s not reset", k)
+		}
+	}
+	if re.Int("Event", "CastleSiegeEvent", 0) != 1 || re.ServerName != "Castle Siege" {
+		t.Fatal("other keys changed")
+	}
+	if strings.Count(string(after), "\n# ") != strings.Count(string(before), "\n# ") {
+		t.Fatal("comments lost")
+	}
 }

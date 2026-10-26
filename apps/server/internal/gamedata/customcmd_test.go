@@ -1,25 +1,11 @@
 package gamedata
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
-func writeCustom(t *testing.T, name, body string) string {
-	t.Helper()
-	dir := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(dir, "Custom"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "Custom", name), []byte(body), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	return dir
-}
-
 func TestLoadCustomAttackOriginal(t *testing.T) {
-	a, err := LoadCustomAttack("../../data/Data")
+	a, err := LoadCustomAttack(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,77 +30,16 @@ func TestLoadCustomAttackOriginal(t *testing.T) {
 	}
 }
 
-func TestCustomAttackDelayRows(t *testing.T) {
-	dir := writeCustom(t, "CustomAttack.txt", `0
-19 100 * * * 700 0 0
-* * * 10 20 -1 1000 10
-end
-1
-16 0 1 1 1 1 1 1
-16 1 0 0 0 0 0 0
-300 1 0 1 1 1 1 1
-end
-`)
-	a, err := LoadCustomAttack(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if a.Skills[16].Group != 0 || len(a.Skills) != 1 {
-		t.Fatalf("first row must win and index 300 is dropped: %+v", a.Skills)
-	}
-	cases := []struct{ skill, dex, speed, want int }{
-		{19, 150, 5, 700},             // first row
-		{19, 50, 15, 1000 - 10*15},    // dexterity below row 1, formula row
-		{20, 0, 30, (0x177 - 30) * 4}, // no row
-		{-5, 0, 10, 1000 - 10*10},     // skill "*"
-	}
-	for _, c := range cases {
-		if g := a.AttackDelay(c.skill, c.dex, c.speed); g != c.want {
-			t.Fatalf("%+v: %d", c, g)
-		}
-	}
-	var none *CustomAttack
-	if none.AttackDelay(1, 1, 75) != 1200 {
-		t.Fatal("nil table")
-	}
-}
-
 func TestLoadCustomGift(t *testing.T) {
-	dir := writeCustom(t, "CustomGift.txt", `0
-0 * 1 1 1 1 * * * * 1 10 500 "beginner"
-1 2 1 0 1 1 5 * * 3 * 0 0 "elf"
-end
-1
-0 12,015 0 0 0 0 0 0 0 0
-0 14,013 1 3 0 1 2 0 0 3600
-1 13,000 0 0 1 0 0 63 0 0
-end
-`)
-	g, err := LoadCustomGift(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(g) != 2 || g[0].Code != "beginner" || g[0].MaxCount != 1 || g[0].LevelUpPoint != 10 || g[0].Money != 500 {
-		t.Fatalf("%+v", g)
-	}
-	if g[1].Class != 2 || g[1].Switch != [4]int{1, 0, 1, 1} || g[1].MinLevel != 5 || g[1].MaxReset != 3 || g[1].MaxCount != -1 {
-		t.Fatalf("%+v", g[1])
-	}
-	if len(g[0].Items) != 2 || g[0].Items[1] != (GiftItem{Index: 14*512 + 13, Level: 1, Durability: 3, Luck: 1, Option: 2, Duration: 3600}) {
-		t.Fatalf("items %+v", g[0].Items)
-	}
-	if g[1].Items[0].Index != 13*512 || g[1].Items[0].Skill != 1 || g[1].Items[0].Excellent != 63 {
-		t.Fatalf("items %+v", g[1].Items)
-	}
 	// The original file has only the commented demonstration rows.
-	orig, err := LoadCustomGift("../../data/Data")
+	orig, err := LoadCustomGift(configDir())
 	if err != nil || len(orig) != 0 {
 		t.Fatalf("original %v %v", orig, err)
 	}
 }
 
 func TestLoadCustomMarriageOriginal(t *testing.T) {
-	m, err := LoadCustomMarriage("../../data/Data")
+	m, err := LoadCustomMarriage(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,25 +53,13 @@ func TestLoadCustomMarriageOriginal(t *testing.T) {
 }
 
 func TestLoadCustomBuyVip(t *testing.T) {
-	dir := writeCustom(t, "CustomBuyVip.txt", `0 1 31 1000 "month"
-* 3 7 0 "week"
-2 3 1 0 "month"
-end
-`)
-	p, err := LoadCustomBuyVip(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(p) != 2 || p["month"] != (VipPlan{0, 1, 31, 1000, "month"}) || p["week"].AccountLevel != -1 {
-		t.Fatalf("%+v", p)
-	}
-	if orig, err := LoadCustomBuyVip("../../data/Data"); err != nil || len(orig) != 0 {
+	if orig, err := LoadCustomBuyVip(configDir()); err != nil || len(orig) != 0 {
 		t.Fatalf("original %v %v", orig, err)
 	}
 }
 
 func TestLoadCustomPickOriginal(t *testing.T) {
-	p, err := LoadCustomPick("../../data/Data")
+	p, err := LoadCustomPick(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}

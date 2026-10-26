@@ -3,7 +3,7 @@ package gamedata
 import "testing"
 
 func TestLoadCastleSiege(t *testing.T) {
-	cs, err := LoadCastleSiege(dataDir())
+	cs, err := LoadCastleSiege(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}

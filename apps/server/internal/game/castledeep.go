@@ -54,8 +54,8 @@ func init() {
 		// FUN_00419060: state EMPTY with nothing scheduled until Init.
 		cd := &castleDeep{data: &gamedata.CastleDeep{}, State: cdEmpty, Tick: w.now()}
 		w.ev().deep = cd
-		if w.dataDir != "" {
-			d, err := gamedata.LoadCastleDeep(w.dataDir) // FUN_00419320
+		if w.configDir != "" {
+			d, err := gamedata.LoadCastleDeep(w.configDir) // FUN_00419320
 			if err != nil {
 				return err
 			}

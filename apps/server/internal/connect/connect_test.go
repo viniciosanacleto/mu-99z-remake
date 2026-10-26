@@ -3,6 +3,7 @@ package connect
 import (
 	"bytes"
 	"context"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/servercfg"
 	"io"
 	"log/slog"
 	"net"
@@ -133,13 +134,13 @@ func TestHandle(t *testing.T) {
 	}
 }
 
-func TestLoadConfig(t *testing.T) {
+func TestConfigFrom(t *testing.T) {
 	_, file, _, _ := runtime.Caller(0)
-	dir := filepath.Join(filepath.Dir(file), "..", "..", "data", "1.ConnectServer")
-	cfg, err := LoadConfig(filepath.Join(dir, "ConnectServer.ini"), filepath.Join(dir, "BlackList.txt"))
+	f, err := servercfg.Load(filepath.Join(filepath.Dir(file), "..", "..", "config", "server.toml"))
 	if err != nil {
 		t.Fatal(err)
 	}
+	cfg := ConfigFrom(f.ConnectServer)
 	if cfg.Port != 44405 || cfg.MaxIdle != 60*time.Second || cfg.MaxPerIP != 1 ||
 		cfg.MaxPacketPerSecond != 10 || len(cfg.BlackList) != 1 || cfg.BlackList[0] != "127.0.0.1" {
 		t.Fatalf("cfg = %+v", cfg)

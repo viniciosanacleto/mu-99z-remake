@@ -1,12 +1,11 @@
 # 16 — Cobertura dos arquivos de dados
 
-Quais arquivos de `MuServer/Data/**`, `4.GameServer/DATA/*` e `5.GameServerCS/DATA/*` o servidor original lê, e qual loader Go faz o parse de cada um. O teste `TestDataFileCoverage` (`apps/server/internal/game/datacoverage_test.go`) percorre `apps/server/data/Data` e as pastas `DATA` das duas instâncias. Cada arquivo encontrado cai em um de três casos:
+Quais arquivos de `MuServer/Data/**`, `4.GameServer/DATA/*` e `5.GameServerCS/DATA/*` o servidor original lê, e qual loader Go os carrega. Desde 2026-10-26 os arquivos de texto foram convertidos para TOML em `apps/server/config/` (ver [11](11-arquivos-de-configuracao.md) seção 0): os loaders da tabela abaixo leem a tabela TOML de cada arquivo original, e a semântica do leitor original (descrita aqui) é aplicada pelo conversor `cmd/configconv` (`internal/config/legacy`). Dois testes em `apps/server/internal/game/datacoverage_test.go` cobrem tudo:
 
-- **carregado**: o original lê o arquivo e o loader Go listado roda sem erro sobre ele;
-- **pendente**: o original lê, mas ainda não existe parser Go (nenhum arquivo hoje);
-- **ignorado**: o original nunca lê, e o motivo fica registrado.
+- `TestConfigFileCoverage`: cada `config/data/<grupo>.toml` precisa ter os loaders dos arquivos originais que contém, e todos rodam sem erro sobre o arquivo do repositório; `server.toml` e as instâncias em `config/gameserver/` também carregam.
+- `TestDataFileCoverage`: percorre `apps/server/data/Data`, que guarda só binários. Cada arquivo é **carregado** (o loader Go roda sem erro) ou **ignorado** (o original nunca lê; o motivo fica registrado). Um arquivo de texto novo ali faz o teste falhar e indica o `configconv`.
 
-Um arquivo novo que não está em nenhuma das listas faz o teste falhar. Uma entrada que aponta para um arquivo inexistente também. O teste fica no pacote `game` porque vários loaders são privados desse pacote. Ele também monta um `World` com os dados reais (`New` executa todos os `startHooks`).
+Uma entrada que aponta para um arquivo inexistente também faz o teste falhar. Os testes ficam no pacote `game` porque vários loaders são privados desse pacote, e montam um `World` com os dados reais (`New` executa todos os `startHooks`).
 
 ## Como o original encontra os arquivos
 
@@ -18,7 +17,7 @@ Um arquivo novo que não está em nenhuma das listas faz o teste falhar. Uma ent
 | `0x4e8520` | `BlackList.txt` (`FUN_00411ae0`: seção 0 IPs de 16 caracteres, seção 1 HWIDs de 44) | `gamedata.LoadBlackList`; usado em `game/blacklist.go` |
 | `0x4e85f0` | `Character/DefaultClassInfo.txt`, `Character/DefaultClassFreebies.txt` (`FUN_0046cb40`) | `LoadClassInfo`, `LoadDefaultClassFreebies` (usado em `game/freebies.go`) |
 | `0x4e86f0` | `CommandManager.txt`, `CommandRequirement.txt` (`FUN_004402a0`) | `game.loadCommands`, `LoadCommandRequirement` (usado em `game/cmdrequirement.go`) |
-| `0x4e8860` | `ConnectMember.txt`, `MapManager.txt`, `MapRateInfo.txt` | `game.loadNameList`, `LoadMapManager`, `LoadMapRateInfo` |
+| `0x4e8860` | `ConnectMember.txt`, `MapManager.txt`, `MapRateInfo.txt` | `game.loadConnectMembers`, `LoadMapManager`, `LoadMapRateInfo` |
 | `0x4e8a50` | 35 arquivos de `Custom/` (incluindo `Custom/Event/*`, `CustomGuard`, `CustomMobCombo`, `DailyReward`, `CustomPatente`, `CustomEvolution`) | `gamedata.LoadCustom*` / `Load*Event`, `game.loadCustomTables`; `LoadCustomMobCombo` (mesmo leitor `FUN_0044ef50` do CustomGuard; lista do push-back, `pushback.go`) e `LoadCustomEvolution` (`FUN_0044aff0`; `game/customevo.go`) |
 | `0x4e9d30` | 12 arquivos de `Event/*.dat` e `Custom/CustomQuiz.txt` | `LoadBloodCastle`, `LoadBonusManager`, `LoadCastleDeep`, `LoadCastleSiege`, `LoadChaosCastle`, `LoadDevilSquare`, `LoadDropEvent`, `LoadEventEntryLevel`, `LoadEventStageSpawn`, `LoadGoldenArcher`, `LoadInvasions`, `LoadKalima`, `LoadCustomQuiz` |
 | `0x4ea4a0` | `EventItemBagManager.txt` e as bags que ele cita (`EventItemBag\%s.txt`, `FUN_00491220`) | `LoadEventItemBags` |
@@ -36,21 +35,16 @@ Um arquivo novo que não está em nenhuma das listas faz o teste falhar. Uma ent
 | `0x4ec0f0` | 7 arquivos de `Skill/` | `game.loadSkillWorld` (SkillDamage, ComboSkill, SkillEnabler, SkillUseArea, SkillElect.hit), `game.loadEffectList`, `LoadSkills` |
 | `0x4ec4c0` | `Util/DamageTable.txt`, `ExperienceTable.txt` (`FUN_0047be80`), `Filter.txt`, `GameMaster.txt`, `PetDamageTable.txt` (`FUN_004d61d0`), `ResetLimit.txt`, `ResetTable.txt` | `game.loadDamageTable`, `LoadExperienceTable` (novo), `game.loadMoveData`, `LoadPetDamageTable` (novo), `game.loadCmdWorld` |
 | sob demanda | `Custom/CreationGold.txt` (`FUN_0049a690`), `Custom/CustomXShopRecharge.txt` ao lado do CustomXShop (`FUN_00404a60`) | `CreationGoldValue`, `game.rechargeBlock` |
-| `.\Data\GameServerInfo - *.dat` | os 8 `.dat` de cada instância (`GetPrivateProfile*`) | `gsconfig.Load` |
+| `.\Data\GameServerInfo - *.dat` | os 8 `.dat` de cada instância (`GetPrivateProfile*`) | `gsconfig.Load` (`config/gameserver/<instância>.toml`) |
 | CastleSiege.exe `FUN_00442c10` | `Custom/CustomGHRS.ini` (só no CastleSiege.exe): `[WEEK] Monday..Sunday` e `[TIMEUPDATE] Hour/Min/Sec`, `GetPrivateProfileIntA` com padrão 0 | `LoadCustomGHRS` (`game/ghrs.go`, só na instância com `ServerType = 1`) |
 
 O CastleSiege.exe lê o mesmo conjunto que o GameServer.exe, com estas diferenças: não lê `CustomXShop.txt`, `CustomXShopRecharge.txt` nem `CreationGold.txt`, e lê também `CustomGHRS.ini`. A comparação foi feita por `strings` nos dois executáveis.
 
 `Item\Item_{Eng,Por,Spn}.bmd` (`0x4ec8d0`) só é tratado pelo comando de menu `0x801c`, nunca na partida. Os arquivos não existem na instalação, e o uso que `FUN_004940b0` faz deles (ler ou gerar) não foi verificado.
 
-## Números (árvore `apps/server/data`, 296 arquivos)
+## Números
 
-| Situação | Arquivos |
-|---|---|
-| Lidos pelo original e carregados em Go | 274 (inclui os 5 scripts Lua: `ScriptMain.lua`, `System/ScriptCore.lua`, `Script/WelcomeMessage.lua`, `Script/CustomWindowName.lua`, `Character/CalcCharacter.lua`) |
-| Lidos pelo original, sem parser Go (pendentes) | 0 |
-| Nunca lidos (ignorados) | 22 |
-| Lido pelo original, mas ausente na instalação | 1 (`Custom/CustomPatente.txt`; `LoadCustomPatente` aceita a ausência) |
+Antes da conversão para TOML, a árvore `apps/server/data` tinha 296 arquivos: 274 lidos pelo original e carregados em Go (incluindo os 5 scripts Lua: `ScriptMain.lua`, `System/ScriptCore.lua`, `Script/WelcomeMessage.lua`, `Script/CustomWindowName.lua`, `Character/CalcCharacter.lua`), 0 pendentes e 22 ignorados; `Custom/CustomPatente.txt` é lido pelo original mas não existe na instalação (`LoadCustomPatente` aceita a ausência).
 
 Na pasta original existem 346 arquivos. Os 50 que não foram copiados são todos não lidos:
 
@@ -60,22 +54,22 @@ Na pasta original existem 346 arquivos. Os 50 que não foram copiados são todos
 - `Data/Item/BMD_Tool.exe`;
 - os `.bmp` gerados pelo XShopRecharge (`RecargaPix.bmp`, `pixA274.tmp.bmp`, `pixqr/25.bmp`).
 
-Nenhum arquivo lido pelo original estava faltando em `apps/server/data`, então esta etapa não precisou copiar dados.
+Depois da conversão (2026-10-26): os textos lidos estão em 20 arquivos TOML (`server.toml`, 2 instâncias e 17 grupos em `config/data/`); `apps/server/data/Data` ficou com 36 arquivos, 31 carregados (22 terrenos, 5 scripts Lua, `Hack/Enc2.dat`, `Hack/Dec1.dat`, `Skill/SkillElect.hit` e a imagem `Custom/pixFE31.tmp.bmp` da recarga do XShop) e 5 ignorados. Os textos que o original não lê foram removidos sem conversão.
 
-### Ignorados (motivo no teste)
+### Ignorados (motivo no teste; os textos foram removidos na conversão para TOML)
 
 - `Common/Protect/{Encrypt,Decrypt}.dat`, `Custom/CustomMix.txt`, `Item/test_item.txt`: nenhum executável de servidor referencia esses arquivos.
 - `Custom/Crywolf.dat`, `Event/Crywolf.dat`, `Event/Kanturu.dat`, `Event/IllusionTemple.dat`: sistemas ausentes. `CIllusionTemple` existe, mas não carrega arquivo.
 - `Custom/CustomDailyReward.txt`: o original lê `Custom\DailyReward.txt`.
-- `Custom/pixFE31.tmp.bmp`: saída de `GetTempFileName("pix")` do XShopRecharge.
+- `Custom/pixFE31.tmp.bmp`: saída de `GetTempFileName("pix")` do XShopRecharge. Hoje é carregada: é a imagem que o `ImagemBMP` da recarga cita.
 - `Monster/BALANCE_CHANGELOG.txt`, `Shop/_ALTERACOES.txt`: documentação.
 - `Shop/239 - Arena Guard.txt`: o `ShopManager.txt` não cita esse arquivo.
 - `EventItemBag/AJUSTE_JOIAS_20_PORCENTO.txt` e `Special/{HideAndSeek,Loteria,MataMata,Quiz,Roleta}.txt`: o `EventItemBagManager.txt` não cita esses arquivos.
 - `Script/Script/TemplateScript.lua`, `CustomMonsterDie(Boss).lua` (o `require` está comentado) e `CustomMonsterDie(Boss) - Copia.lua`.
 
-## Parsers novos (`internal/gamedata/datafiles.go`)
+## Parsers novos (`internal/gamedata/datafiles.go`, hoje no conversor)
 
-Os leitores originais consomem um fluxo de tokens (`FUN_004e0d70` lê o token e `_ftol` converte), sem olhar para as quebras de linha. A vírgula termina um número (`12,015` são dois números) e `*` vale -1. Os parsers Go repetem esse comportamento (`streamRows`).
+Os leitores originais consomem um fluxo de tokens (`FUN_004e0d70` lê o token e `_ftol` converte), sem olhar para as quebras de linha. A vírgula termina um número (`12,015` são dois números) e `*` vale -1. O conversor repete esse comportamento (`mutext.StreamRows`) e grava os registros resultantes como linhas TOML.
 
 - **DefaultClassFreebies**: a seção 0 tem `Class Money Points`. A seção 1 tem 11 números: `Class`, item `cc,iii` (fora de 0..0x1FFF vira -1), `Level Durability Skill Luck Option Excellent SetOption Duration`; linhas com `Class` fora de 0..4 são descartadas. A seção 2 tem 8 números: `Class Effect Type Power1..4 Duration`.
 - **CommandRequirement** (0x78 bytes): `ReqItemIndex` igual a `*` ocupa um token só; nos outros casos são dois. A linha tem 17 campos depois do item e, por fim, as 5 classes.

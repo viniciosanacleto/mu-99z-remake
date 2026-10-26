@@ -3,7 +3,7 @@ package gamedata
 import "testing"
 
 func TestLoadClassInfo(t *testing.T) {
-	c, err := LoadClassInfo(dataDir())
+	c, err := LoadClassInfo(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -23,7 +23,7 @@ func TestLoadClassInfo(t *testing.T) {
 }
 
 func TestLoadItemOptions(t *testing.T) {
-	o, err := LoadItemOptions(dataDir())
+	o, err := LoadItemOptions(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestLoadItemOptions(t *testing.T) {
 }
 
 func TestLoadWingAndCustomTables(t *testing.T) {
-	wo, err := LoadWingOptions(dataDir())
+	wo, err := LoadWingOptions(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestLoadWingAndCustomTables(t *testing.T) {
 	if w := wo[13*512+30]; w.DefenseConstA != 3 || w.MaxNewOption != 4 {
 		t.Fatalf("cape %+v", w)
 	}
-	cw, err := LoadCustomWings(dataDir())
+	cw, err := LoadCustomWings(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,14 +61,14 @@ func TestLoadWingAndCustomTables(t *testing.T) {
 		c.NewOption[0] != [2]int{110, 5} || c.NewOption[3] != [2]int{108, 3} {
 		t.Fatalf("custom wing %+v", c)
 	}
-	at, err := LoadCustomAttributes(dataDir())
+	at, err := LoadCustomAttributes(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}
 	if a := at[7*512+106]; a.DamageReflect != 20 || a.DamageMin != 10 || a.DamageMax != 20 || a.ExcellentDamageRate != 30 {
 		t.Fatalf("attribute %+v", a)
 	}
-	cm, err := LoadCustomMonsters(dataDir())
+	cm, err := LoadCustomMonsters(configDir())
 	if err != nil {
 		t.Fatal(err)
 	}

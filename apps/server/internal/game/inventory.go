@@ -88,16 +88,16 @@ func init() {
 func loadItemData(w *World) error {
 	d := &itemData{}
 	var err error
-	if d.stack, err = gamedata.LoadItemStack(w.dataDir); err != nil {
+	if d.stack, err = gamedata.LoadItemStack(w.configDir); err != nil {
 		return err
 	}
-	if d.values, err = gamedata.LoadItemValue(w.dataDir); err != nil {
+	if d.values, err = gamedata.LoadItemValue(w.configDir); err != nil {
 		return err
 	}
-	if d.move, err = gamedata.LoadItemMove(w.dataDir); err != nil {
+	if d.move, err = gamedata.LoadItemMove(w.configDir); err != nil {
 		return err
 	}
-	if d.loot, err = gamedata.LoadItemLoot(w.dataDir); err != nil {
+	if d.loot, err = gamedata.LoadItemLoot(w.configDir); err != nil {
 		return err
 	}
 	w.itemData = d

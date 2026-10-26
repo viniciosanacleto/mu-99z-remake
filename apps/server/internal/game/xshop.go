@@ -78,7 +78,7 @@ const (
 
 // cashWorld is the per-instance state of the block 12 customs.
 type cashWorld struct {
-	xshopPath string // CCustomXShop +0xc4
+	xshopPath string // CCustomXShop +0xc4: config/data/xshop.toml (prices and recharge)
 	prices    *gamedata.XShopPrices
 	jewels    *gamedata.CustomJewels
 	wheel     map[int]gamedata.WheelReward
@@ -133,14 +133,14 @@ func (w *World) cw2() *cashWorld {
 	return w.cash
 }
 
-// loadCashWorld reads CustomXShop.txt (FUN_004026e0), CustomJewel.txt
-// (FUN_00464b70) and CustomLuckyWheel.txt (FUN_0044e3a0).
+// loadCashWorld reads CustomXShop (FUN_004026e0, config/data/xshop.toml),
+// CustomJewel (FUN_00464b70) and CustomLuckyWheel (FUN_0044e3a0).
 func loadCashWorld(w *World) error {
 	c := w.cw2()
-	if w.dataDir == "" {
+	if w.configDir == "" {
 		return nil
 	}
-	c.xshopPath = filepath.Join(w.dataDir, "Custom", "CustomXShop.txt")
+	c.xshopPath = filepath.Join(w.configDir, "data", "xshop.toml")
 	prices, ok, err := gamedata.LoadXShopPrices(c.xshopPath)
 	if err != nil {
 		return err
@@ -149,10 +149,10 @@ func loadCashWorld(w *World) error {
 		w.log.Warn("[CustomXShop] Nao foi possivel abrir. Usando preco padrao 25.", "file", c.xshopPath)
 	}
 	c.prices = prices
-	if c.jewels, err = gamedata.LoadCustomJewel(w.dataDir); err != nil {
+	if c.jewels, err = gamedata.LoadCustomJewel(w.configDir); err != nil {
 		return err
 	}
-	c.wheel, err = gamedata.LoadLuckyWheel(w.dataDir)
+	c.wheel, err = gamedata.LoadLuckyWheel(w.configDir)
 	return err
 }
 
