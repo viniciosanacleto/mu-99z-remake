@@ -186,6 +186,9 @@ func (w *World) enterWorld(o *Object, ch *store.Character) {
 	for _, h := range enterWorldHooks {
 		h(w, o)
 	}
+	// The Main.dll character window takes level and experience only from
+	// F3 05 / F3 E0 (0x10271788, 0x102717bc/c0), never from F3 03.
+	w.send(o, w.packetCharRefresh(o))
 	if isNew && newCharacterHook != nil { // DefaultClassFreebies (freebies.go)
 		newCharacterHook(w, o)
 	}
@@ -207,8 +210,9 @@ func (w *World) charInfo(o *Object) charInfo {
 		BP: int(c.BP), MaxBP: int(c.MaxBP) + o.P.AddBP,
 		Money: uint32(c.Money), PKLevel: c.PKLevel, CtlCode: c.CtlCode,
 		FruitAdd: c.FruitAddPoints, MaxFruit: fruit, Leadership: c.Leadership,
-		FruitSub: c.FruitSubPoints, MaxFruitS: fruit, Resets: uint32(c.Resets), Level: c.Level,
-		Extra: uint32(c.Patente), // obj+0x2500 Patente (customevent.go)
+		FruitSub: c.FruitSubPoints, MaxFruitS: fruit, Class: o.Class,
+		Resets: uint32(c.Resets), MasterResets: uint32(c.MasterResets),
+		AccountLevel: uint32(o.P.Account.Level), Authority: uint32(w.gmLevel(o)),
 	}
 }
 

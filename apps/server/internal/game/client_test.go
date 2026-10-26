@@ -226,8 +226,8 @@ func TestLoginCreateEnterWorld(t *testing.T) {
 
 	c.send(frame.Build(frame.C1, 0xF3, append([]byte{0x03}, name...)...))
 	ci := c.next(0xF3, 0x03)
-	if !c.lastEncrypted || len(ci) != 0x74 || ci[4] != 182 || ci[5] != 128 || ci[6] != 0 ||
-		ci[18] != 28 || ci[108] != 1 {
+	if !c.lastEncrypted || len(ci) != 0xB0 || ci[4] != 182 || ci[5] != 128 || ci[6] != 0 ||
+		ci[18] != 28 || ci[0x9c] != 28 {
 		t.Fatalf("F3 03 = % X", ci)
 	}
 	inv := c.next(0xF3, 0x10)

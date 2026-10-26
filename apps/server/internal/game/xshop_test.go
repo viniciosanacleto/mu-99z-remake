@@ -354,7 +354,7 @@ func TestXShopRechargeFromOriginalFiles(t *testing.T) {
 	d := rechargeChunks(t, b.drain(o))
 	if d[rcActive] != 1 || fieldText(d[rcHolder:rcHolder+0x60]) != "MATEUS DE SOUZA FERMINO" ||
 		fieldText(d[rcKey:rcKey+0x80]) != "+5522997264959" || fieldText(d[rcCopy:rcCopy+0x200]) != "5544999066491" ||
-		fieldText(d[rcURL:rcURL+0x100]) != "https://muorix.com.br/pixdanilo/25.png" {
+		fieldText(d[rcURL:rcURL+0x100]) != "https://MuJogatina.com.br/pixdanilo/25.png" {
 		t.Fatalf("fields %q %q", d[rcHolder:rcHolder+30], d[rcKey:rcKey+20])
 	}
 	// pixFE31.tmp.bmp is a 256x256 QR code; the copy text is not EMV.

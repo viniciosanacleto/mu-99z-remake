@@ -77,6 +77,8 @@ go run ./cmd/muserver -data data -blacklist /tmp/blacklist.txt -public-ip 127.0.
 
 Aponte o cliente original para o IP da máquina na porta 44405. O ConnectServer entrega a lista de servidores, e o cliente conecta no GameServer escolhido usando o IP do `ServerList.dat`. Esse IP é `192.168.1.1` nos arquivos originais, e `-public-ip` o substitui.
 
+O `Main.dll` lê o IP do ConnectServer do `License.wzt`, não do `MainInfo.ini`. Para trocar: edite `IpAddress` em `PATCH CLIENTE/MainInfo.ini`, rode o `GetMainInfo.exe` nessa pasta (ele lê também `PATCH CLIENTE/Data/Custom*.txt`) e copie `PATCH CLIENTE/Path/License.wzt` para a pasta do cliente. Use o IP da máquina na rede (ex.: `192.168.18.5`), não `127.0.0.1`: com `127.0.0.1` no `License.wzt` o cliente não chega a abrir socket e a lista de servidores não aparece (observado em 2026-10-24). Passe o mesmo IP em `-public-ip`.
+
 O login exige que versão e serial do cliente batam com `ServerVersion` (`1.00.00`) e `ServerSerial` do `GameServerInfo - Common.dat`.
 
 ## Flags do `muserver`
@@ -171,6 +173,16 @@ Para o código de rede, use `-race` num subconjunto (`go test -race -p 1 -run <T
 ## Proxy de captura
 
 `cmd/muproxy` fica entre o cliente original e um servidor (o original ou este) e grava os pacotes decodificados e as sessões golden. Uso em [`15-captura.md`](../../docs/server-plan/15-captura.md).
+
+## Editor de personagens
+
+`cmd/mueditor` é um editor web que muda atributos, zen e itens (inventário e baú 0) de personagens **offline** direto no PostgreSQL. Contas online ficam só leitura, porque o GameServer regrava o personagem no logout.
+
+```sh
+go run ./cmd/mueditor -db postgres://... -data data [-addr 127.0.0.1:8080] [-password segredo]
+```
+
+`-db` e `-password` também podem vir de `MU_DATABASE_URL` e `MU_EDITOR_PASSWORD` (sem senha não há autenticação). O nível máximo vem do `ServerMaxLevel` da instância em `-instance` (padrão `4.GameServer`).
 
 ## Estrutura
 

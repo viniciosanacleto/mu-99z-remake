@@ -2,7 +2,6 @@ package game
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
@@ -33,16 +32,12 @@ func petExpTable(constA int) [petMaxTableLevel + 1]uint32 {
 	return t
 }
 
-// petTables caches the table of each World.
-var petTables sync.Map
-
+// petTable returns the World's table, built on first use.
 func (w *World) petTable() *[petMaxTableLevel + 1]uint32 {
-	if t, ok := petTables.Load(w); ok {
-		return t.(*[petMaxTableLevel + 1]uint32)
-	}
-	t := petExpTable(w.cfg.Int("Common", "PetExperienceMultiplierConstA", 0))
-	petTables.Store(w, &t)
-	return &t
+	w.petExpOnce.Do(func() {
+		w.petExp = petExpTable(w.cfg.Int("Common", "PetExperienceMultiplierConstA", 0))
+	})
+	return &w.petExp
 }
 
 func (w *World) maxPetLevel() int { return w.cfg.Int("Common", "MaxPetLevel", 0) }

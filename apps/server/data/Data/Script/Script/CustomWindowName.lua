@@ -40,6 +40,6 @@ function CustomWindowName_OnTimerThread()
         end
 
         -- Ponemos en el titulo
-        SetObjectWindowTitle(i, string.format("MuOrix 97D - [%s] [%s] - Resets: %d - Level: %d", UserName, UserAccountLevel, UserReset, UserLevel))
+        SetObjectWindowTitle(i, string.format("MuJogatina 97D - [%s] [%s] - Resets: %d - Level: %d", UserName, UserAccountLevel, UserReset, UserLevel))
     end
 end
