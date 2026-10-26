@@ -1,6 +1,6 @@
 # Plano de reconstrução — Servidor (backend)
 
-Especificação técnica para reescrever o servidor MU Online "99z / 97D" (emulador **WizardTeam "Premium VS2026 OriX"**) como **um único serviço Go** com **PostgreSQL**, mantendo compatibilidade de protocolo com o cliente original.
+Especificação técnica para reescrever o servidor MU Online "99z / 97D" (um **emulador customizado**) como **um único serviço Go** com **PostgreSQL**, mantendo compatibilidade de protocolo com o cliente original.
 
 Toda afirmação aqui foi extraída dos binários e arquivos originais com o REA (Ghidra 12.1.4 via MCP). Cada seção indica o nível de confiança:
 

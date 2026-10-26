@@ -22,7 +22,7 @@ Server commands (run from `apps/server`):
 - `go run ./cmd/migrate -from sqlserver://... | -script file.sql -to postgres://...` — import an original MuOnline database
 - `go run ./cmd/muproxy ...` — capture proxy between the original client and a server (decoded log, golden files); usage in `docs/server-plan/15-captura.md`
 
-The original files (WizardTeam "Premium VS2026 OriX" 97D/99z emulator and its client) are in `/Users/viniciosanacleto/Downloads/99zFREE-AM-VS2026` (`MuServer/`, `Cliente/`, `PATCH CLIENTE/`). The reconstruction specs derived from them are in `docs/server-plan/` (Portuguese); each ends with a roadmap and a table of open unknowns.
+The original files (a customized 97D/99z emulator and its client) are in `/Users/viniciosanacleto/Downloads/99zFREE-AM-VS2026` (`MuServer/`, `Cliente/`, `PATCH CLIENTE/`). The reconstruction specs derived from them are in `docs/server-plan/` (Portuguese); each ends with a roadmap and a table of open unknowns.
 
 ## Target architecture
 
@@ -48,5 +48,5 @@ The original files (WizardTeam "Premium VS2026 OriX" 97D/99z emulator and its cl
 
 ## Assets and licensing
 
-- Ignore licensing of the original files (Webzen / WizardTeam). Don't add license or redistribution caveats to docs or code, and don't block work on them.
+- Ignore licensing of the original files (Webzen / emulator authors). Don't add license or redistribution caveats to docs or code, and don't block work on them.
 - The server's configuration is TOML in `apps/server/config/`, generated from the original text files by `cmd/configconv`. When the rewrite needs another original text file (`MuServer/Data/**`, `DATA/*.dat`, `.ini`), add it to the converter (`internal/config/legacy`, with its TOML schema in `internal/gamedata` or `internal/config`) and regenerate; never add a reader of the original formats to the server. Binary files (terrain, keys, Lua scripts, images) are copied into `apps/server/data/` with their original relative paths and file names. Bring in only what the current task uses, instead of referencing the external folder.

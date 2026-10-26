@@ -54,14 +54,13 @@ Na pasta original existem 346 arquivos. Os 50 que não foram copiados são todos
 - `Data/Item/BMD_Tool.exe`;
 - os `.bmp` gerados pelo XShopRecharge (`RecargaPix.bmp`, `pixA274.tmp.bmp`, `pixqr/25.bmp`).
 
-Depois da conversão (2026-10-26): os textos lidos estão em 20 arquivos TOML (`server.toml`, 2 instâncias e 17 grupos em `config/data/`); `apps/server/data/Data` ficou com 36 arquivos, 31 carregados (22 terrenos, 5 scripts Lua, `Hack/Enc2.dat`, `Hack/Dec1.dat`, `Skill/SkillElect.hit` e a imagem `Custom/pixFE31.tmp.bmp` da recarga do XShop) e 5 ignorados. Os textos que o original não lê foram removidos sem conversão.
+Depois da conversão (2026-10-26): os textos lidos estão em 20 arquivos TOML (`server.toml`, 2 instâncias e 17 grupos em `config/data/`); `apps/server/data/Data` ficou com 35 arquivos, 30 carregados (22 terrenos, 5 scripts Lua, `Hack/Enc2.dat`, `Hack/Dec1.dat` e `Skill/SkillElect.hit`) e 5 ignorados. A imagem `Custom/pixFE31.tmp.bmp` da recarga do XShop foi removida na neutralização de nomes (era o QR de uma chave PIX real); a recarga vem desativada e sem `ImagemBMP`. Os textos que o original não lê foram removidos sem conversão.
 
 ### Ignorados (motivo no teste; os textos foram removidos na conversão para TOML)
 
 - `Common/Protect/{Encrypt,Decrypt}.dat`, `Custom/CustomMix.txt`, `Item/test_item.txt`: nenhum executável de servidor referencia esses arquivos.
 - `Custom/Crywolf.dat`, `Event/Crywolf.dat`, `Event/Kanturu.dat`, `Event/IllusionTemple.dat`: sistemas ausentes. `CIllusionTemple` existe, mas não carrega arquivo.
 - `Custom/CustomDailyReward.txt`: o original lê `Custom\DailyReward.txt`.
-- `Custom/pixFE31.tmp.bmp`: saída de `GetTempFileName("pix")` do XShopRecharge. Hoje é carregada: é a imagem que o `ImagemBMP` da recarga cita.
 - `Monster/BALANCE_CHANGELOG.txt`, `Shop/_ALTERACOES.txt`: documentação.
 - `Shop/239 - Arena Guard.txt`: o `ShopManager.txt` não cita esse arquivo.
 - `EventItemBag/AJUSTE_JOIAS_20_PORCENTO.txt` e `Special/{HideAndSeek,Loteria,MataMata,Quiz,Roleta}.txt`: o `EventItemBagManager.txt` não cita esses arquivos.
@@ -94,9 +93,9 @@ Cada arquivo foi procurado no `GameServer.exe` (e no `CastleSiege.exe`, para o G
 | `MonsterMove.txt` | `FUN_004b1450` (timer de 1 s `0x50a140`): por classe, a cada 1000 ms, quando o tempo acaba apaga o NPC atual, sorteia uma linha, cria o NPC lá (`FUN_004b4b00`/`FUN_004b4fe0`) por `KeepTime` s. Falha de índice ou de `SetMonster` encerra a passada | `monstermove.go` (Marlon, 229) |
 | `MonsterSchedule.txt` | Não cria monstros: 100 grupos abrem e fecham NPCs. `FUN_004bb560` (1 s): estado 1 → no horário manda `EnableMessage` a todos e abre por `EnableNpcTime` s; estado 2 → `DisableMessage` e volta a esperar. `FUN_004bb8d0`, primeira checagem da conversa com NPC (`FUN_004c2eb0`): NPC de grupo fechado responde `ItsNotTimeMessage` (`C1 01`) e não conversa | `monsterschedule.go`, gancho `npcScheduleHook` no início de `npcTalk` |
 | `BlackList.txt` (Data) | IPs: condição do `WSAAccept` do GameServer (`FUN_005054f0` → `FUN_00411f00`), recusa antes de alocar índice. HWIDs: `F3 09` (`FUN_00441730` → `FUN_00411fa0`) fecha o cliente. Não é o `1.ConnectServer/BlackList.txt` (flag `-blacklist`), que só vale para a porta do ConnectServer | `blacklist.go`, gancho `acceptFilterHook` em `World.accept` e `blacklistedHWID` |
-| `CustomEvolution.txt` | Só `FUN_004ce0b0`, chamado pelo uso de item (`FUN_00499a20`) para o item 14,211 (0x1cd3) solto sobre outro item. O `/evo` não usa a tabela (completa as quests de classe). Detalhes em [10e](10e-customs-wizardteam.md#customevolution) | `customevo.go`, `case` em `itemuse.go` |
+| `CustomEvolution.txt` | Só `FUN_004ce0b0`, chamado pelo uso de item (`FUN_00499a20`) para o item 14,211 (0x1cd3) solto sobre outro item. O `/evo` não usa a tabela (completa as quests de classe). Detalhes em [10e](10e-customs.md#customevolution) | `customevo.go`, `case` em `itemuse.go` |
 | `CustomMobCombo.txt` | Lista de classes que o push-back não empurra (`FUN_005110e0`/`FUN_005114f0`) | `pushback.go` (agente Q) |
-| `CustomGHRS.ini` | Teto diário de resets do `CastleSiege.exe`. Detalhes em [10e](10e-customs-wizardteam.md#ghrs-castlesiegeexe) | `ghrs.go`, ganchos em `/reset`, reset automático e resposta do reset |
+| `CustomGHRS.ini` | Teto diário de resets do `CastleSiege.exe`. Detalhes em [10e](10e-customs.md#ghrs-castlesiegeexe) | `ghrs.go`, ganchos em `/reset`, reset automático e resposta do reset |
 | `ItemLevel.txt` | `FUN_00494a40`: nome da linha com o mesmo índice e nível, senão o do `Item.txt`, senão `"Unknown"`. Usado nas mensagens 0x290/0x298 do casamento (com o nível da linha do `CustomMarriage`), nos filtros do CustomPick (`FUN_00455c80`: " +nível" só quando o nível > 0 não tem linha) e no anúncio +13 da Chaos Machine (`FUN_005120b0`, não reconstruído) | `itemlevel.go` (`itemName(index, level)`), `custompick.go` |
 | `HackSkillSpeedCheck.txt` | `FUN_00488550`, para jogadores, antes de `C3 08 19` (`FUN_00501570`) e `C3 09 1E` (`FUN_00501740`), que não são enviados se falhar, a cada passo da carga da Nova (`FUN_0050e640`, skill 0x28) e na skill 215 (`FUN_004fdbd0`, não reconstruída). Detalhes em [10](10-sistemas-de-jogo.md) | `skillspeed.go`, ganchos em `sendSkillTo`, `sendSkillUse`, `useSkillArea` e `novaTick` |
 | `MoveSummon.txt`, `PetDamageTable.txt` | Ligados pelo agente Q (`round_q.go`, `pet_raven.go`) | — |

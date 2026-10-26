@@ -8,7 +8,7 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
-// WizardTeam custom events (Data/Custom/Event and the hide and seek of
+// Custom events (Data/Custom/Event and the hide and seek of
 // GameServerInfo - Event.dat): the pieces they share and their hooks into
 // the rest of the server.
 //
@@ -58,7 +58,7 @@ var (
 	tradeRequestHook func(w *World, o, t *Object) bool
 )
 
-// customEvents holds the WizardTeam custom events of an instance.
+// customEvents holds the custom events of an instance.
 type customEvents struct {
 	sobre  sobreEvent
 	death  killEvent

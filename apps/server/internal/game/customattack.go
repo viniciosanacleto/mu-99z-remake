@@ -10,7 +10,7 @@ import (
 )
 
 // CustomAttack (CCustomAttack, getter FUN_00434630; docs/server-plan/
-// 10e-customs-wizardteam.md): a server-side auto attack. It starts from
+// 10e-customs.md): a server-side auto attack. It starts from
 // the client helper (F3 0A with the CommandManager checks of index 52,
 // FUN_00447380), from the manual skill choice (F3 0B, FUN_00447800) or
 // from index 52 itself (FUN_00445ab0, unreachable from the chat because

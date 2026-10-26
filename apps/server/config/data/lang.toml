@@ -535,7 +535,7 @@ Rows = [
   { Index = 906,  Text = "Erro: Sintax" },
   { Index = 907,  Text = "Você já usa esta classe" },
   { Index = 908,  Text = "Remova Todos os Itens" },
-  { Index = 990,  Text = "Bem-vindo ao MuJogatina" },
+  { Index = 990,  Text = "Bem-vindo ao MU Online" },
   { Index = 1102, Text = "[%s] Começa em %d minuto(s)!" },
   { Index = 1103, Text = "[%s] Pergunta: (Use /Resp para responder)" },
   { Index = 1104, Text = "[%s] %s" },
@@ -676,7 +676,7 @@ Rows = [
 # Notice.txt: rotating notices; Type 0 gold / 1 blue; RepeatTime in seconds
 [Eng.Notice]
 Rows = [
-  { Message = "==MuJogatina GMS e ADMS nao pedem senhas==", Type = 0, Count = 0, Opacity = 0, Delay = 0, ColorR = 0, ColorG = 100, ColorB = 0, Speed = 0, RepeatTime = 360 },
+  { Message = "==GMs e ADMs nunca pedem senhas==",          Type = 0, Count = 0, Opacity = 0, Delay = 0, ColorR = 0, ColorG = 100, ColorB = 0, Speed = 0, RepeatTime = 360 },
   { Message = "==Tecla [X] Loja de Utilitarios e magias==", Type = 0, Count = 0, Opacity = 0, Delay = 0, ColorR = 0, ColorG = 100, ColorB = 0, Speed = 0, RepeatTime = 360 },
 ]
 
@@ -1208,7 +1208,7 @@ Rows = [
   { Index = 906,  Text = "Erro: Sintax" },
   { Index = 907,  Text = "Você já usa esta classe" },
   { Index = 908,  Text = "Remova Todos os Itens" },
-  { Index = 990,  Text = "Bem-vindo ao MuJogatina" },
+  { Index = 990,  Text = "Bem-vindo ao MU Online" },
   { Index = 1102, Text = "[%s] Começa em %d minuto(s)!" },
   { Index = 1103, Text = "[%s] Pergunta: (Use /Resp para responder)" },
   { Index = 1104, Text = "[%s] %s" },
@@ -1349,7 +1349,7 @@ Rows = [
 # Notice.txt: rotating notices; Type 0 gold / 1 blue; RepeatTime in seconds
 [Por.Notice]
 Rows = [
-  { Message = "==MuJogatina GMS e ADMS nao pedem senhas==", Type = 0, Count = 0, Opacity = 0, Delay = 0, ColorR = 0, ColorG = 100, ColorB = 0, Speed = 0, RepeatTime = 360 },
+  { Message = "==GMs e ADMs nunca pedem senhas==",          Type = 0, Count = 0, Opacity = 0, Delay = 0, ColorR = 0, ColorG = 100, ColorB = 0, Speed = 0, RepeatTime = 360 },
   { Message = "==Tecla [X] Loja de Utilitarios e magias==", Type = 0, Count = 0, Opacity = 0, Delay = 0, ColorR = 0, ColorG = 100, ColorB = 0, Speed = 0, RepeatTime = 360 },
 ]
 
@@ -1881,7 +1881,7 @@ Rows = [
   { Index = 906,  Text = "Erro: Sintax" },
   { Index = 907,  Text = "Você já usa esta classe" },
   { Index = 908,  Text = "Remova Todos os Itens" },
-  { Index = 990,  Text = "Bem-vindo ao MuJogatina" },
+  { Index = 990,  Text = "Bem-vindo ao MU Online" },
   { Index = 1102, Text = "[%s] Começa em %d minuto(s)!" },
   { Index = 1103, Text = "[%s] Pergunta: (Use /Resp para responder)" },
   { Index = 1104, Text = "[%s] %s" },
@@ -2022,6 +2022,6 @@ Rows = [
 # Notice.txt: rotating notices; Type 0 gold / 1 blue; RepeatTime in seconds
 [Spn.Notice]
 Rows = [
-  { Message = "==MuJogatina GMS e ADMS nao pedem senhas==", Type = 0, Count = 0, Opacity = 0, Delay = 0, ColorR = 0, ColorG = 100, ColorB = 0, Speed = 0, RepeatTime = 360 },
+  { Message = "==GMs e ADMs nunca pedem senhas==",          Type = 0, Count = 0, Opacity = 0, Delay = 0, ColorR = 0, ColorG = 100, ColorB = 0, Speed = 0, RepeatTime = 360 },
   { Message = "==Tecla [X] Loja de Utilitarios e magias==", Type = 0, Count = 0, Opacity = 0, Delay = 0, ColorR = 0, ColorG = 100, ColorB = 0, Speed = 0, RepeatTime = 360 },
 ]

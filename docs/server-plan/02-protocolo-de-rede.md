@@ -128,7 +128,7 @@ Implementação: `apps/server/internal/protocol/crypto/stream.go` e o pipeline e
 ```
 Cliente                         ConnectServer (TCP 44405)
   │ ◄──── C1 04 00 01 ──────────── (hello ao aceitar a conexão; constante 0x010004C1)
-  │ ◄──── C2 .. F3 EA ………… ──── (nomes dos servidores, custom WizardTeam)
+  │ ◄──── C2 .. F3 EA ………… ──── (nomes dos servidores, custom do emulador)
   │ ───── C1 .. F4 06 ──────────► pedir lista
   │ ◄──── C2 hi lo F4 06 count[2 BE] {code u16, load u8, 0xCC}×N
   │ ───── C1 .. F4 03 code[2] ──► pedir endereço do servidor `code`
@@ -191,7 +191,7 @@ Resultado `F1 01` (resposta do JS tratada em `0x4a18d0`; o código vai em `CL` p
 
 ### `C3 B0 F3 03` — dados do personagem ao entrar (GS → cliente), builder `0x473a10`
 
-**Corrigido em 2026-10-24 pelo cliente (U-PROTO-09).** A leitura do builder `0x473a10` dava 116 bytes (`0x74`), com o bloco u32 em 60 e o nível em 108. O `Main.dll` da WizardTeam (`PATCH CLIENTE/Path/Main.dll`, handler `0x1001d640`, caso 03 da tabela de subcódigos `F3` em `0x1001d08c`/`0x1001d0e0`) lê **176 bytes (`0xB0`)**. Com o pacote de 116 bytes o cliente mostrou resets = LevelUpPoint, nível 0 e atributos com lixo (observado). Os bytes 0–55 são a parte 97D lida pelo `main.exe` e não mudaram. Valores > 65000 são truncados para 65000 nos campos u16 e repetidos em u32 no final.
+**Corrigido em 2026-10-24 pelo cliente (U-PROTO-09).** A leitura do builder `0x473a10` dava 116 bytes (`0x74`), com o bloco u32 em 60 e o nível em 108. O `Main.dll` do cliente original (`PATCH CLIENTE/Path/Main.dll`, handler `0x1001d640`, caso 03 da tabela de subcódigos `F3` em `0x1001d08c`/`0x1001d0e0`) lê **176 bytes (`0xB0`)**. Com o pacote de 116 bytes o cliente mostrou resets = LevelUpPoint, nível 0 e atributos com lixo (observado). Os bytes 0–55 são a parte 97D lida pelo `main.exe` e não mudaram. Valores > 65000 são truncados para 65000 nos campos u16 e repetidos em u32 no final.
 
 Parte lida pelo `Main.dll` (offset → variável global do cliente):
 

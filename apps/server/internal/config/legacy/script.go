@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// The WizardTeam script reader of Data/Custom/Event and CustomPatente.txt.
+// The custom script reader of Data/Custom/Event and CustomPatente.txt.
 // A missing cell reads as -1 for the integer fields and 0xFF for the byte
 // fields (map, x, y).
 
@@ -19,7 +19,7 @@ type EventSection struct {
 	Rows  [][]string
 }
 
-// LoadEventScript reads a WizardTeam script file (FUN_00409600 /
+// LoadEventScript reads a custom script file (FUN_00409600 /
 // FUN_00451390): numbered sections closed by "end", ';' and "//" comments,
 // quoted strings.
 func LoadEventScript(path string) ([]EventSection, error) {

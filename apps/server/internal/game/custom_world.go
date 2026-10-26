@@ -6,7 +6,7 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
-// WizardTeam world customs of Data/Custom that the GameServer uses:
+// Emulator world customs of Data/Custom that the GameServer uses:
 // CustomMove (chat words that move the player, FUN_0044f430 /
 // FUN_0044f550 from the chat handler FUN_004d7720), CustomGate (cells that
 // move the player, FUN_0044b850 / FUN_0044b8b0 in the 1-second proc

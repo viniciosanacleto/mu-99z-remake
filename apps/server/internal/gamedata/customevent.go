@@ -2,7 +2,7 @@ package gamedata
 
 import ()
 
-// WizardTeam custom events of Data/Custom/Event, now in
+// Custom events of Data/Custom/Event, now in
 // config/data/custom-event.toml (loaders called from FUN_004e8390's
 // start-up list: DuelEvent FUN_0045d1f0, DeathEvent FUN_0045b890,
 // RoletaEvent FUN_004e42e0, RaffleEvent FUN_004e0350, PairEvent

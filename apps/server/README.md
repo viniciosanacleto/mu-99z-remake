@@ -1,6 +1,6 @@
 # MU Server (Go)
 
-Serviço único que substitui os processos do emulador original WizardTeam 97D/99z: ConnectServer, JoinServer, DataServer, GameServer e GameServerCS (Castle Siege). O protocolo do cliente original foi mantido, então o `Main.exe` original conecta sem mudanças. Os dados ficam em PostgreSQL.
+Serviço único que substitui os processos do emulador original 97D/99z: ConnectServer, JoinServer, DataServer, GameServer e GameServerCS (Castle Siege). O protocolo do cliente original foi mantido, então o `Main.exe` original conecta sem mudanças. Os dados ficam em PostgreSQL.
 
 As especificações de engenharia reversa estão em [`docs/server-plan/`](../../docs/server-plan/). O progresso e o próximo passo estão em [`13-progresso.md`](../../docs/server-plan/13-progresso.md).
 
@@ -8,7 +8,7 @@ As especificações de engenharia reversa estão em [`docs/server-plan/`](../../
 
 - Go 1.27.2 ou mais novo (versão do `go.mod`).
 - PostgreSQL 13 ou mais novo, com a extensão `citext` (vem no pacote padrão). Opcional: sem banco o servidor usa um store em memória.
-- O cliente original (`Cliente/` do pacote WizardTeam), para jogar.
+- O cliente original (`Cliente/` do pacote original), para jogar.
 
 Todos os comandos abaixo rodam a partir de `apps/server`.
 
@@ -107,7 +107,7 @@ Toda a configuração fica em `config/`, em arquivos TOML (UTF-8) gerados a part
 | `config/gameserver/gameserver-cs.toml` | O mesmo para a instância do Castle Siege |
 | `config/data/common.toml` | Arquivos da raiz de `Data/`: `MapManager`, `MapServerInfo` (que servidor atende cada mapa), `MapRateInfo`, `BlackList` do GameServer, `CommandManager`, `CommandRequirement`, `ConnectMember` |
 | `config/data/util.toml` | `GameMaster` (GMs), `Filter`, `DamageTable`, `ExperienceTable`, `PetDamageTable`, `ResetTable`, `ResetLimit` |
-| `config/data/custom.toml`, `custom-event.toml`, `xshop.toml` | Sistemas WizardTeam (Arena, Marriage, LuckyWheel, GHRS, Pick etc.), os eventos de `Custom/Event` e o XShop |
+| `config/data/custom.toml`, `custom-event.toml`, `xshop.toml` | Sistemas custom do emulador (Arena, Marriage, LuckyWheel, GHRS, Pick etc.), os eventos de `Custom/Event` e o XShop |
 | `config/data/event.toml`, `eventitembag.toml` | Eventos e seus drops |
 | `config/data/monster.toml`, `spawn.toml`, `item.toml`, `shop.toml`, `move.toml`, `quest.toml`, `skill.toml`, `character.toml`, `hack.toml` | Monstros e spawns, itens, lojas, gates/moves, quests, skills, classes, anti-hack |
 | `config/data/lang.toml` | Textos enviados ao jogador (`Message`, `Notice`) por idioma |

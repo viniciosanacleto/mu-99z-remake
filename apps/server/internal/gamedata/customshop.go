@@ -8,8 +8,8 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/tomlconf"
 )
 
-// Data of the last WizardTeam customs (docs/server-plan/
-// 10e-customs-wizardteam.md): CustomJewel (CCustomJewel) and
+// Data of the last emulator customs (docs/server-plan/
+// 10e-customs.md): CustomJewel (CCustomJewel) and
 // CustomLuckyWheel (CLuckyWheel) in config/data/custom.toml, CustomXShop
 // (CCustomXShop, with the in-game GM price writer) in config/data/xshop.toml.
 

@@ -72,13 +72,6 @@ var coveredFiles = map[string]covLoader{
 	}),
 	// FUN_004ec0f0: Skill.
 	"Data/Skill/SkillElect.hit": ldSkillWorld,
-	// FUN_00404a60: the QR image named by ImagemBMP in config/data/xshop.toml.
-	"Data/Custom/pixFE31.tmp.bmp": ld("game.rechargeBlock", "FUN_00404a60 -> FUN_00401bf0", func(c *covEnv) error {
-		if d := c.w.rechargeBlock(c.w.rechargePath()); d[rcQRSize] == 0 && d[rcQRSize+1] == 0 {
-			c.t.Error("ImagemBMP not loaded")
-		}
-		return nil
-	}),
 }
 
 // The Lua scripts run in the embedded VM (lua.go): ScriptMain.lua with the

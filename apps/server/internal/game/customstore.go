@@ -1,7 +1,7 @@
 package game
 
 // CustomStore (CCustomStore, getter FUN_00434850; docs/server-plan/
-// 10e-customs-wizardteam.md): /store turns the open personal shop into a
+// 10e-customs.md): /store turns the open personal shop into a
 // shop that sells for jewels instead of zen (index 50, FUN_00468d90 ->
 // FUN_00469140) and /offstore keeps it open without the client (index 51,
 // FUN_00469030). The jewel payment replaces the 3F 06 purchase

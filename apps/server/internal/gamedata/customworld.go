@@ -2,7 +2,7 @@ package gamedata
 
 import ()
 
-// WizardTeam world customs (config/data/custom.toml).
+// Emulator world customs (config/data/custom.toml).
 
 // CustomMoveRow is a CustomMove.txt row (CCustomMove, FUN_0044f210, 0x50
 // bytes kept in a std::map by Id: the first row of an Id wins).

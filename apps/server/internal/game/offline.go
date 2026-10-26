@@ -4,8 +4,8 @@ import (
 	"time"
 )
 
-// Offline modes of the WizardTeam emulator (docs/server-plan/
-// 10e-customs-wizardteam.md, "Modo offline"). Three flags keep a player
+// Offline modes of the original emulator (docs/server-plan/
+// 10e-customs.md, "Modo offline"). Three flags keep a player
 // object in the world after its socket is closed:
 //
 //   - obj+0x2110 CHelperOffline (/offline and index 21, FUN_004888e0);

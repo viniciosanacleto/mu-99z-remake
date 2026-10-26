@@ -1196,7 +1196,7 @@ func maxFruit(class, level int) int {
 	return fruitLimit(class, level)
 }
 
-// packetCharStats is the WizardTeam C1 CC F3 E1 (FUN_004dc150) sent at the
+// packetCharStats is the custom C1 CC F3 E1 (FUN_004dc150) sent at the
 // end of every CalcCharacter. Buff/master-skill fields are zero.
 func (w *World) packetCharStats(o *Object) []byte {
 	p, c, s := o.P, o.P.Char, w.statsOf(o)
@@ -1286,7 +1286,7 @@ func (w *World) packetCharStats(o *Object) []byte {
 	return b
 }
 
-// packetCharOptions is the WizardTeam C1 3C F3 E3 (FUN_004dcc20).
+// packetCharOptions is the custom C1 3C F3 E3 (FUN_004dcc20).
 func (w *World) packetCharOptions(o *Object) []byte {
 	s := w.statsOf(o)
 	k := &w.statsData.k

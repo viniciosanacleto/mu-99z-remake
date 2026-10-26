@@ -10,8 +10,8 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
-// CReconnect of the WizardTeam GameServer (singleton FUN_004e1000 at
-// DAT_01241a08; docs/server-plan/10e-customs-wizardteam.md, "Cache de
+// CReconnect of the original GameServer (singleton FUN_004e1000 at
+// DAT_01241a08; docs/server-plan/10e-customs.md, "Cache de
 // reconexão"). It is a std::map name -> 0x13C-byte record:
 //
 //   - FUN_004e1350 fills the record of a character that leaves the game

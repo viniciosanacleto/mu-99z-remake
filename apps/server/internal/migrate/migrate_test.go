@@ -220,7 +220,7 @@ func TestRunOnPostgres(t *testing.T) {
 	if d, err := pg.LoadPick(ctx, "Knight"); err != nil || string(d.List[:2]) != "jo" || d.Money != 1 || d.Set != 1 || d.Exc != 0 {
 		t.Fatalf("pick %+v %v", d, err)
 	}
-	// WizardTeam columns of Character: Patente and the custom rankings.
+	// Custom columns of Character: Patente and the custom rankings.
 	mage, _ := pg.AccountByLogin(ctx, "mage")
 	if wiz, err := pg.LoadCharacter(ctx, mage.ID, "Wiz"); err != nil || wiz.Patente != 9 {
 		t.Fatalf("patente %+v %v", wiz, err)

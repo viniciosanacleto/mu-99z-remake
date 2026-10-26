@@ -2,7 +2,7 @@ package gamedata
 
 import "github.com/viniciosanacleto/mu-remake/apps/server/internal/config/tomlconf"
 
-// CustomEventConfig is config/data/custom-event.toml: the WizardTeam events
+// CustomEventConfig is config/data/custom-event.toml: the custom events
 // of Data/Custom/Event. Active > 0 enables the event; Syntax is the player
 // command; Day 0 = Sunday; Time in minutes. The converter fills the values
 // the script reader gives to missing cells (-1, map / x / y 255).

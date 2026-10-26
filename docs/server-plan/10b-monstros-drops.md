@@ -1,6 +1,6 @@
 # 10b — Monstros (skills, área, traps, summons) e sistema de drop
 
-Reconstrução do lado "monstro" e do drop do GameServer (WizardTeam OriX 97D/99z). Código em `apps/server/internal/game/{drop.go,monster_skill.go,summon.go}` e `internal/gamedata/{drops.go,sets.go}`. Todos os endereços são do `GameServer.exe` original.
+Reconstrução do lado "monstro" e do drop do GameServer (emulador customizado 97D/99z). Código em `apps/server/internal/game/{drop.go,monster_skill.go,summon.go}` e `internal/gamedata/{drops.go,sets.go}`. Todos os endereços são do `GameServer.exe` original.
 
 ## 1. Drop na morte do monstro — `FUN_004b7290`
 

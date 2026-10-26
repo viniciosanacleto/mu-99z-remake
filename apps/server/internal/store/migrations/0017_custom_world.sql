@@ -1,4 +1,4 @@
--- WizardTeam world customs (docs/server-plan/10f-gm-eventos-custom.md,
+-- Emulator world customs (docs/server-plan/10f-gm-eventos-custom.md,
 -- block 12).
 --
 -- MonsterKillCount (CustomMonsterKillCount.txt): DS 0x50 (DataServer

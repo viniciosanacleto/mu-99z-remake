@@ -10,7 +10,7 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
-// WizardTeam commands 54..62 of FUN_00435400: /gift (CCustomGift),
+// Custom commands 54..62 of FUN_00435400: /gift (CCustomGift),
 // /marry /accept /divorce /trackmarry (CCustomMarriage), /buyvip
 // (CCustomBuyVip) and /pack /unpack (CCustomJewelPack). The offline modes
 // are in offline.go, the custom shop in customstore.go, the auto attack in

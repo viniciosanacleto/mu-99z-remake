@@ -925,7 +925,7 @@ Rows = [
   { Id = 55, Command = "/@eventopvp1",   Map = 40, X = 220, Y = 20,  MinLevel = -1,  MaxLevel = -1, MinReset = -1, MaxReset = -1, MinMReset = -1, MaxMReset = -1, AccountLevel = 0, PKMove = 1 },
   { Id = 56, Command = "/@eventopvp2",   Map = 40, X = 220, Y = 20,  MinLevel = -1,  MaxLevel = -1, MinReset = -1, MaxReset = -1, MinMReset = -1, MaxMReset = -1, AccountLevel = 0, PKMove = 1 },
   { Id = 57, Command = "/arena",         Map = 6,  X = 62,  Y = 114, MinLevel = -1,  MaxLevel = -1, MinReset = -1, MaxReset = -1, MinMReset = -1, MaxMReset = -1, AccountLevel = 0, PKMove = 1 },
-  { Id = 58, Command = "/pvp",           Map = 40, X = 220, Y = 20,  MinLevel = -1,  MaxLevel = -1, MinReset = -1, MaxReset = -1, MinMReset = -1, MaxMReset = -1, AccountLevel = 0, PKMove = 1, Comment = "OriX: PvP mapa 40" },
+  { Id = 58, Command = "/pvp",           Map = 40, X = 220, Y = 20,  MinLevel = -1,  MaxLevel = -1, MinReset = -1, MaxReset = -1, MinMReset = -1, MaxMReset = -1, AccountLevel = 0, PKMove = 1, Comment = "PvP mapa 40" },
 ]
 
 # CustomNPCCommand.txt: talking to the NPC on that cell runs the command
@@ -968,9 +968,9 @@ Quiz = [
 ]
 # section 2
 Question = [
-  { ID = 0,  Money = 3, Question = "Em que ano foi lançado o jogo MuJogatina?",            Answer = "2026" },
-  { ID = 1,  Money = 3, Question = "Quantas vogais tem no nome MuJogatina",                 Answer = "5" },
-  { ID = 2,  Money = 5, Question = "Nome MuReaper é hiato?",                               Answer = "Nao" },
+  { ID = 0,  Money = 3, Question = "Qual a primeira cidade do MU Online?",                  Answer = "Lorencia" },
+  { ID = 1,  Money = 3, Question = "Quantas vogais tem no nome MU Online",                  Answer = "4" },
+  { ID = 2,  Money = 5, Question = "Qual a cidade dos elfos?",                              Answer = "Noria" },
   { ID = 3,  Money = 3, Question = "Um dos maiores cientistas do mundo?",                   Answer = "Albert Einstein" },
   { ID = 4,  Money = 1, Question = "Quantas vezes o Brasil foi campeão mundial(futebol)?", Answer = "5" },
   { ID = 5,  Money = 2, Question = "Em que ano foi lançado o jogo Mu Online?",             Answer = "2003" },
@@ -979,7 +979,7 @@ Question = [
   { ID = 8,  Money = 3, Question = "Quando um jogador é novato, qual nome lhe damos?",     Answer = "Noob" },
   { ID = 9,  Money = 1, Question = "Quantos estados tem o Brasil?",                         Answer = "26" },
   { ID = 10, Money = 1, Question = "Em que continente fica localizada a Itália?",          Answer = "Continente Europeu" },
-  { ID = 11, Money = 2, Question = "Qual o melhor Servidor de Mu Online ?",                 Answer = "MuJogatina" },
+  { ID = 11, Money = 2, Question = "Qual evento acontece no castelo de sangue?",            Answer = "Blood Castle" },
   { ID = 12, Money = 1, Question = "300 + 300 = ?",                                         Answer = "600" },
   { ID = 13, Money = 5, Question = "78 x 87 = ?",                                           Answer = "6786" },
 ]

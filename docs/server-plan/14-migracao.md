@@ -13,9 +13,9 @@ go run ./cmd/migrate -script data/DB/MuOnline.sql -to postgres://...
 
 | Origem | Destino | Regras |
 |---|---|---|
-| `MEMB_INFO` + `AccountCharacter` | `accounts` | Senha vira `plain:<senha>` (`JoinServer.ini` `MD5Encryption = 0`; o `auth` regrava em argon2id no próximo login). `bloc_code`, `AccountLevel`, `AccountExpireDate` (> 1900), `ExtClass`, `Locked`, `MoveCnt`. `Credits` (coluna WizardTeam do XShop e do `/minhainfo`, ausente do `MuOnline.sql` distribuído; `NULL`/ausente = 0). |
+| `MEMB_INFO` + `AccountCharacter` | `accounts` | Senha vira `plain:<senha>` (`JoinServer.ini` `MD5Encryption = 0`; o `auth` regrava em argon2id no próximo login). `bloc_code`, `AccountLevel`, `AccountExpireDate` (> 1900), `ExtClass`, `Locked`, `MoveCnt`. `Credits` (coluna custom do XShop e do `/minhainfo`, ausente do `MuOnline.sql` distribuído; `NULL`/ausente = 0). |
 | `Character` | `characters` | Slot = posição em `GameID1..5`; sem posição, primeiro slot livre. Blobs completados com `0xFF` até 1728 / 180 / 208 / 50 bytes. Personagem sem conta é ignorado (listado no relatório). |
-| `Character.Patente`, `TopDeath`, `TopTheft`, `TopRoleta`, `TopDupla`, `topsurvivor`, `Duelsm`..`Duelall` | `characters.patente`, `custom_rank` | Colunas WizardTeam ausentes do `MuOnline.sql` distribuído; lidas quando existem no banco (nome sem diferenciar maiúsculas). Ranking 0 não gera linha. |
+| `Character.Patente`, `TopDeath`, `TopTheft`, `TopRoleta`, `TopDupla`, `topsurvivor`, `Duelsm`..`Duelall` | `characters.patente`, `custom_rank` | Colunas custom ausentes do `MuOnline.sql` distribuído; lidas quando existem no banco (nome sem diferenciar maiúsculas). Ranking 0 não gera linha. |
 | `warehouse`, `ExtWarehouse` | `warehouses` | Número 0 e `Number`; itens completados até 1920 bytes. |
 | `OptionData` | `character_options` | |
 | `T_FriendMain`, `T_FriendList`, `T_WaitFriend`, `T_FriendMail` | `friend_*` | GUID mantido; sequência ajustada. |

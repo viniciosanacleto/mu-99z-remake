@@ -48,7 +48,7 @@ type partyState struct {
 	RequestTo   int // obj+0x2f4
 	Other       int // obj+0x318
 	// Flags is obj+0x434 (default 3): bit 0 accepts requests, bit 2 enables
-	// the WizardTeam auto-party (password at obj+0x630).
+	// the custom auto-party (password at obj+0x630).
 	Flags int
 	// Password is obj+0x630 (10 chars), set by /request auto.
 	Password string
@@ -327,7 +327,7 @@ func (w *World) handlePartyRequest(o *Object, p []byte) {
 		result = partyResultLevelGap
 	default:
 		// FUN_004d2780 (auto-party by password) needs obj+0x434 bit 2,
-		// only set by WizardTeam commands (U-PARTY-01).
+		// only set by custom commands (U-PARTY-01).
 		pt := w.partyOf(o)
 		if pt != nil && pt.leader() != o.Index {
 			result = partyResultFail

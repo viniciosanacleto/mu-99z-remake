@@ -1,4 +1,4 @@
--- ReconnectData (CReconnect of the WizardTeam GameServer, DataServer
+-- ReconnectData (CReconnect of the original GameServer, DataServer
 -- C0 00 / C0 01 / replay on GameServer connect): the reconnect record of
 -- a character that left a game server, kept ReconnectTime seconds. Data is
 -- the 400-byte block the GameServer sends (the 0x13C-byte record first).

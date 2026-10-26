@@ -10,7 +10,7 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
-// CLuckyWheel (0x44e080..0x44eac0): the WizardTeam roulette. When the
+// CLuckyWheel (0x44e080..0x44eac0): the custom roulette. When the
 // character enters the game (FUN_00473a10) the client gets the wheel
 // (C2 FB FB, FUN_0044e860) and the price (C1 08 FB FC, FUN_0044ea00). A spin
 // (FB 16, FUN_0044e570) draws rand() % 12, waits 3 s, gives the reward

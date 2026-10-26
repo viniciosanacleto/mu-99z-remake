@@ -20,7 +20,7 @@ const (
 // stored little-endian (FUN_004025a0).
 func Hello() []byte { return []byte{0xC1, 0x04, 0x00, 0x01} }
 
-// ServerNames builds the WizardTeam custom C2 F3 EA packet (FUN_00403870 /
+// ServerNames builds the custom C2 F3 EA packet (FUN_00403870 /
 // FUN_00405d00): count u8, then {code u16 LE, name[32]} for every alive
 // server, visible or not. Empty when the auth gate is closed.
 func (r *Registry) ServerNames() []byte {

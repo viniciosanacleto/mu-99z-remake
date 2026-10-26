@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// CommandStore replaces the DataServer requests of the WizardTeam
+// CommandStore replaces the DataServer requests of the custom
 // commands: DS 0x0F 00 / 01 (WZ_GetResetInfo / WZ_GetMasterResetInfo and
 // WZ_SetResetInfo / WZ_SetMasterResetInfo, table ResetData) and DS 0x0F 04
 // (WZ_RenameCharacter).

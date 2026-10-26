@@ -75,7 +75,7 @@ func (w *World) handlePacket(c *conn, pkt gscodec.Packet) {
 }
 
 // packetBlockHook refuses an in-game head before its handler (the
-// WizardTeam custom event checks of 36, 40 and AA in FUN_004d6690;
+// Custom event checks of 36, 40 and AA in FUN_004d6690;
 // customevent.go).
 var packetBlockHook func(w *World, o *Object, head byte) bool
 
@@ -83,7 +83,7 @@ var packetBlockHook func(w *World, o *Object, head byte) bool
 // themselves in init functions.
 var worldHandlers = map[byte]func(*World, *Object, []byte){}
 
-// faHandlers and fbHandlers map the sub-codes of the WizardTeam heads FA
+// faHandlers and fbHandlers map the sub-codes of the custom heads FA
 // and FB (FUN_004d6690: FA only for C1 packets longer than 3 bytes, the
 // sub-code at [3]); xshop.go registers the head handlers.
 var (

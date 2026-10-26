@@ -4,8 +4,8 @@ import (
 	"fmt"
 )
 
-// Data of the WizardTeam commands 50..65 (docs/server-plan/
-// 10e-customs-wizardteam.md): the CustomAttack, CustomGift, CustomMarriage,
+// Data of the custom commands 50..65 (docs/server-plan/
+// 10e-customs.md): the CustomAttack, CustomGift, CustomMarriage,
 // CustomBuyVip and CustomPick tables of config/data/custom.toml.
 
 // AttackSpeedRow is a section 0 row of CustomAttack.txt (CCustomAttack

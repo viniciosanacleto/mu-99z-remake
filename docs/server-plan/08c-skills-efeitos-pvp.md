@@ -1,6 +1,6 @@
 # 08c — Skills de jogador, efeitos (buffs/debuffs), PvP e duelo
 
-Reconstrução a partir do GameServer WizardTeam 97D/99z (`4.GameServer/GameServer.exe`). Código: `apps/server/internal/game/{skill,effect,pvp,duel}.go` (+ edições cirúrgicas em `combat.go`, `object.go`, `world.go`). Endereços citados = funções do binário original.
+Reconstrução a partir do GameServer original 97D/99z (`4.GameServer/GameServer.exe`). Código: `apps/server/internal/game/{skill,effect,pvp,duel}.go` (+ edições cirúrgicas em `combat.go`, `object.go`, `world.go`). Endereços citados = funções do binário original.
 
 ## 1. Pacotes
 

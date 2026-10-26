@@ -1,6 +1,6 @@
 package gamedata
 
-// CustomConfig is config/data/custom.toml: the WizardTeam customs of
+// CustomConfig is config/data/custom.toml: the emulator customs of
 // Data/Custom (CustomXShop and CustomXShopRecharge are in xshop.toml, the
 // Custom/Event files in custom-event.toml). -1 = any / none.
 type CustomConfig struct {

@@ -122,7 +122,7 @@ func importAccounts(ctx context.Context, src Source, tx pgx.Tx, rep *Report) (ma
 		}
 		x := extra[key(login)]
 		var id int64
-		// Credits is the WizardTeam column of CCustomXShop and /minhainfo
+		// Credits is the custom column of CCustomXShop and /minhainfo
 		// (ISNULL(Credits,0) in the DataServer); absent in the schema dump.
 		err := tx.QueryRow(ctx, `INSERT INTO accounts (login, password_hash, personal_id, email, block_code,
 			account_level, level_expires_at, lock_code, ext_class, move_count, created_at, credits)
@@ -601,12 +601,12 @@ func importCustomCommands(ctx context.Context, src Source, tx pgx.Tx, chars map[
 	return nil
 }
 
-// customRankColumns are the WizardTeam ranking columns of Character raised
+// customRankColumns are the custom ranking columns of Character raised
 // by DS 0x41 (custom_rank.rank keeps the column name the events use).
 var customRankColumns = []string{"TopDeath", "TopTheft", "TopRoleta", "TopDupla", "topsurvivor",
 	"Duelsm", "Duelbk", "Duelelf", "Duelmg", "Dueldl", "Duelall"}
 
-// importCustomCharacterColumns copies the custom columns a WizardTeam
+// importCustomCharacterColumns copies the custom columns that a customized
 // database adds to Character (absent from the shipped MuOnline.sql):
 // Patente and the ranking columns, matched without case.
 func importCustomCharacterColumns(ctx context.Context, tx pgx.Tx, id int64, name string, r Row, rep *Report) error {

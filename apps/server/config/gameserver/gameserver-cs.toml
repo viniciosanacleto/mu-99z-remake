@@ -16,6 +16,8 @@
 # ==================================================
 # Customer Settings
 # ==================================================
+# CustomerName is the stream cipher key: it must match the CustomerName
+# of the client's MainInfo.ini, so it changes only with the client.
 CustomerName = "WizardTeam"
 CustomerHardwareId = ""
 

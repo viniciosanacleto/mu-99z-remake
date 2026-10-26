@@ -5,7 +5,7 @@ import (
 	"sort"
 )
 
-// The remaining WizardTeam world customs of Data/Custom (block 12, doc
+// The remaining emulator world customs of Data/Custom (block 12, doc
 // 10f, now in config/data/custom.toml): CustomArena, CustomEventDrop,
 // CustomLukeHelper, CustomHealthBar, CustomMonsterKillCount, SummonScroll,
 // CreationGold, DailyReward and CustomPatente.

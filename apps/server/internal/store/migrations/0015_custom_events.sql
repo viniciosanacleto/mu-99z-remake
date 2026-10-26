@@ -1,4 +1,4 @@
--- WizardTeam custom events (docs/server-plan/10f-gm-eventos-custom.md).
+-- Custom events (docs/server-plan/10f-gm-eventos-custom.md).
 --
 -- Character.Patente (obj+0x2500, sent in F3 03 [112]): the rank badge of
 -- the last winner of each custom event (/patente and the event rewards).

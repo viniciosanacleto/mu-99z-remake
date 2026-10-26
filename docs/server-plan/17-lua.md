@@ -83,7 +83,7 @@ Os flags de permissão (`obj+0x20a4 + n`, escritos por `PermissionInsert`/`Permi
 
   Na saída, um GM nível 8 gera `NoticeSendToAll(0, "GameMaster %s Offline!")`. As mensagens 991 e 992 não existem nos `Message.txt`. Se aparecessem, viriam como `Could not find message: 991, lang: 0!`.
 
-- **CustomWindowName.lua** (OnTimerThread, a cada segundo): para `i = GetMinUserIndex() .. GetMaxUserIndex()` (0x53FC..0x57E4, inclusive, porque o `for` do Lua inclui o limite e o último índice está fora da tabela), chama `SetObjectWindowTitle(i, "MuJogatina 97D - [nome] [Free|VIP] - Resets: %d - Level: %d")`. Todo índice com socket recebe o pacote, mesmo na seleção de personagem.
+- **CustomWindowName.lua** (OnTimerThread, a cada segundo): para `i = GetMinUserIndex() .. GetMaxUserIndex()` (0x53FC..0x57E4, inclusive, porque o `for` do Lua inclui o limite e o último índice está fora da tabela), chama `SetObjectWindowTitle(i, "MU Online 97D - [nome] [Free|VIP] - Resets: %d - Level: %d")`. Todo índice com socket recebe o pacote, mesmo na seleção de personagem.
 
 ## Pacotes enviados pela API
 

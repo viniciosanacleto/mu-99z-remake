@@ -82,7 +82,7 @@ function WelcomeMessage_OnCharacterEntry(aIndex)
 		NoticeSendToAll(0,string.format("GameMaster %s Online!",UserName))
 	end
 
-	MessageSend(aIndex,2,2,"Compartilhe o MuJogatina.com.br")
+	MessageSend(aIndex,2,2,"Bem-vindo ao MU Online")
 	MessageSend(aIndex,2,2,"Ajude-nos a crescer")
 	MessageSend(aIndex,2,2,"/cemiterio /bar /pista /offline /bau1 ..20")
 
