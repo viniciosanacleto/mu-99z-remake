@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
@@ -42,7 +43,7 @@ type moveEntry struct {
 }
 
 func loadCommands(dataDir string) (map[string]command, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "CommandManager.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "CommandManager.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +71,7 @@ func loadCommands(dataDir string) (map[string]command, error) {
 }
 
 func loadMoves(dataDir string) ([]moveEntry, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Move", "Move.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Move", "Move.json"))
 	if err != nil {
 		return nil, err
 	}

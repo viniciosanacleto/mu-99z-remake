@@ -1,0 +1,10 @@
+{
+  "rows": [
+    {"KALevel": 0, "CreateNextPortal": 1},
+    {"KALevel": 1, "CreateNextPortal": 1},
+    {"KALevel": 2, "CreateNextPortal": 1},
+    {"KALevel": 3, "CreateNextPortal": 1},
+    {"KALevel": 4, "CreateNextPortal": 1},
+    {"KALevel": 5, "CreateNextPortal": 0}
+  ]
+}

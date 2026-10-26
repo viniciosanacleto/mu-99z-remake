@@ -1,0 +1,17 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"ACTIVE": 1, "SYNTAX_PLAYER": "/irdeath", "PATENTE": 1},
+      {"LVL": 400, "MAP": 6, "X": 116, "Y": 39}
+    ]},
+    {"index": 1, "rows": [
+      {"DAY": 0, "HOURS": 19, "MINUTES": 30, "TIME": 5, "DURATION": 5},
+      {"DAY": 1, "HOURS": 19, "MINUTES": 30, "TIME": 5, "DURATION": 5},
+      {"DAY": 2, "HOURS": 19, "MINUTES": 30, "TIME": 5, "DURATION": 5},
+      {"DAY": 3, "HOURS": 19, "MINUTES": 30, "TIME": 5, "DURATION": 5},
+      {"DAY": 4, "HOURS": 19, "MINUTES": 30, "TIME": 5, "DURATION": 5},
+      {"DAY": 5, "HOURS": 19, "MINUTES": 30, "TIME": 5, "DURATION": 5},
+      {"DAY": 6, "HOURS": 19, "MINUTES": 30, "TIME": 5, "DURATION": 5}
+    ]}
+  ]
+}

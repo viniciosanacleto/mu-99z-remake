@@ -23,7 +23,7 @@ This project merges all of them into **one Go service** backed by **PostgreSQL**
 - **ConnectServer and login.** Server list, authentication, single-session enforcement, IP/HWID limits, VIP expiry and map-server transfers. Passwords are stored with argon2id.
 - **Game world.** Movement, gates and teleports, chat and commands, monsters with AI and pathfinding, combat and damage formulas, experience and leveling, items, inventory, shops, warehouse, trade, parties, PK, guilds, quests, chaos mixes, pets, friends and mail.
 - **Events and custom systems.** Blood Castle, Devil Square, Chaos Castle, Illusion Temple, Kalima, Castle Siege, GM events, and the WizardTeam customs (XShop, LuckyWheel, JewelBank, marriage, arena, resets, rankings, Lua scripts).
-- **Original data files.** The server reads the original `MuServer/Data` configuration as is (copied into [`apps/server/data/`](apps/server/data/)); a test loads every file the original binary reads.
+- **Original data files.** The original `MuServer` configuration and data tables are converted to JSON in [`apps/server/config/`](apps/server/config/), keeping their section, key and column names; terrain, keys and Lua scripts stay in their original format in [`apps/server/data/`](apps/server/data/). A test loads every file the original binary reads.
 - **PostgreSQL.** Schema and embedded migrations that keep the binary column layouts of the original database (inventory, skills, etc.).
 - **Tooling.**
   - `cmd/migrate` imports an existing MuOnline database from SQL Server.

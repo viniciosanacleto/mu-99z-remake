@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
@@ -43,7 +44,7 @@ type QuestReward struct {
 }
 
 func loadIntTable(path string, cols int) ([][]int, error) {
-	lines, err := mutext.LoadFile(path)
+	lines, err := jsonconf.LoadLines(path)
 	if err != nil {
 		return nil, err
 	}
@@ -76,21 +77,21 @@ type Quests struct {
 func LoadQuests(dataDir string) (*Quests, error) {
 	dir := filepath.Join(dataDir, "Quest")
 	q := &Quests{}
-	rows, err := loadIntTable(filepath.Join(dir, "Quest.txt"), 12)
+	rows, err := loadIntTable(filepath.Join(dir, "Quest.json"), 12)
 	if err != nil {
 		return nil, err
 	}
 	for _, v := range rows {
 		q.Quests = append(q.Quests, QuestInfo{v[0], v[1], v[2], v[3], v[4], v[5], v[6], class5(v[7:])})
 	}
-	if rows, err = loadIntTable(filepath.Join(dir, "QuestObjective.txt"), 20); err != nil {
+	if rows, err = loadIntTable(filepath.Join(dir, "QuestObjective.json"), 20); err != nil {
 		return nil, err
 	}
 	for _, v := range rows {
 		q.Objectives = append(q.Objectives, QuestObjective{v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8],
 			v[9], v[10], v[11], v[12], v[13], v[14], class5(v[15:])})
 	}
-	if rows, err = loadIntTable(filepath.Join(dir, "QuestReward.txt"), 16); err != nil {
+	if rows, err = loadIntTable(filepath.Join(dir, "QuestReward.json"), 16); err != nil {
 		return nil, err
 	}
 	for _, v := range rows {

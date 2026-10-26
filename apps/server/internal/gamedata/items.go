@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
@@ -140,7 +141,7 @@ func (it *ItemInfo) set(col string, v int) {
 // category sections; categories may appear more than once (the WizardTeam
 // additions at the end) and later rows override earlier ones.
 func LoadItems(dataDir string) (map[int]ItemInfo, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "Item.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Item", "Item.json"))
 	if err != nil {
 		return nil, err
 	}

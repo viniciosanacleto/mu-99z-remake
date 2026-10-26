@@ -3,13 +3,10 @@ package game
 import (
 	"bytes"
 	"context"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/gsconfig"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
@@ -18,39 +15,7 @@ import (
 // file replaced (or appended).
 func withConfig(t *testing.T, b *bareWorld, file string, kv map[string]string) {
 	t.Helper()
-	dir := t.TempDir()
-	for _, name := range gsconfig.Files {
-		fn := "GameServerInfo - " + name + ".dat"
-		data, err := os.ReadFile(repoData("4.GameServer", "DATA", fn))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if name == file {
-			lines := strings.Split(string(data), "\n")
-			done := map[string]bool{}
-			for i, l := range lines {
-				k := strings.TrimSpace(strings.SplitN(l, "=", 2)[0])
-				if v, ok := kv[k]; ok {
-					lines[i] = k + " = " + v
-					done[k] = true
-				}
-			}
-			for k, v := range kv {
-				if !done[k] {
-					lines = append(lines, k+" = "+v)
-				}
-			}
-			data = []byte(strings.Join(lines, "\n"))
-		}
-		if err := os.WriteFile(filepath.Join(dir, fn), data, 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	cfg, err := gsconfig.Load(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	b.cfg = cfg
+	b.cfg = instanceConfig(t, "4.GameServer", map[string]map[string]string{file: kv})
 }
 
 // texts returns the texts of the C1 0D notices and C1 86 F3 E4 notices.

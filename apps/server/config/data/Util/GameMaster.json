@@ -1,0 +1,9 @@
+{
+  "rows": [
+    {"Account": "teste2", "Name": "Admin", "GMLevel": 32},
+    {"Account": "allam", "Name": "AllanJPA", "GMLevel": 32},
+    {"Account": "lipee13", "Name": "BrizaGM", "GMLevel": 8},
+    {"Account": "motocross", "Name": "JANELA", "GMLevel": 8},
+    {"Account": "suportegm", "Name": "SuporteGM", "GMLevel": 8}
+  ]
+}

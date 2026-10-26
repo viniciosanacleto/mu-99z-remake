@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
@@ -319,11 +320,11 @@ type moveSummonRow struct {
 }
 
 func loadMoveSummon(dataDir string) ([]moveSummonRow, error) {
-	path := filepath.Join(dataDir, "Move", "MoveSummon.txt")
+	path := filepath.Join(dataDir, "Move", "MoveSummon.json")
 	if _, err := os.Stat(path); err != nil {
 		return nil, nil
 	}
-	lines, err := mutext.LoadFile(path)
+	lines, err := jsonconf.LoadLines(path)
 	if err != nil {
 		return nil, err
 	}

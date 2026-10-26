@@ -1,0 +1,13 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"Enable": 1, "ItemIndex": "12,015", "ItemLevel": 0, "ItemCount": 1}
+    ]},
+    {"index": 1, "rows": [
+      {"Enable": 1, "ItemIndex": "12,015", "ItemLevel": 0, "ItemCount": 1}
+    ]},
+    {"index": 2, "rows": [
+      {"ItemIndex": "13,042", "ItemLevel": 0, "Durability": 0, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0, "Duration": 0}
+    ]}
+  ]
+}

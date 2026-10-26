@@ -1,0 +1,9 @@
+{
+  "rows": [
+    {"Class": 0, "Strength": 18, "Dexterity": 18, "Vitality": 15, "Energy": 30, "Leadership": 0, "MaxLife": 60, "MaxMana": 60, "LevelLife": "1.0", "LevelMana": "2.0", "VitalityToLife": "2.0", "EnergyToMana": "2.0"},
+    {"Class": 1, "Strength": 28, "Dexterity": 20, "Vitality": 25, "Energy": 10, "Leadership": 0, "MaxLife": 110, "MaxMana": 20, "LevelLife": "2.0", "LevelMana": "0.5", "VitalityToLife": "3.0", "EnergyToMana": "1.0"},
+    {"Class": 2, "Strength": 22, "Dexterity": 25, "Vitality": 20, "Energy": 15, "Leadership": 0, "MaxLife": 80, "MaxMana": 30, "LevelLife": "1.0", "LevelMana": "1.5", "VitalityToLife": "2.0", "EnergyToMana": "1.5"},
+    {"Class": 3, "Strength": 26, "Dexterity": 26, "Vitality": 26, "Energy": 26, "Leadership": 0, "MaxLife": 110, "MaxMana": 60, "LevelLife": "1.0", "LevelMana": "1.0", "VitalityToLife": "2.0", "EnergyToMana": "2.0"},
+    {"Class": 4, "Strength": 26, "Dexterity": 20, "Vitality": 20, "Energy": 15, "Leadership": 25, "MaxLife": 40090, "MaxMana": 40, "LevelLife": "1.5", "LevelMana": "1.0", "VitalityToLife": "2.0", "EnergyToMana": "1.5"}
+  ]
+}

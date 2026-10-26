@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
@@ -279,11 +280,11 @@ func TestXShopRefundWhenItemCannotBeGiven(t *testing.T) {
 func TestXShopGMPrice(t *testing.T) {
 	b := newBareWorld(t)
 	o := b.player(PlayerStart, "Gm", 0, 130, 130)
-	src, err := os.ReadFile(repoData("Data", "Custom", "CustomXShop.txt"))
+	src, err := os.ReadFile(repoConfig("data", "Custom", "CustomXShop.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(t.TempDir(), "CustomXShop.txt")
+	path := filepath.Join(t.TempDir(), "CustomXShop.json")
 	if err := os.WriteFile(path, src, 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -300,7 +301,7 @@ func TestXShopGMPrice(t *testing.T) {
 		t.Fatalf("GM % X", p)
 	}
 	data, _ := os.ReadFile(path)
-	if !strings.Contains(string(data), "0   0   300   // Kris") {
+	if !strings.Contains(string(data), `{"Type": 0, "Index": 0, "Preco": 300}`) {
 		t.Fatal("file not rewritten")
 	}
 	b.xshopGMPrice(o, pkt)
@@ -315,7 +316,7 @@ func TestXShopGMPrice(t *testing.T) {
 		t.Fatalf("price over 2e9 % X", p)
 	}
 	b.advance(time.Second)
-	b.cw2().xshopPath = filepath.Join(t.TempDir(), "missing.txt")
+	b.cw2().xshopPath = filepath.Join(t.TempDir(), "missing.json")
 	b.xshopGMPrice(o, pkt)
 	if p := find(b.drain(o), 0xFA, 0x06); p == nil || p[4] != 3 {
 		t.Fatalf("write fail % X", p)
@@ -403,10 +404,11 @@ func TestXShopRechargeUploadRoundTrip(t *testing.T) {
 	b := newBareWorld(t)
 	o := b.player(PlayerStart, "Gm", 0, 130, 130)
 	dir := t.TempDir()
-	b.cw2().xshopPath = filepath.Join(dir, "CustomXShop.txt")
+	b.cw2().xshopPath = filepath.Join(dir, "CustomXShop.json")
+	b.assetDir = filepath.Join(dir, "assets")
 	d := new([rechargeSize]byte)
 	d[rcActive] = 1
-	copy(d[rcHolder:], "Fulano")
+	copy(d[rcHolder:], "Jo\xe3o") // Windows-1252 from the client
 	copy(d[rcKey:], "chave@pix")
 	copy(d[rcCopy:], "000201"+"540510.50"+"6304ABCD")
 	binary.LittleEndian.PutUint16(d[rcQRSize:], 16)
@@ -427,7 +429,7 @@ func TestXShopRechargeUploadRoundTrip(t *testing.T) {
 	if acks := send(); len(acks) != 48 {
 		t.Fatalf("not GM: %d acks", len(acks))
 	}
-	if _, err := os.Stat(filepath.Join(dir, "CustomXShopRecharge.txt")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(dir, "CustomXShopRecharge.json")); !os.IsNotExist(err) {
 		t.Fatal("saved without GM")
 	}
 	mv(o).Authority = 8
@@ -435,14 +437,16 @@ func TestXShopRechargeUploadRoundTrip(t *testing.T) {
 	if len(acks) != 1 || !bytes.Equal(acks[0], []byte{0xC1, 5, 0xFA, 0x11, 0}) {
 		t.Fatalf("acks %d % X", len(acks), acks)
 	}
-	cfg, err := os.ReadFile(filepath.Join(dir, "CustomXShopRecharge.txt"))
+	cfg, err := jsonconf.LoadSettings(filepath.Join(dir, "CustomXShopRecharge.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := string(cfg)
-	if !strings.HasPrefix(s, "; Configurado pelo GM no X Shop. Credito manual.\r\n[Recarga]\r\nAtivo=1\r\nTitular=Fulano\r\n") ||
-		!strings.Contains(s, "\r\nValor=10.50\r\n") || !strings.Contains(s, "\r\nImagemBMP=pix") {
-		t.Fatalf("config %q", s)
+	get := func(k string) string { v, _ := cfg.Get("Recarga", k); return v }
+	if get("Ativo") != "1" || get("Titular") != "João" || get("Valor") != "10.50" || !strings.HasPrefix(get("ImagemBMP"), "pix") {
+		t.Fatalf("config %+v", cfg)
+	}
+	if _, err := os.Stat(filepath.Join(b.assetDir, "Custom", get("ImagemBMP"))); err != nil {
+		t.Fatalf("image: %v", err)
 	}
 	// The saved file reads back as the same block.
 	b.xshopRecharge(o, []byte{0xC1, 4, 0xFA, 0x0E})

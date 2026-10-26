@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
@@ -107,7 +108,7 @@ func sk(o *Object) *skillState {
 
 // --- data -------------------------------------------------------------------
 
-func loadSkillWorld(dataDir string) (*skillWorld, error) {
+func loadSkillWorld(dataDir, assetDir string) (*skillWorld, error) {
 	sw := &skillWorld{damage: map[int][2]int{}, effectRate: map[int]int{}, combos: map[[2]int]comboRow{},
 		areaSkills: map[int]bool{}}
 	var err error
@@ -115,7 +116,7 @@ func loadSkillWorld(dataDir string) (*skillWorld, error) {
 		return nil, err
 	}
 	dir := filepath.Join(dataDir, "Skill")
-	secs, err := loadSections(filepath.Join(dir, "SkillDamage.txt"))
+	secs, err := loadSections(filepath.Join(dir, "SkillDamage.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +140,7 @@ func loadSkillWorld(dataDir string) (*skillWorld, error) {
 			}
 		}
 	}
-	lines, err := mutext.LoadFile(filepath.Join(dir, "ComboSkill.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dir, "ComboSkill.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +151,7 @@ func loadSkillWorld(dataDir string) (*skillWorld, error) {
 		}
 		sw.combos[[2]int{v[0], v[1]}] = comboRow{Stage: v[2], Delay: v[3]}
 	}
-	if lines, err = mutext.LoadFile(filepath.Join(dir, "SkillEnabler.txt")); err != nil {
+	if lines, err = jsonconf.LoadLines(filepath.Join(dir, "SkillEnabler.json")); err != nil {
 		return nil, err
 	}
 	for _, l := range mutext.Table(lines) {
@@ -160,7 +161,7 @@ func loadSkillWorld(dataDir string) (*skillWorld, error) {
 		}
 		sw.enabler = append(sw.enabler, enablerRow{v[0], v[1], v[2], v[3]})
 	}
-	if secs, err = loadSections(filepath.Join(dir, "SkillUseArea.txt")); err != nil {
+	if secs, err = loadSections(filepath.Join(dir, "SkillUseArea.json")); err != nil {
 		return nil, err
 	}
 	for _, s := range secs {
@@ -182,14 +183,14 @@ func loadSkillWorld(dataDir string) (*skillWorld, error) {
 		}
 	}
 	// SkillElect.hit (FUN_004f7530): exactly 0x3e04 bytes.
-	if b, err := os.ReadFile(filepath.Join(dir, "SkillElect.hit")); err == nil && len(b) == 0x3e04 {
+	if b, err := os.ReadFile(filepath.Join(assetDir, "Skill", "SkillElect.hit")); err == nil && len(b) == 0x3e04 {
 		sw.hitbox = b
 	}
 	return sw, nil
 }
 
 func loadSections(path string) ([]mutext.Section, error) {
-	lines, err := mutext.LoadFile(path)
+	lines, err := jsonconf.LoadLines(path)
 	if err != nil {
 		return nil, err
 	}
@@ -1512,7 +1513,7 @@ func init() {
 			w.skills = &skillWorld{}
 			return nil
 		}
-		sw, err := loadSkillWorld(w.dataDir)
+		sw, err := loadSkillWorld(w.dataDir, w.assetDir)
 		if err != nil {
 			return fmt.Errorf("skill data: %w", err)
 		}

@@ -1,0 +1,20 @@
+{
+  "rows": [
+    {"ItemIndex": "14,001", "ItemLevel": 0, "Durability": 15, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "14,002", "ItemLevel": 0, "Durability": 15, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "14,004", "ItemLevel": 0, "Durability": 15, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "14,005", "ItemLevel": 0, "Durability": 15, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "14,006", "ItemLevel": 0, "Durability": 15, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "14,008", "ItemLevel": 0, "Durability": 10, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "14,035", "ItemLevel": 0, "Durability": 10, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "13,029", "ItemLevel": 0, "Durability": 1, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "14,009", "ItemLevel": 0, "Durability": 1, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "14,009", "ItemLevel": 1, "Durability": 1, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "14,020", "ItemLevel": 0, "Durability": 1, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "04,007", "ItemLevel": 0, "Durability": 255, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "04,015", "ItemLevel": 0, "Durability": 255, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "15,220", "ItemLevel": 0, "Durability": 1, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "04,007", "ItemLevel": 5, "Durability": 255, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "04,015", "ItemLevel": 5, "Durability": 255, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0}
+  ]
+}

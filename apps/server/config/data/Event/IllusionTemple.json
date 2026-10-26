@@ -1,0 +1,22 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"WarningTime": 5, "NotifyTime": 1, "EventTime": 15, "CloseTime": 4}
+    ]},
+    {"index": 1, "rows": [
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 1, "StartMin": 30, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 5, "StartMin": 30, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 9, "StartMin": 30, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 13, "StartMin": 30, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 17, "StartMin": 30, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 21, "StartMin": 30, "StartSec": 0}
+    ]},
+    {"index": 2, "rows": [
+      {"EventIndex": 0, "ExperienceTable1": 300000, "ExperienceTable2": 50000},
+      {"EventIndex": 1, "ExperienceTable1": 340000, "ExperienceTable2": 60000},
+      {"EventIndex": 2, "ExperienceTable1": 380000, "ExperienceTable2": 70000},
+      {"EventIndex": 3, "ExperienceTable1": 420000, "ExperienceTable2": 80000},
+      {"EventIndex": 4, "ExperienceTable1": 460000, "ExperienceTable2": 90000}
+    ]}
+  ]
+}

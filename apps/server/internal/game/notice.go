@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
@@ -31,7 +32,7 @@ type noticeList struct {
 func loadNotices(dataDir string, now time.Time) ([3]noticeList, error) {
 	var out [3]noticeList
 	for i, lang := range langDirs {
-		lines, err := mutext.LoadFile(filepath.Join(dataDir, "Lang", lang, "Notice.txt"))
+		lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Lang", lang, "Notice.json"))
 		if err != nil {
 			return out, err
 		}

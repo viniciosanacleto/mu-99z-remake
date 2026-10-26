@@ -1,0 +1,29 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"WarningTime": 5, "NotifyTime": 1, "EventTime": 10, "CloseTime": 4}
+    ]},
+    {"index": 1, "rows": [
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 1, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 3, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 5, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 7, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 9, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 11, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 13, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 15, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 17, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 19, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 21, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 23, "StartMin": 0, "StartSec": 0}
+    ]},
+    {"index": 2, "rows": [
+      {"EventIndex": 0, "ExperienceTable1": 1000, "ExperienceTable2": 500},
+      {"EventIndex": 1, "ExperienceTable1": 1500, "ExperienceTable2": 100},
+      {"EventIndex": 2, "ExperienceTable1": 2000, "ExperienceTable2": 1500},
+      {"EventIndex": 3, "ExperienceTable1": 2500, "ExperienceTable2": 2000},
+      {"EventIndex": 4, "ExperienceTable1": 3000, "ExperienceTable2": 2500},
+      {"EventIndex": 5, "ExperienceTable1": 3500, "ExperienceTable2": 3000}
+    ]}
+  ]
+}

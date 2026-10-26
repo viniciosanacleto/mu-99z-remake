@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
@@ -42,7 +43,7 @@ type CustomAttack struct {
 // LoadCustomAttack reads Data/Custom/CustomAttack.txt. Section 1 indexes
 // outside 0..213 are ignored like in FUN_00445480.
 func LoadCustomAttack(dataDir string) (*CustomAttack, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Custom", "CustomAttack.txt"))
+	secs, err := loadSections(filepath.Join(dataDir, "Custom", "CustomAttack.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +130,7 @@ type Gift struct {
 // LoadCustomGift reads Data/Custom/CustomGift.txt in file order (the code
 // lookup of FUN_00463780 walks the list and takes the first match).
 func LoadCustomGift(dataDir string) ([]Gift, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Custom", "CustomGift.txt"))
+	secs, err := loadSections(filepath.Join(dataDir, "Custom", "CustomGift.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +214,7 @@ type CustomMarriage struct {
 
 // LoadCustomMarriage reads Data/Custom/CustomMarriage.txt.
 func LoadCustomMarriage(dataDir string) (*CustomMarriage, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Custom", "CustomMarriage.txt"))
+	secs, err := loadSections(filepath.Join(dataDir, "Custom", "CustomMarriage.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -269,7 +270,7 @@ type VipPlan struct {
 
 // LoadCustomBuyVip reads Data/Custom/CustomBuyVip.txt (first code wins).
 func LoadCustomBuyVip(dataDir string) (map[string]VipPlan, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Custom", "CustomBuyVip.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Custom", "CustomBuyVip.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -299,7 +300,7 @@ type PickBlock struct {
 
 // LoadCustomPick reads Data/Custom/CustomPick.txt.
 func LoadCustomPick(dataDir string) ([]PickBlock, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Custom", "CustomPick.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Custom", "CustomPick.json"))
 	if err != nil {
 		return nil, err
 	}

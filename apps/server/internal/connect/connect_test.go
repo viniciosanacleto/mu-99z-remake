@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/serverlist"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -135,14 +136,22 @@ func TestHandle(t *testing.T) {
 
 func TestLoadConfig(t *testing.T) {
 	_, file, _, _ := runtime.Caller(0)
-	dir := filepath.Join(filepath.Dir(file), "..", "..", "data", "1.ConnectServer")
-	cfg, err := LoadConfig(filepath.Join(dir, "ConnectServer.ini"), filepath.Join(dir, "BlackList.txt"))
+	sf, err := jsonconf.LoadServer(filepath.Join(filepath.Dir(file), "..", "..", "config", "server.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := LoadConfig(sf)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if cfg.Port != 44405 || cfg.MaxIdle != 60*time.Second || cfg.MaxPerIP != 1 ||
 		cfg.MaxPacketPerSecond != 10 || len(cfg.BlackList) != 1 || cfg.BlackList[0] != "127.0.0.1" {
 		t.Fatalf("cfg = %+v", cfg)
+	}
+	sf.BlackList.Sections[0].Rows[0][0].Value = "日本"
+	sf.BlackList.Encoding = jsonconf.Windows1252
+	if _, err := LoadConfig(sf); err == nil {
+		t.Fatal("unencodable blacklist accepted")
 	}
 }
 

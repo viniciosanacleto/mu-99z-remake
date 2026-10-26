@@ -1,0 +1,20 @@
+{
+  "rows": [
+    {"Index": 0, "MonsterClass": 235, "CurrentState": 3, "RequireIndex": "*", "RequireState": "*", "RequireMinLevel": 150, "RequireMaxLevel": "*", "DW": 1, "DK": 1, "FE": 1, "MG": 0, "DL": 0},
+    {"Index": 1, "MonsterClass": 235, "CurrentState": 3, "RequireIndex": 0, "RequireState": 2, "RequireMinLevel": 150, "RequireMaxLevel": "*", "DW": 1, "DK": 1, "FE": 1, "MG": 0, "DL": 0},
+    {"Index": 2, "MonsterClass": 229, "CurrentState": 3, "RequireIndex": 1, "RequireState": 2, "RequireMinLevel": 220, "RequireMaxLevel": "*", "DW": 2, "DK": 2, "FE": 2, "MG": 0, "DL": 0},
+    {"Index": 3, "MonsterClass": 229, "CurrentState": 3, "RequireIndex": 2, "RequireState": 2, "RequireMinLevel": 220, "RequireMaxLevel": "*", "DW": 0, "DK": 2, "FE": 0, "MG": 0, "DL": 0},
+    {"Index": 0, "MonsterClass": 235, "CurrentState": 0, "RequireIndex": "*", "RequireState": "*", "RequireMinLevel": 150, "RequireMaxLevel": "*", "DW": 1, "DK": 1, "FE": 1, "MG": 0, "DL": 0},
+    {"Index": 1, "MonsterClass": 235, "CurrentState": 0, "RequireIndex": 0, "RequireState": 2, "RequireMinLevel": 150, "RequireMaxLevel": "*", "DW": 1, "DK": 1, "FE": 1, "MG": 0, "DL": 0},
+    {"Index": 2, "MonsterClass": 229, "CurrentState": 0, "RequireIndex": 1, "RequireState": 2, "RequireMinLevel": 220, "RequireMaxLevel": "*", "DW": 2, "DK": 2, "FE": 2, "MG": 0, "DL": 0},
+    {"Index": 3, "MonsterClass": 229, "CurrentState": 0, "RequireIndex": 2, "RequireState": 2, "RequireMinLevel": 220, "RequireMaxLevel": "*", "DW": 0, "DK": 2, "FE": 0, "MG": 0, "DL": 0},
+    {"Index": 0, "MonsterClass": 235, "CurrentState": 1, "RequireIndex": "*", "RequireState": "*", "RequireMinLevel": 150, "RequireMaxLevel": "*", "DW": 1, "DK": 1, "FE": 1, "MG": 0, "DL": 0},
+    {"Index": 1, "MonsterClass": 235, "CurrentState": 1, "RequireIndex": 0, "RequireState": 2, "RequireMinLevel": 150, "RequireMaxLevel": "*", "DW": 1, "DK": 1, "FE": 1, "MG": 0, "DL": 0},
+    {"Index": 2, "MonsterClass": 229, "CurrentState": 1, "RequireIndex": 1, "RequireState": 2, "RequireMinLevel": 220, "RequireMaxLevel": "*", "DW": 2, "DK": 2, "FE": 2, "MG": 0, "DL": 0},
+    {"Index": 3, "MonsterClass": 229, "CurrentState": 1, "RequireIndex": 2, "RequireState": 2, "RequireMinLevel": 220, "RequireMaxLevel": "*", "DW": 0, "DK": 2, "FE": 0, "MG": 0, "DL": 0},
+    {"Index": 3, "MonsterClass": 229, "CurrentState": 2, "RequireIndex": 2, "RequireState": 2, "RequireMinLevel": 220, "RequireMaxLevel": "*", "DW": 0, "DK": 2, "FE": 0, "MG": 0, "DL": 0},
+    {"Index": 2, "MonsterClass": 229, "CurrentState": 2, "RequireIndex": 1, "RequireState": 2, "RequireMinLevel": 220, "RequireMaxLevel": "*", "DW": 2, "DK": 2, "FE": 2, "MG": 0, "DL": 0},
+    {"Index": 1, "MonsterClass": 235, "CurrentState": 2, "RequireIndex": 0, "RequireState": 2, "RequireMinLevel": 150, "RequireMaxLevel": "*", "DW": 1, "DK": 1, "FE": 1, "MG": 0, "DL": 0},
+    {"Index": 0, "MonsterClass": 235, "CurrentState": 2, "RequireIndex": "*", "RequireState": "*", "RequireMinLevel": 150, "RequireMaxLevel": "*", "DW": 1, "DK": 1, "FE": 1, "MG": 0, "DL": 0}
+  ]
+}

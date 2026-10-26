@@ -3,6 +3,7 @@ package gamedata
 import (
 	"path/filepath"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
@@ -15,7 +16,7 @@ const KalimaLevels = 6
 // Kalima n+1 dies.
 func LoadKalima(dataDir string) ([KalimaLevels]int, error) {
 	var out [KalimaLevels]int
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Event", "Kalima.dat"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Event", "Kalima.json"))
 	if err != nil {
 		return out, err
 	}

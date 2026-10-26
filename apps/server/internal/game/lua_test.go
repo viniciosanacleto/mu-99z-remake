@@ -417,7 +417,7 @@ func TestLuaRequireAndReload(t *testing.T) {
 	// A private data folder: the shipped ScriptMain plus a script that
 	// counts its runs.
 	for _, f := range []string{"ScriptMain.lua", "System/ScriptCore.lua", "Script/WelcomeMessage.lua", "Script/CustomWindowName.lua", "Character/CalcCharacter.lua"} {
-		src, err := os.ReadFile(filepath.Join(b.dataDir, "Script", f))
+		src, err := os.ReadFile(filepath.Join(b.assetDir, "Script", f))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -433,7 +433,7 @@ func TestLuaRequireAndReload(t *testing.T) {
 		"Runs = (Runs or 0) + 1\nPathArg = ...\nBridgeFunctionAttach('OnShutScript','Count_Shut')\nfunction Count_Shut() ShutCalled = true end\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	b.dataDir = dir
+	b.assetDir = dir
 	b.reloadScripts()
 	luaDo(t, b, `require('Script\\Count') require('Script\\Count')`)
 	if got := luaGet(t, b, `Runs`); got != "2" {

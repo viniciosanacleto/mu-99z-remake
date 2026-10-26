@@ -1,0 +1,40 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"MonsterIndex": 240, "SpawnRadius": 0, "LocationX": 196, "LocationY": 57, "Direction": 3}
+    ]},
+    {"index": 1, "rows": [
+      {"MonsterIndex": 63, "SpawnRadius": 5, "RangeStartX": 160, "RangeStartY": 216, "RangeEndX": 160, "RangeEndY": 216, "Direction": "*", "MaxSpawnCount": 6}
+    ]},
+    {"index": 2, "rows": []},
+    {"index": 1, "rows": [
+      {"Monster": 62, "Radius": 5, "X": 140, "Y": 49, "TX": 149, "TY": 58, "Dir": -1, "Count": 8},
+      {"Monster": 62, "Radius": 5, "X": 150, "Y": 70, "TX": 159, "TY": 79, "Dir": -1, "Count": 8},
+      {"Monster": 57, "Radius": 5, "X": 157, "Y": 97, "TX": 166, "TY": 106, "Dir": -1, "Count": 8},
+      {"Monster": 57, "Radius": 5, "X": 182, "Y": 110, "TX": 191, "TY": 119, "Dir": -1, "Count": 8},
+      {"Monster": 57, "Radius": 5, "X": 202, "Y": 100, "TX": 211, "TY": 109, "Dir": -1, "Count": 8},
+      {"Monster": 58, "Radius": 5, "X": 89, "Y": 146, "TX": 98, "TY": 155, "Dir": -1, "Count": 8},
+      {"Monster": 60, "Radius": 5, "X": 72, "Y": 122, "TX": 81, "TY": 131, "Dir": -1, "Count": 8},
+      {"Monster": 60, "Radius": 5, "X": 118, "Y": 173, "TX": 127, "TY": 182, "Dir": -1, "Count": 8},
+      {"Monster": 57, "Radius": 5, "X": 4, "Y": 242, "TX": 13, "TY": 251, "Dir": -1, "Count": 8},
+      {"Monster": 58, "Radius": 5, "X": 36, "Y": 48, "TX": 45, "TY": 57, "Dir": -1, "Count": 8},
+      {"Monster": 60, "Radius": 5, "X": 178, "Y": 210, "TX": 187, "TY": 219, "Dir": -1, "Count": 8},
+      {"Monster": 62, "Radius": 5, "X": 24, "Y": 172, "TX": 33, "TY": 181, "Dir": -1, "Count": 8},
+      {"Monster": 57, "Radius": 5, "X": 10, "Y": 98, "TX": 19, "TY": 107, "Dir": -1, "Count": 8},
+      {"Monster": 58, "Radius": 5, "X": 88, "Y": 20, "TX": 97, "TY": 29, "Dir": -1, "Count": 8}
+    ]},
+    {"index": 1, "rows": [
+      {"Monster": 57, "Radius": 2, "X": 39, "Y": 249, "TX": 40, "TY": 250, "Dir": -1, "Count": 8},
+      {"Monster": 58, "Radius": 2, "X": 39, "Y": 246, "TX": 40, "TY": 247, "Dir": -1, "Count": 8},
+      {"Monster": 60, "Radius": 2, "X": 41, "Y": 247, "TX": 42, "TY": 248, "Dir": -1, "Count": 8},
+      {"Monster": 62, "Radius": 2, "X": 36, "Y": 233, "TX": 37, "TY": 234, "Dir": -1, "Count": 8},
+      {"Monster": 57, "Radius": 2, "X": 36, "Y": 229, "TX": 37, "TY": 230, "Dir": -1, "Count": 8},
+      {"Monster": 58, "Radius": 2, "X": 23, "Y": 215, "TX": 24, "TY": 216, "Dir": -1, "Count": 8},
+      {"Monster": 60, "Radius": 2, "X": 20, "Y": 213, "TX": 21, "TY": 214, "Dir": -1, "Count": 8},
+      {"Monster": 62, "Radius": 2, "X": 87, "Y": 50, "TX": 88, "TY": 51, "Dir": -1, "Count": 8},
+      {"Monster": 57, "Radius": 2, "X": 90, "Y": 49, "TX": 91, "TY": 50, "Dir": -1, "Count": 8},
+      {"Monster": 58, "Radius": 2, "X": 90, "Y": 53, "TX": 91, "TY": 54, "Dir": -1, "Count": 8},
+      {"Monster": 60, "Radius": 2, "X": 79, "Y": 127, "TX": 80, "TY": 128, "Dir": -1, "Count": 8}
+    ]}
+  ]
+}

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
@@ -554,11 +555,11 @@ func (w *World) petDamageRate(o *Object, index, dmg int) int {
 
 // loadPetDamageTable reads Util/PetDamageTable.txt (missing file: empty).
 func loadPetDamageTable(dataDir string) ([]petDamageRow, error) {
-	path := filepath.Join(dataDir, "Util", "PetDamageTable.txt")
+	path := filepath.Join(dataDir, "Util", "PetDamageTable.json")
 	if _, err := os.Stat(path); err != nil {
 		return nil, nil
 	}
-	lines, err := mutext.LoadFile(path)
+	lines, err := jsonconf.LoadLines(path)
 	if err != nil {
 		return nil, err
 	}

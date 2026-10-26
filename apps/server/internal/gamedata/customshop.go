@@ -1,13 +1,13 @@
 package gamedata
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
@@ -113,7 +113,7 @@ func LoadCustomJewel(dataDir string) (*CustomJewels, error) {
 	for i := range c.Slots {
 		c.Slots[i].Index = -1
 	}
-	secs, err := loadSections(filepath.Join(dataDir, "Custom", "CustomJewel.txt"))
+	secs, err := loadSections(filepath.Join(dataDir, "Custom", "CustomJewel.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +205,7 @@ type WheelReward struct {
 // LoadLuckyWheel reads Data/Custom/CustomLuckyWheel.txt: a plain table
 // keyed by IndexWheel; the first row of an index wins (std::map insert).
 func LoadLuckyWheel(dataDir string) (map[int]WheelReward, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Custom", "CustomLuckyWheel.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Custom", "CustomLuckyWheel.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +261,7 @@ func LoadXShopPrices(path string) (x *XShopPrices, ok bool, err error) {
 	for i := range x.Category {
 		x.Category[i] = XShopDefaultPrice
 	}
-	lines, err := mutext.LoadFile(path)
+	lines, err := jsonconf.LoadLines(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return x, false, nil
@@ -270,7 +270,7 @@ func LoadXShopPrices(path string) (x *XShopPrices, ok bool, err error) {
 	}
 	secs, err := mutext.Sections(lines)
 	if err != nil {
-		return nil, false, fmt.Errorf("CustomXShop.txt: %w", err)
+		return nil, false, fmt.Errorf("CustomXShop: %w", err)
 	}
 	for _, s := range secs {
 		for _, l := range s.Rows {
@@ -278,7 +278,7 @@ func LoadXShopPrices(path string) (x *XShopPrices, ok bool, err error) {
 			case 0:
 				v, err := shopInts(l, 0, 2)
 				if err != nil {
-					return nil, false, fmt.Errorf("CustomXShop.txt: %w", err)
+					return nil, false, fmt.Errorf("CustomXShop: %w", err)
 				}
 				if v[0] >= 0 && v[0] < 16 {
 					x.Category[v[0]] = nonNegative(v[1])
@@ -286,7 +286,7 @@ func LoadXShopPrices(path string) (x *XShopPrices, ok bool, err error) {
 			case 1:
 				v, err := shopInts(l, 0, 3)
 				if err != nil {
-					return nil, false, fmt.Errorf("CustomXShop.txt: %w", err)
+					return nil, false, fmt.Errorf("CustomXShop: %w", err)
 				}
 				if i := v[0]*0x200 + v[1]; i >= 0 && i < 0x2000 {
 					x.Overrides[i] = nonNegative(v[2])
@@ -297,87 +297,45 @@ func LoadXShopPrices(path string) (x *XShopPrices, ok bool, err error) {
 	return x, true, nil
 }
 
-// xshopGMComment marks a row written by the GM price packet.
-const xshopGMComment = "// alterado/criado ingame por GM"
-
 // WriteXShopPrice is FUN_00403920: the GM price change rewrites
-// CustomXShop.txt line by line. Inside section 1 a "Type Index Price" row
-// of the item is replaced by "%d   %d   %lu" (keeping its "//" comment);
-// without such a row a new "... // alterado/criado ingame por GM" line goes
-// before the section's "end"; without a section 1 the lines "", "1", the
-// new row and "end" are appended. The text goes to "<path>.tmp", which then
-// replaces the file.
+// CustomXShop. Inside section 1 the price of every "Type Index Price" row
+// of the item is replaced; without such a row a new row goes at the end of
+// the section; without a section 1 the section is appended. The original
+// also tagged a new row with the comment "// alterado/criado ingame por
+// GM", which the JSON file has no place for. The file is replaced through
+// a temporary file.
 func WriteXShopPrice(path string, index int, price uint32) error {
-	data, err := os.ReadFile(path)
+	t, err := jsonconf.LoadTable(path)
 	if err != nil {
 		return err
 	}
 	cat, idx := index>>9, index&0x1ff
-	newRow := fmt.Sprintf("%d   %d   %d   %s", cat, idx, price, xshopGMComment)
-	var out []string
-	inSec, found, written := false, false, false
-	// std::getline keeps a '\r' of CRLF lines; so does this split.
-	lines := strings.Split(string(data), "\n")
-	if len(lines) > 0 && lines[len(lines)-1] == "" {
-		lines = lines[:len(lines)-1]
+	sec := t.Section(1)
+	if sec == nil {
+		one := 1
+		t.Sections = append(t.Sections, jsonconf.Section{Index: &one})
+		sec = &t.Sections[len(t.Sections)-1]
 	}
-	for _, line := range lines {
-		trimmed := strings.Trim(line, " \t\r\n")
-		if trimmed == "" {
-			out = append(out, line)
+	value := strconv.FormatUint(uint64(price), 10)
+	written := false
+	for _, r := range sec.Rows {
+		if len(r) < 3 {
 			continue
 		}
-		if !inSec {
-			if trimmed == "1" {
-				inSec, found = true, true
-			}
-			out = append(out, line)
-			continue
-		}
-		if trimmed == "end" {
-			if !written {
-				out = append(out, newRow)
-				written = true
-			}
-			inSec = false
-			out = append(out, line)
-			continue
-		}
-		if strings.HasPrefix(trimmed, "//") {
-			out = append(out, line)
-			continue
-		}
-		var t, i int
-		var p uint64
-		if n, _ := fmt.Sscanf(trimmed, "%d %d %d", &t, &i, &p); n == 3 && t == cat && i == idx {
-			row := fmt.Sprintf("%d   %d   %d", cat, idx, price)
-			if k := strings.Index(trimmed, "//"); k >= 0 {
-				if c := strings.TrimSpace(trimmed[k:]); c != "" {
-					row += "   " + c
-				}
-			}
-			out = append(out, row)
+		c, err1 := strconv.Atoi(r[0].Value)
+		i, err2 := strconv.Atoi(r[1].Value)
+		_, err3 := strconv.ParseUint(r[2].Value, 10, 64)
+		if err1 == nil && err2 == nil && err3 == nil && c == cat && i == idx {
+			r[2] = jsonconf.NewCell(r[2].Name, value)
 			written = true
-			continue
 		}
-		out = append(out, line)
 	}
-	if !found {
-		out = append(out, "", "1", newRow, "end")
+	if !written {
+		sec.Rows = append(sec.Rows, jsonconf.Row{
+			jsonconf.NewCell("Type", strconv.Itoa(cat)),
+			jsonconf.NewCell("Index", strconv.Itoa(idx)),
+			jsonconf.NewCell("Preco", value),
+		})
 	}
-	tmp := path + ".tmp"
-	var buf bytes.Buffer
-	for _, l := range out {
-		buf.WriteString(l)
-		buf.WriteByte('\n')
-	}
-	if err := os.WriteFile(tmp, buf.Bytes(), 0o644); err != nil {
-		os.Remove(tmp)
-		return err
-	}
-	if err := os.Rename(tmp, path); err != nil {
-		os.Remove(tmp)
-		return err
-	}
-	return nil
+	return jsonconf.WriteTable(path, t)
 }

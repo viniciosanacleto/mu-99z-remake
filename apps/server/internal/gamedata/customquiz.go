@@ -33,7 +33,7 @@ type QuizQuestion struct {
 
 // LoadCustomQuiz reads Data/Custom/CustomQuiz.txt.
 func LoadCustomQuiz(dataDir string) (*CustomQuiz, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Custom", "CustomQuiz.txt"))
+	secs, err := loadSections(filepath.Join(dataDir, "Custom", "CustomQuiz.json"))
 	if err != nil {
 		return nil, err
 	}

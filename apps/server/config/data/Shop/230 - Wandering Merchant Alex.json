@@ -1,0 +1,14 @@
+{
+  "rows": [
+    {"ItemIndex": "07,025", "ItemLevel": 0, "Durability": 56, "SkillSwitch": 0, "LuckSwitch": 1, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "08,025", "ItemLevel": 0, "Durability": 56, "SkillSwitch": 0, "LuckSwitch": 1, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "09,025", "ItemLevel": 0, "Durability": 56, "SkillSwitch": 0, "LuckSwitch": 1, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "10,025", "ItemLevel": 0, "Durability": 56, "SkillSwitch": 0, "LuckSwitch": 1, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "11,025", "ItemLevel": 0, "Durability": 56, "SkillSwitch": 0, "LuckSwitch": 1, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "12,021", "ItemLevel": 0, "Durability": 0, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "12,022", "ItemLevel": 0, "Durability": 0, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "12,023", "ItemLevel": 0, "Durability": 0, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "12,024", "ItemLevel": 0, "Durability": 0, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "02,008", "ItemLevel": 0, "Durability": 54, "SkillSwitch": 1, "LuckSwitch": 1, "Aditional": 0, "Excellent": 0, "SetOption": 0}
+  ]
+}

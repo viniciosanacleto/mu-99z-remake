@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/ini"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -17,7 +17,8 @@ import (
 // maxClients: the original indexes clients in a 100-slot table (index < 100).
 const maxClients = 100
 
-// Config mirrors [ConnectServerInfo] in ConnectServer.ini.
+// Config mirrors [ConnectServerInfo] of ConnectServer.ini (the
+// ConnectServer member of config/server.json).
 type Config struct {
 	Port               int
 	MaxIdle            time.Duration // MaxConnectionIdle (seconds)
@@ -26,13 +27,10 @@ type Config struct {
 	BlackList          []string      // BlackList.txt
 }
 
-// LoadConfig reads ConnectServer.ini and, when blackListPath is not empty,
-// BlackList.txt.
-func LoadConfig(iniPath, blackListPath string) (Config, error) {
-	f, err := ini.Load(iniPath)
-	if err != nil {
-		return Config{}, err
-	}
+// LoadConfig reads the ConnectServer settings and the BlackList table of
+// server.json.
+func LoadConfig(sf *jsonconf.ServerFile) (Config, error) {
+	f := sf.ConnectServer.INI()
 	const s = "ConnectServerInfo"
 	c := Config{
 		Port:               f.Int(s, "ConnectServerPortTCP", 44405),
@@ -40,14 +38,12 @@ func LoadConfig(iniPath, blackListPath string) (Config, error) {
 		MaxPerIP:           f.Int(s, "MaxConnectionPerIP", 0),
 		MaxPacketPerSecond: f.Int(s, "MaxPacketPerSecond", 0),
 	}
-	if blackListPath != "" {
-		lines, err := mutext.LoadFile(blackListPath)
-		if err != nil {
-			return Config{}, err
-		}
-		for _, l := range mutext.Table(lines) {
-			c.BlackList = append(c.BlackList, l.Tokens[0])
-		}
+	lines, err := sf.BlackList.Lines()
+	if err != nil {
+		return Config{}, fmt.Errorf("BlackList: %w", err)
+	}
+	for _, l := range mutext.Table(lines) {
+		c.BlackList = append(c.BlackList, l.Tokens[0])
 	}
 	return c, nil
 }

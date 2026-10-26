@@ -30,7 +30,7 @@ type CastleDeepMonster struct {
 // LoadCastleDeep reads Data/Event/CastleDeepEvent.dat. Sections other than
 // 0..3 are skipped, like the token loop of the original.
 func LoadCastleDeep(dataDir string) (*CastleDeep, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Event", "CastleDeepEvent.dat"))
+	secs, err := loadSections(filepath.Join(dataDir, "Event", "CastleDeepEvent.json"))
 	if err != nil {
 		return nil, err
 	}

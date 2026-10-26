@@ -29,9 +29,7 @@ func writeShopFile(t *testing.T, name, body string) string {
 	if err := os.MkdirAll(filepath.Join(dir, "Custom"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "Custom", name), []byte(body), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	putOriginal(t, filepath.Join(dir, "Custom", name), body)
 	return dir
 }
 
@@ -105,7 +103,7 @@ func TestLoadLuckyWheelColumns(t *testing.T) {
 }
 
 func TestLoadXShopPricesOriginal(t *testing.T) {
-	x, ok, err := LoadXShopPrices(filepath.Join(dataDir(), "Custom", "CustomXShop.txt"))
+	x, ok, err := LoadXShopPrices(filepath.Join(dataDir(), "Custom", "CustomXShop.json"))
 	if err != nil || !ok {
 		t.Fatal(ok, err)
 	}
@@ -123,12 +121,12 @@ func TestLoadXShopPricesOriginal(t *testing.T) {
 }
 
 func TestLoadXShopPricesMissingAndNegative(t *testing.T) {
-	x, ok, err := LoadXShopPrices(filepath.Join(t.TempDir(), "none.txt"))
+	x, ok, err := LoadXShopPrices(filepath.Join(t.TempDir(), "none.json"))
 	if err != nil || ok || x.Price(5*512) != XShopDefaultPrice || x.Price(0x1fff) != XShopDefaultPrice {
 		t.Fatalf("missing %v %v %+v", ok, err, x)
 	}
 	dir := writeShopFile(t, "CustomXShop.txt", "0\n3 -5\n16 9\nend\n1\n3 2 -1\n0 600 7\nend\n")
-	x, _, err = LoadXShopPrices(filepath.Join(dir, "Custom", "CustomXShop.txt"))
+	x, _, err = LoadXShopPrices(filepath.Join(dir, "Custom", "CustomXShop.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +143,7 @@ func TestLoadXShopPricesMissingAndNegative(t *testing.T) {
 func TestWriteXShopPrice(t *testing.T) {
 	dir := writeShopFile(t, "CustomXShop.txt",
 		"// header\r\n0\r\n0 100\r\nend\r\n\r\n1\r\n// comment\r\n0   0   20   // Kris\r\n0 1 10\r\nend\r\n")
-	path := filepath.Join(dir, "Custom", "CustomXShop.txt")
+	path := filepath.Join(dir, "Custom", "CustomXShop.json")
 	if err := WriteXShopPrice(path, 0, 55); err != nil {
 		t.Fatal(err)
 	}
@@ -156,10 +154,21 @@ func TestWriteXShopPrice(t *testing.T) {
 		t.Fatal(err)
 	}
 	b, _ := os.ReadFile(path)
-	want := "// header\r\n0\r\n0 100\r\nend\r\n\r\n1\r\n// comment\r\n0   0   55   // Kris\n0   1   11\n" +
-		"7   3   99   // alterado/criado ingame por GM\nend\r\n"
+	want := `{
+  "sections": [
+    {"index": 0, "rows": [
+      {"Col1": 0, "Col2": 100}
+    ]},
+    {"index": 1, "rows": [
+      {"Col1": 0, "Col2": 0, "Col3": 55},
+      {"Col1": 0, "Col2": 1, "Col3": 11},
+      {"Type": 7, "Index": 3, "Preco": 99}
+    ]}
+  ]
+}
+`
 	if string(b) != want {
-		t.Fatalf("file:\n%q\nwant\n%q", b, want)
+		t.Fatalf("file:\n%s\nwant\n%s", b, want)
 	}
 	x, _, _ := LoadXShopPrices(path)
 	if x.Price(0) != 55 || x.Price(1) != 11 || x.Price(7*512+3) != 99 {
@@ -172,15 +181,20 @@ func TestWriteXShopPrice(t *testing.T) {
 
 func TestWriteXShopPriceWithoutSection(t *testing.T) {
 	dir := writeShopFile(t, "CustomXShop.txt", "0\n0 100\nend\n")
-	path := filepath.Join(dir, "Custom", "CustomXShop.txt")
+	path := filepath.Join(dir, "Custom", "CustomXShop.json")
 	if err := WriteXShopPrice(path, 2*512+1, 30); err != nil {
 		t.Fatal(err)
 	}
 	b, _ := os.ReadFile(path)
-	if !strings.HasSuffix(string(b), "end\n\n1\n2   1   30   // alterado/criado ingame por GM\nend\n") {
-		t.Fatalf("%q", b)
+	if !strings.HasSuffix(string(b), `{"index": 1, "rows": [
+      {"Type": 2, "Index": 1, "Preco": 30}
+    ]}
+  ]
+}
+`) {
+		t.Fatalf("%s", b)
 	}
-	if err := WriteXShopPrice(filepath.Join(dir, "missing.txt"), 0, 1); err == nil {
+	if err := WriteXShopPrice(filepath.Join(dir, "missing.json"), 0, 1); err == nil {
 		t.Fatal("missing file written")
 	}
 }

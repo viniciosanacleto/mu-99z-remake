@@ -1,0 +1,16 @@
+{
+  "rows": [
+    {"IndexWheel": 0, "Type": 14, "Index": 200, "Level": 0, "Skill": 0, "Luck": 0, "Option": 0, "Excellent": 0},
+    {"IndexWheel": 1, "Type": 14, "Index": 11, "Level": 10, "Skill": 0, "Luck": 0, "Option": 0, "Excellent": 0},
+    {"IndexWheel": 2, "Type": 14, "Index": 201, "Level": 0, "Skill": 0, "Luck": 0, "Option": 0, "Excellent": 0},
+    {"IndexWheel": 3, "Type": 14, "Index": 11, "Level": 9, "Skill": 0, "Luck": 0, "Option": 0, "Excellent": 0},
+    {"IndexWheel": 4, "Type": 14, "Index": 202, "Level": 0, "Skill": 0, "Luck": 0, "Option": 0, "Excellent": 0},
+    {"IndexWheel": 5, "Type": 14, "Index": 11, "Level": 11, "Skill": 0, "Luck": 0, "Option": 0, "Excellent": 0},
+    {"IndexWheel": 6, "Type": 14, "Index": 203, "Level": 0, "Skill": 0, "Luck": 0, "Option": 0, "Excellent": 0},
+    {"IndexWheel": 7, "Type": 14, "Index": 204, "Level": 0, "Skill": 0, "Luck": 0, "Option": 0, "Excellent": 0},
+    {"IndexWheel": 8, "Type": 14, "Index": 11, "Level": 8, "Skill": 0, "Luck": 0, "Option": 0, "Excellent": 0},
+    {"IndexWheel": 9, "Type": 14, "Index": 12, "Level": 0, "Skill": 0, "Luck": 0, "Option": 0, "Excellent": 0},
+    {"IndexWheel": 10, "Type": 14, "Index": 207, "Level": 0, "Skill": 0, "Luck": 0, "Option": 0, "Excellent": 0},
+    {"IndexWheel": 11, "Type": 14, "Index": 11, "Level": 12, "Skill": 0, "Luck": 0, "Option": 0, "Excellent": 0}
+  ]
+}

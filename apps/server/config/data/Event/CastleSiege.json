@@ -1,0 +1,75 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"CycleDays": 7}
+    ]},
+    {"index": 1, "rows": [
+      {"State": 1, "StartDay": 0, "StartHour": 0, "StartMinute": 0},
+      {"State": 2, "StartDay": 1, "StartHour": 23, "StartMinute": 59},
+      {"State": 3, "StartDay": 2, "StartHour": 0, "StartMinute": 0},
+      {"State": 4, "StartDay": 3, "StartHour": 0, "StartMinute": 0},
+      {"State": 5, "StartDay": 4, "StartHour": 12, "StartMinute": 0},
+      {"State": 6, "StartDay": 4, "StartHour": 19, "StartMinute": 0},
+      {"State": 7, "StartDay": 6, "StartHour": 20, "StartMinute": 0},
+      {"State": 8, "StartDay": 6, "StartHour": 22, "StartMinute": 0},
+      {"State": 9, "StartDay": 7, "StartHour": 0, "StartMinute": 0}
+    ]},
+    {"index": 2, "rows": [
+      {"Class": 283, "Index": 1, "DBSave": 1, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 400000, "MapX": 94, "MapY": 227, "MapDir": 1},
+      {"Class": 283, "Index": 2, "DBSave": 1, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 400000, "MapX": 94, "MapY": 182, "MapDir": 1},
+      {"Class": 283, "Index": 3, "DBSave": 1, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 400000, "MapX": 82, "MapY": 130, "MapDir": 1},
+      {"Class": 283, "Index": 4, "DBSave": 1, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 400000, "MapX": 107, "MapY": 130, "MapDir": 1},
+      {"Class": 277, "Index": 1, "DBSave": 1, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 500000, "MapX": 93, "MapY": 204, "MapDir": 1},
+      {"Class": 277, "Index": 2, "DBSave": 1, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 500000, "MapX": 81, "MapY": 161, "MapDir": 1},
+      {"Class": 277, "Index": 3, "DBSave": 1, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 500000, "MapX": 107, "MapY": 161, "MapDir": 1},
+      {"Class": 277, "Index": 4, "DBSave": 1, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 500000, "MapX": 67, "MapY": 114, "MapDir": 1},
+      {"Class": 277, "Index": 5, "DBSave": 1, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 500000, "MapX": 93, "MapY": 114, "MapDir": 1},
+      {"Class": 277, "Index": 6, "DBSave": 1, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 500000, "MapX": 119, "MapY": 114, "MapDir": 1},
+      {"Class": 288, "Index": 1, "DBSave": 0, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 800000, "MapX": 75, "MapY": 130, "MapDir": 1},
+      {"Class": 288, "Index": 2, "DBSave": 0, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 800000, "MapX": 88, "MapY": 130, "MapDir": 1},
+      {"Class": 288, "Index": 3, "DBSave": 0, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 800000, "MapX": 99, "MapY": 130, "MapDir": 1},
+      {"Class": 288, "Index": 4, "DBSave": 0, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 800000, "MapX": 114, "MapY": 130, "MapDir": 1},
+      {"Class": 288, "Index": 5, "DBSave": 0, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 800000, "MapX": 94, "MapY": 151, "MapDir": 1},
+      {"Class": 288, "Index": 6, "DBSave": 0, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 800000, "MapX": 88, "MapY": 182, "MapDir": 1},
+      {"Class": 288, "Index": 7, "DBSave": 0, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 800000, "MapX": 100, "MapY": 182, "MapDir": 1},
+      {"Class": 288, "Index": 8, "DBSave": 0, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 800000, "MapX": 94, "MapY": 221, "MapDir": 1},
+      {"Class": 288, "Index": 9, "DBSave": 0, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 800000, "MapX": 94, "MapY": 233, "MapDir": 1},
+      {"Class": 215, "Index": 1, "DBSave": 0, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 10000, "MapX": 94, "MapY": 242, "MapDir": 1},
+      {"Class": 222, "Index": 1, "DBSave": 0, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 10000, "MapX": 80, "MapY": 188, "MapDir": 1},
+      {"Class": 222, "Index": 2, "DBSave": 0, "Side": 1, "DFLevel": 0, "RGLevel": 0, "MaxLife": 10000, "MapX": 105, "MapY": 188, "MapDir": 1},
+      {"Class": 221, "Index": 1, "DBSave": 0, "Side": 2, "DFLevel": 0, "RGLevel": 0, "MaxLife": 10000, "MapX": 63, "MapY": 19, "MapDir": 5},
+      {"Class": 221, "Index": 2, "DBSave": 0, "Side": 2, "DFLevel": 0, "RGLevel": 0, "MaxLife": 10000, "MapX": 119, "MapY": 19, "MapDir": 5}
+    ]},
+    {"index": 3, "rows": [
+      {"Index": 0, "DFUpgradeValue": 1, "DFUpgradeCount": 2, "DFUpgradeMoney": 3000000},
+      {"Index": 1, "DFUpgradeValue": 2, "DFUpgradeCount": 3, "DFUpgradeMoney": 3000000},
+      {"Index": 2, "DFUpgradeValue": 3, "DFUpgradeCount": 4, "DFUpgradeMoney": 3000000}
+    ]},
+    {"index": 4, "rows": [
+      {"Index": 0, "DFUpgradeValue": 1, "DFUpgradeCount": 3, "DFUpgradeMoney": 3000000},
+      {"Index": 1, "DFUpgradeValue": 2, "DFUpgradeCount": 5, "DFUpgradeMoney": 3000000},
+      {"Index": 2, "DFUpgradeValue": 3, "DFUpgradeCount": 7, "DFUpgradeMoney": 3000000}
+    ]},
+    {"index": 5, "rows": [
+      {"Index": 0, "HPUpgradeValue": 800000, "HPUpgradeCount": 2, "HPUpgradeMoney": 1000000},
+      {"Index": 1, "HPUpgradeValue": 1500000, "HPUpgradeCount": 3, "HPUpgradeMoney": 1000000},
+      {"Index": 2, "HPUpgradeValue": 3000000, "HPUpgradeCount": 4, "HPUpgradeMoney": 1000000}
+    ]},
+    {"index": 6, "rows": [
+      {"Index": 0, "HPUpgradeValue": 750000, "HPUpgradeCount": 3, "HPUpgradeMoney": 1000000},
+      {"Index": 1, "HPUpgradeValue": 1300000, "HPUpgradeCount": 5, "HPUpgradeMoney": 1000000},
+      {"Index": 2, "HPUpgradeValue": 2500000, "HPUpgradeCount": 7, "HPUpgradeMoney": 1000000}
+    ]},
+    {"index": 7, "rows": [
+      {"Index": 0, "RGUpgradeValue": 1, "RGUpgradeCount": 3, "RGUpgradeMoney": 5000000},
+      {"Index": 1, "RGUpgradeValue": 2, "RGUpgradeCount": 5, "RGUpgradeMoney": 5000000},
+      {"Index": 2, "RGUpgradeValue": 3, "RGUpgradeCount": 7, "RGUpgradeMoney": 5000000}
+    ]},
+    {"index": 8, "rows": [
+      {"DFLevel1": 100, "DFLevel2": 180, "DFLevel3": 300, "DefLevel4": 520}
+    ]},
+    {"index": 9, "rows": [
+      {"DFLevel1": 80, "DFLevel2": 180, "DFLevel3": 340, "DefLevel4": 550}
+    ]}
+  ]
+}

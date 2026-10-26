@@ -1,0 +1,31 @@
+{
+  "rows": [
+    {"Index": 1, "Name": "Arena", "RequireMoney": 2000, "MinLevel": 50, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 50},
+    {"Index": 2, "Name": "Lorencia", "RequireMoney": 1000, "MinLevel": 10, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 17},
+    {"Index": 3, "Name": "Noria", "RequireMoney": 1000, "MinLevel": 10, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 27},
+    {"Index": 7, "Name": "Devias", "RequireMoney": 2000, "MinLevel": 20, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 22},
+    {"Index": 8, "Name": "Devias2", "RequireMoney": 2500, "MinLevel": 20, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 72},
+    {"Index": 9, "Name": "Devias3", "RequireMoney": 3000, "MinLevel": 20, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 73},
+    {"Index": 10, "Name": "Devias4", "RequireMoney": 3500, "MinLevel": 20, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 74},
+    {"Index": 11, "Name": "Dungeon", "RequireMoney": 3000, "MinLevel": 30, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 2},
+    {"Index": 12, "Name": "Dungeon2", "RequireMoney": 3500, "MinLevel": 40, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 6},
+    {"Index": 13, "Name": "Dungeon3", "RequireMoney": 4000, "MinLevel": 50, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 10},
+    {"Index": 14, "Name": "Atlans", "RequireMoney": 4000, "MinLevel": 70, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 49},
+    {"Index": 15, "Name": "Atlans2", "RequireMoney": 4500, "MinLevel": 80, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 75},
+    {"Index": 16, "Name": "Atlans3", "RequireMoney": 5000, "MinLevel": 90, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 76},
+    {"Index": 17, "Name": "LostTower", "RequireMoney": 5000, "MinLevel": 50, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 42},
+    {"Index": 18, "Name": "LostTower2", "RequireMoney": 5500, "MinLevel": 50, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 31},
+    {"Index": 19, "Name": "LostTower3", "RequireMoney": 6000, "MinLevel": 50, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 33},
+    {"Index": 20, "Name": "LostTower4", "RequireMoney": 6500, "MinLevel": 60, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 35},
+    {"Index": 21, "Name": "LostTower5", "RequireMoney": 7000, "MinLevel": 60, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 37},
+    {"Index": 22, "Name": "LostTower6", "RequireMoney": 7500, "MinLevel": 70, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 39},
+    {"Index": 23, "Name": "LostTower7", "RequireMoney": 8000, "MinLevel": 70, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 41},
+    {"Index": 24, "Name": "Tarkan", "RequireMoney": 8000, "MinLevel": 140, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 57},
+    {"Index": 25, "Name": "Tarkan2", "RequireMoney": 8500, "MinLevel": 140, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 77},
+    {"Index": 26, "Name": "Aida", "RequireMoney": 8500, "MinLevel": 150, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 119},
+    {"Index": 27, "Name": "Kalima", "RequireMoney": 8500, "MinLevel": 150, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 88},
+    {"Index": 28, "Name": "Icarus", "RequireMoney": 10000, "MinLevel": 170, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 63},
+    {"Index": 38, "Name": "Crywolf", "RequireMoney": 30000, "MinLevel": 380, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 118},
+    {"Index": 50, "Name": "CustomArena", "RequireMoney": 50000, "MinLevel": 50, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GateNumber": 450}
+  ]
+}

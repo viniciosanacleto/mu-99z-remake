@@ -38,7 +38,7 @@ func TestParseFlags(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if o.gsData != filepath.Join("d", "4.GameServer", "DATA") || o.hackDir != filepath.Join("d", "Data", "Hack") ||
+	if o.gsConfig != filepath.Join("config", "gameservers", "4.GameServer.json") || o.hackDir != filepath.Join("d", "Data", "Hack") ||
 		o.kind != "connect" || o.listen != "127.0.0.1:44405" {
 		t.Fatalf("defaults = %+v", o)
 	}
@@ -85,6 +85,7 @@ func TestRunConnect(t *testing.T) {
 	done := make(chan error, 1)
 	go func() {
 		done <- run(ctx, []string{"-listen", "127.0.0.1:0", "-upstream", up.Addr().String(), "-data", dataRoot(),
+			"-gs-config", filepath.Join(dataRoot(), "..", "config", "gameservers", "4.GameServer.json"),
 			"-client-keys", clientKeys(), "-golden", golden}, out, ready)
 	}()
 	var addr string

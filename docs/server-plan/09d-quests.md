@@ -1,6 +1,6 @@
 # 09d — Quests (observado no GameServer)
 
-Implementação: `apps/server/internal/game/quest.go` (testes em `quest_test.go`), dados em `apps/server/data/Data/Quest/{Quest,QuestObjective,QuestReward}.txt` (`internal/gamedata/quests.go`).
+Implementação: `apps/server/internal/game/quest.go` (testes em `quest_test.go`), dados em `apps/server/config/data/Quest/{Quest,QuestObjective,QuestReward}.json` (originais `Data/Quest/*.txt`) (`internal/gamedata/quests.go`).
 
 ## Estado
 

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
@@ -77,7 +78,7 @@ func numRow(f []string, from, n int) []int {
 }
 
 func dropSections(path string) ([]mutext.Section, error) {
-	lines, err := mutext.LoadFile(path)
+	lines, err := jsonconf.LoadLines(path)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +104,7 @@ type ItemOptionRate struct {
 
 // LoadItemOptionRate reads Data/Item/ItemOptionRate.txt.
 func LoadItemOptionRate(dataDir string) (*ItemOptionRate, error) {
-	secs, err := dropSections(filepath.Join(dataDir, "Item", "ItemOptionRate.txt"))
+	secs, err := dropSections(filepath.Join(dataDir, "Item", "ItemOptionRate.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +179,7 @@ type MapRateInfo struct {
 
 // LoadMapRateInfo reads Data/MapRateInfo.txt.
 func LoadMapRateInfo(dataDir string) ([]MapRateInfo, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "MapRateInfo.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "MapRateInfo.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +217,7 @@ type ExcellentOptionRate struct {
 
 // LoadExcellentOptionRate reads Data/Item/ExcellentOptionRate.txt.
 func LoadExcellentOptionRate(dataDir string) ([]ExcellentOptionRate, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "ExcellentOptionRate.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Item", "ExcellentOptionRate.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +277,7 @@ type ItemDropRule struct {
 
 // LoadItemDrop reads Data/Item/ItemDrop.txt.
 func LoadItemDrop(dataDir string) ([]ItemDropRule, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "ItemDrop.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Item", "ItemDrop.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -305,7 +306,7 @@ type ItemMoneyDropRule struct {
 
 // LoadItemMoneyDrop reads Data/Item/ItemMoneyDrop.txt.
 func LoadItemMoneyDrop(dataDir string) ([]ItemMoneyDropRule, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "ItemMoneyDrop.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Item", "ItemMoneyDrop.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -322,7 +323,7 @@ func LoadItemMoneyDrop(dataDir string) ([]ItemMoneyDropRule, error) {
 // LoadCustomGuard reads Data/Custom/CustomGuard.txt section 0: up to 100
 // monster classes that never drop (FUN_0044ef50 / FUN_0044f040).
 func LoadCustomGuard(dataDir string) ([]int, error) {
-	return monsterClassList(filepath.Join(dataDir, "Custom", "CustomGuard.txt"))
+	return monsterClassList(filepath.Join(dataDir, "Custom", "CustomGuard.json"))
 }
 
 // CustomMonsterRow is a full Data/Custom/CustomMonster.txt row (0x3c bytes,
@@ -339,7 +340,7 @@ type CustomMonsterRow struct {
 
 // LoadCustomMonsterRows reads Data/Custom/CustomMonster.txt.
 func LoadCustomMonsterRows(dataDir string) ([]CustomMonsterRow, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Custom", "CustomMonster.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Custom", "CustomMonster.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -469,7 +470,7 @@ func LoadItemBag(path string) (*ItemBag, error) {
 // LoadEventItemBags reads Data/EventItemBagManager.txt and every bag it
 // names (EventItemBag\<path>.txt, FUN_00491220).
 func LoadEventItemBags(dataDir string) ([]BagEntry, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "EventItemBagManager.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "EventItemBagManager.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -481,7 +482,7 @@ func LoadEventItemBags(dataDir string) ([]BagEntry, error) {
 		v := numRow(l.Tokens, 0, 6)
 		e := BagEntry{ItemIndex: v[0], ItemLevel: v[1], MonsterClass: v[2], SpecialValue: v[3],
 			SpecialLevel: v[4], SpecialState: v[5], Path: l.Tokens[6]}
-		p := filepath.Join(append([]string{dataDir, "EventItemBag"}, strings.Split(e.Path+".txt", "\\")...)...)
+		p := filepath.Join(append([]string{dataDir, "EventItemBag"}, strings.Split(e.Path+".json", "\\")...)...)
 		if e.Bag, err = LoadItemBag(p); err != nil {
 			return nil, err
 		}

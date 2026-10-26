@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 )
@@ -44,7 +45,7 @@ func parseItemRef(s string) (int, error) {
 
 func loadCustomTables(dataDir string) (customTables, error) {
 	t := customTables{wings: map[int]int{}, pets: map[int]bool{}}
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Custom", "CustomWing.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Custom", "CustomWing.json"))
 	if err != nil {
 		return t, err
 	}
@@ -61,7 +62,7 @@ func loadCustomTables(dataDir string) (customTables, error) {
 			t.wings[idx] = slot
 		}
 	}
-	lines, err = mutext.LoadFile(filepath.Join(dataDir, "Custom", "CustomPet.txt"))
+	lines, err = jsonconf.LoadLines(filepath.Join(dataDir, "Custom", "CustomPet.json"))
 	if err != nil {
 		return t, err
 	}

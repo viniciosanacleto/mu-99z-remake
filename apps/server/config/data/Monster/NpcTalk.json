@@ -1,0 +1,10 @@
+{
+  "encoding": "windows-1252",
+  "rows": [
+    {"NPCIndex": 247, "Map": 0, "CordX": 130, "CordY": 126, "Message": "Se for Forte o Suficiente, sua habilidade será restaurada"},
+    {"NPCIndex": 249, "Map": 0, "CordX": 130, "CordY": 128, "Message": "Sua Honra foi será Restaurada!"},
+    {"NPCIndex": 247, "Map": "*", "CordX": "*", "CordY": "*", "Message": "Bem Vindo ao Servidor"},
+    {"NPCIndex": 249, "Map": "*", "CordX": "*", "CordY": "*", "Message": "Ajude a Salvar nosso Continente"},
+    {"NPCIndex": 240, "Map": "*", "CordX": "*", "CordY": "*", "Message": "Seus Items estarão seguros!"}
+  ]
+}

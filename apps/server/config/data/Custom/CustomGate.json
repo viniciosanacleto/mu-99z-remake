@@ -1,0 +1,10 @@
+{
+  "rows": [
+    {"GateIndex": 1, "MapStart": 7, "RangeStartX": 233, "RangeStartY": 209, "MapEnd": 25, "RangeEndX": "010", "RangeEndY": 116, "MinLevel": "*", "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AccountLevel": 0},
+    {"GateIndex": 2, "MapStart": 7, "RangeStartX": 228, "RangeStartY": 209, "MapEnd": 26, "RangeEndX": "010", "RangeEndY": 116, "MinLevel": "*", "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AccountLevel": 0},
+    {"GateIndex": 3, "MapStart": 7, "RangeStartX": 222, "RangeStartY": 205, "MapEnd": 27, "RangeEndX": "010", "RangeEndY": 116, "MinLevel": "*", "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AccountLevel": 0},
+    {"GateIndex": 4, "MapStart": 7, "RangeStartX": 215, "RangeStartY": 200, "MapEnd": 28, "RangeEndX": "010", "RangeEndY": 116, "MinLevel": "*", "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AccountLevel": 0},
+    {"GateIndex": 5, "MapStart": 7, "RangeStartX": 204, "RangeStartY": 195, "MapEnd": 29, "RangeEndX": "010", "RangeEndY": 116, "MinLevel": "*", "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AccountLevel": 0},
+    {"GateIndex": 6, "MapStart": 57, "RangeStartX": 171, "RangeStartY": "024", "MapEnd": 58, "RangeEndX": 140, "RangeEndY": 126, "MinLevel": "*", "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AccountLevel": 0}
+  ]
+}

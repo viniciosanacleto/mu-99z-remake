@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
@@ -26,7 +27,7 @@ type ClassInfo struct {
 
 // LoadClassInfo reads Data/Character/DefaultClassInfo.txt.
 func LoadClassInfo(dataDir string) (map[int]ClassInfo, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Character", "DefaultClassInfo.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Character", "DefaultClassInfo.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +83,7 @@ func (r ItemOptionRule) Matches(index, skill, luck, option int, excellent byte) 
 
 // LoadItemOptions reads Data/Item/ItemOption.txt grouped by option slot.
 func LoadItemOptions(dataDir string) (map[int][]ItemOptionRule, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "ItemOption.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Item", "ItemOption.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +127,7 @@ type WingOption struct {
 
 // LoadWingOptions reads Data/Item/WingOption.txt.
 func LoadWingOptions(dataDir string) (map[int]WingOption, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "WingOption.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Item", "WingOption.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +168,7 @@ type CustomWing struct {
 
 // LoadCustomWings reads Data/Custom/CustomWing.txt keyed by item index.
 func LoadCustomWings(dataDir string) (map[int]CustomWing, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Custom", "CustomWing.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Custom", "CustomWing.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +225,7 @@ type CustomAttribute struct {
 
 // LoadCustomAttributes reads Data/Custom/CustomAttribute.txt.
 func LoadCustomAttributes(dataDir string) (map[int]CustomAttribute, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Custom", "CustomAttribute.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Custom", "CustomAttribute.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +261,7 @@ type CustomMonster struct {
 
 // LoadCustomMonsters reads Data/Custom/CustomMonster.txt in file order.
 func LoadCustomMonsters(dataDir string) ([]CustomMonster, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Custom", "CustomMonster.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Custom", "CustomMonster.json"))
 	if err != nil {
 		return nil, err
 	}

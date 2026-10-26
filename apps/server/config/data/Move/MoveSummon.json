@@ -1,0 +1,16 @@
+{
+  "rows": [
+    {"MapNumber": 0, "RangeStartX": 1, "RangeStartY": 1, "RangeEndX": 255, "RangeEndY": 255, "MinLevel": 1, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1},
+    {"MapNumber": 1, "RangeStartX": 1, "RangeStartY": 1, "RangeEndX": 255, "RangeEndY": 255, "MinLevel": 1, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1},
+    {"MapNumber": 2, "RangeStartX": 1, "RangeStartY": 1, "RangeEndX": 255, "RangeEndY": 255, "MinLevel": 1, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1},
+    {"MapNumber": 3, "RangeStartX": 1, "RangeStartY": 1, "RangeEndX": 255, "RangeEndY": 255, "MinLevel": 1, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1},
+    {"MapNumber": 4, "RangeStartX": 1, "RangeStartY": 1, "RangeEndX": 255, "RangeEndY": 255, "MinLevel": 1, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1},
+    {"MapNumber": 6, "RangeStartX": 1, "RangeStartY": 1, "RangeEndX": 255, "RangeEndY": 255, "MinLevel": 1, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1},
+    {"MapNumber": 7, "RangeStartX": 1, "RangeStartY": 1, "RangeEndX": 255, "RangeEndY": 255, "MinLevel": 1, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1},
+    {"MapNumber": 8, "RangeStartX": 1, "RangeStartY": 1, "RangeEndX": 255, "RangeEndY": 255, "MinLevel": 1, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1},
+    {"MapNumber": 10, "RangeStartX": 1, "RangeStartY": 1, "RangeEndX": 255, "RangeEndY": 255, "MinLevel": 1, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1},
+    {"MapNumber": 30, "RangeStartX": 1, "RangeStartY": 1, "RangeEndX": 255, "RangeEndY": 255, "MinLevel": 1, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1},
+    {"MapNumber": 33, "RangeStartX": 1, "RangeStartY": 1, "RangeEndX": 255, "RangeEndY": 255, "MinLevel": 1, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1},
+    {"MapNumber": 34, "RangeStartX": 1, "RangeStartY": 1, "RangeEndX": 255, "RangeEndY": 255, "MinLevel": 1, "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1}
+  ]
+}

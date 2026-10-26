@@ -14,8 +14,8 @@ import (
 
 func TestRunServesConnectAndGame(t *testing.T) {
 	// The original BlackList.txt blocks 127.0.0.1, so use an empty one.
-	empty := filepath.Join(t.TempDir(), "BlackList.txt")
-	if err := os.WriteFile(empty, []byte("end\n"), 0o644); err != nil {
+	empty := filepath.Join(t.TempDir(), "BlackList.json")
+	if err := os.WriteFile(empty, []byte(`{"rows": []}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -23,7 +23,7 @@ func TestRunServesConnectAndGame(t *testing.T) {
 	done := make(chan error, 1)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	go func() {
-		done <- run(ctx, []string{"-data", "../../data", "-connect-addr", "127.0.0.1:0",
+		done <- run(ctx, []string{"-config", "../../config", "-data", "../../data", "-connect-addr", "127.0.0.1:0",
 			"-bind", "127.0.0.1", "-blacklist", empty, "-instances", "4.GameServer"}, log, ready)
 	}()
 
@@ -67,17 +67,24 @@ func TestRunServesConnectAndGame(t *testing.T) {
 
 func TestAccountCommand(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	if err := run(context.Background(), []string{"-data", "../../data", "account", "create", "x", "y"}, log, nil); err != nil {
+	if err := run(context.Background(), []string{"-config", "../../config", "account", "create", "x", "y"}, log, nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := run(context.Background(), []string{"-data", "../../data", "bogus"}, log, nil); err == nil {
+	if err := run(context.Background(), []string{"-config", "../../config", "bogus"}, log, nil); err == nil {
 		t.Fatal("expected error")
 	}
 }
 
 func TestRunFailsWithoutData(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	if err := run(context.Background(), []string{"-data", t.TempDir()}, log, nil); err == nil {
-		t.Fatal("expected error")
+	if err := run(context.Background(), []string{"-config", t.TempDir()}, log, nil); err == nil {
+		t.Fatal("expected error without config")
+	}
+	if err := run(context.Background(), []string{"-config", "../../config", "-data", t.TempDir(),
+		"-connect-addr", "127.0.0.1:0", "-bind", "127.0.0.1"}, log, nil); err == nil {
+		t.Fatal("expected error without the original data files")
+	}
+	if err := run(context.Background(), []string{"-config", "../../config", "-blacklist", "missing.json"}, log, nil); err == nil {
+		t.Fatal("expected error for a missing blacklist")
 	}
 }

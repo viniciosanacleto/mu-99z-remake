@@ -1,0 +1,12 @@
+{
+  "rows": [
+    {"ItemIndex": "12,000", "DefenseConstA": 3, "IncDamageConstA": 112, "IncDamageConstB": 2, "DecDamageConstA": 88, "DecDamageConstB": 2, "MaxNewOption": 0},
+    {"ItemIndex": "12,001", "DefenseConstA": 3, "IncDamageConstA": 112, "IncDamageConstB": 2, "DecDamageConstA": 88, "DecDamageConstB": 2, "MaxNewOption": 0},
+    {"ItemIndex": "12,002", "DefenseConstA": 3, "IncDamageConstA": 112, "IncDamageConstB": 2, "DecDamageConstA": 88, "DecDamageConstB": 2, "MaxNewOption": 0},
+    {"ItemIndex": "12,003", "DefenseConstA": 2, "IncDamageConstA": 132, "IncDamageConstB": 1, "DecDamageConstA": 75, "DecDamageConstB": 2, "MaxNewOption": 3},
+    {"ItemIndex": "12,004", "DefenseConstA": 2, "IncDamageConstA": 132, "IncDamageConstB": 1, "DecDamageConstA": 75, "DecDamageConstB": 2, "MaxNewOption": 3},
+    {"ItemIndex": "12,005", "DefenseConstA": 2, "IncDamageConstA": 132, "IncDamageConstB": 1, "DecDamageConstA": 75, "DecDamageConstB": 2, "MaxNewOption": 3},
+    {"ItemIndex": "12,006", "DefenseConstA": 2, "IncDamageConstA": 132, "IncDamageConstB": 1, "DecDamageConstA": 75, "DecDamageConstB": 2, "MaxNewOption": 3},
+    {"ItemIndex": "13,030", "DefenseConstA": 3, "IncDamageConstA": 120, "IncDamageConstB": 2, "DecDamageConstA": 90, "DecDamageConstB": 1, "MaxNewOption": 4}
+  ]
+}

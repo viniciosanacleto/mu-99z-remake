@@ -1,0 +1,12 @@
+{
+  "rows": [
+    {"Class": 1, "SkillIndex": 19, "Stage": 0, "Delay": 3000},
+    {"Class": 1, "SkillIndex": 20, "Stage": 0, "Delay": 3000},
+    {"Class": 1, "SkillIndex": 21, "Stage": 0, "Delay": 3000},
+    {"Class": 1, "SkillIndex": 22, "Stage": 0, "Delay": 3000},
+    {"Class": 1, "SkillIndex": 23, "Stage": 0, "Delay": 3000},
+    {"Class": 1, "SkillIndex": 41, "Stage": 1, "Delay": 3000},
+    {"Class": 1, "SkillIndex": 42, "Stage": 1, "Delay": 3000},
+    {"Class": 1, "SkillIndex": 43, "Stage": 1, "Delay": 3000}
+  ]
+}

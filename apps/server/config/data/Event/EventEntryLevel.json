@@ -1,0 +1,38 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"Index": 0, "CommonMinLevel": 15, "CommonMaxLevel": 80, "SpecialMinLevel": 10, "SpecialMaxLevel": 60},
+      {"Index": 1, "CommonMinLevel": 81, "CommonMaxLevel": 130, "SpecialMinLevel": 61, "SpecialMaxLevel": 110},
+      {"Index": 2, "CommonMinLevel": 131, "CommonMaxLevel": 180, "SpecialMinLevel": 111, "SpecialMaxLevel": 160},
+      {"Index": 3, "CommonMinLevel": 181, "CommonMaxLevel": 230, "SpecialMinLevel": 161, "SpecialMaxLevel": 210},
+      {"Index": 4, "CommonMinLevel": 231, "CommonMaxLevel": 280, "SpecialMinLevel": 211, "SpecialMaxLevel": 260},
+      {"Index": 5, "CommonMinLevel": 281, "CommonMaxLevel": 330, "SpecialMinLevel": 261, "SpecialMaxLevel": 310},
+      {"Index": 6, "CommonMinLevel": 331, "CommonMaxLevel": "*", "SpecialMinLevel": 311, "SpecialMaxLevel": "*"}
+    ]},
+    {"index": 1, "rows": [
+      {"Index": 0, "CommonMinLevel": 15, "CommonMaxLevel": 130, "SpecialMinLevel": 15, "SpecialMaxLevel": 110},
+      {"Index": 1, "CommonMinLevel": 131, "CommonMaxLevel": 180, "SpecialMinLevel": 111, "SpecialMaxLevel": 160},
+      {"Index": 2, "CommonMinLevel": 181, "CommonMaxLevel": 230, "SpecialMinLevel": 161, "SpecialMaxLevel": 210},
+      {"Index": 3, "CommonMinLevel": 231, "CommonMaxLevel": 280, "SpecialMinLevel": 211, "SpecialMaxLevel": 260},
+      {"Index": 4, "CommonMinLevel": 281, "CommonMaxLevel": 330, "SpecialMinLevel": 261, "SpecialMaxLevel": 310},
+      {"Index": 5, "CommonMinLevel": 331, "CommonMaxLevel": "*", "SpecialMinLevel": 311, "SpecialMaxLevel": "*"}
+    ]},
+    {"index": 2, "rows": [
+      {"Index": 0, "CommonMinLevel": 15, "CommonMaxLevel": 49, "SpecialMinLevel": 15, "SpecialMaxLevel": 29},
+      {"Index": 1, "CommonMinLevel": 50, "CommonMaxLevel": 119, "SpecialMinLevel": 30, "SpecialMaxLevel": 99},
+      {"Index": 2, "CommonMinLevel": 120, "CommonMaxLevel": 179, "SpecialMinLevel": 100, "SpecialMaxLevel": 159},
+      {"Index": 3, "CommonMinLevel": 180, "CommonMaxLevel": 239, "SpecialMinLevel": 160, "SpecialMaxLevel": 219},
+      {"Index": 4, "CommonMinLevel": 240, "CommonMaxLevel": 299, "SpecialMinLevel": 220, "SpecialMaxLevel": 279},
+      {"Index": 5, "CommonMinLevel": 300, "CommonMaxLevel": "*", "SpecialMinLevel": 280, "SpecialMaxLevel": "*"}
+    ]},
+    {"index": 3, "rows": [
+      {"Index": 0, "CommonMinLevel": 40, "CommonMaxLevel": "*", "SpecialMinLevel": 20, "SpecialMaxLevel": "*"},
+      {"Index": 1, "CommonMinLevel": 131, "CommonMaxLevel": "*", "SpecialMinLevel": 111, "SpecialMaxLevel": "*"},
+      {"Index": 2, "CommonMinLevel": 181, "CommonMaxLevel": "*", "SpecialMinLevel": 161, "SpecialMaxLevel": "*"},
+      {"Index": 3, "CommonMinLevel": 231, "CommonMaxLevel": "*", "SpecialMinLevel": 211, "SpecialMaxLevel": "*"},
+      {"Index": 4, "CommonMinLevel": 281, "CommonMaxLevel": "*", "SpecialMinLevel": 261, "SpecialMaxLevel": "*"},
+      {"Index": 5, "CommonMinLevel": 331, "CommonMaxLevel": "*", "SpecialMinLevel": 311, "SpecialMaxLevel": "*"},
+      {"Index": 6, "CommonMinLevel": 350, "CommonMaxLevel": "*", "SpecialMinLevel": 350, "SpecialMaxLevel": "*"}
+    ]}
+  ]
+}

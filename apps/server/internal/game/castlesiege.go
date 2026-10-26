@@ -16,9 +16,6 @@ package game
 
 import (
 	"context"
-	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
@@ -233,36 +230,20 @@ func (w *World) csLoad() error {
 func dateKey(t time.Time) int { y, m, d := t.Date(); return y*10000 + int(m)*100 + d }
 
 // csResetEventKeys is the WritePrivateProfileStringA("...", "0") block
-// of FUN_0041ab60.
+// of FUN_0041ab60, on the Event section of the instance file.
 func (w *World) csResetEventKeys() {
-	if w.cfg.Dir == "" {
+	if w.cfg.Path == "" {
 		return
 	}
-	path := filepath.Join(w.cfg.Dir, "GameServerInfo - Event.dat")
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return
-	}
-	keys := []string{"CastleSiegeCycleStartYear", "CastleSiegeCycleStartMonth", "CastleSiegeCycleStartDay",
+	keys := map[string]string{}
+	for _, k := range []string{"CastleSiegeCycleStartYear", "CastleSiegeCycleStartMonth", "CastleSiegeCycleStartDay",
 		"CastleSiegeSpecificState", "CastleSiegeStateStartYear", "CastleSiegeStateStartMonth",
-		"CastleSiegeStateStartDay", "CastleSiegeStateStartHour", "CastleSiegeStateStartMinute"}
-	lines := strings.Split(string(b), "\n")
-	for i, l := range lines {
-		k, _, ok := strings.Cut(l, "=")
-		if !ok {
-			continue
-		}
-		for _, key := range keys {
-			if strings.EqualFold(strings.TrimSpace(k), key) {
-				cr := strings.HasSuffix(l, "\r")
-				lines[i] = key + "=0"
-				if cr {
-					lines[i] += "\r"
-				}
-			}
-		}
+		"CastleSiegeStateStartDay", "CastleSiegeStateStartHour", "CastleSiegeStateStartMinute"} {
+		keys[k] = "0"
 	}
-	os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0o644)
+	if err := w.cfg.WriteKeys("Event", keys); err != nil {
+		w.log.Warn("castle siege: event keys not reset", "err", err)
+	}
 }
 
 func (w *World) csStore() store.CastleStore {

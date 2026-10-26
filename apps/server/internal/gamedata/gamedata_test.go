@@ -1,18 +1,60 @@
 package gamedata
 
 import (
+	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
+
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 )
 
+// dataDir is config/data, the JSON tables converted from MuServer/Data.
 func dataDir() string {
+	_, file, _, _ := runtime.Caller(0)
+	return filepath.Join(filepath.Dir(file), "..", "..", "config", "data")
+}
+
+// assetDir is data/Data, the files kept in their original format.
+func assetDir() string {
 	_, file, _, _ := runtime.Caller(0)
 	return filepath.Join(filepath.Dir(file), "..", "..", "data", "Data")
 }
 
+// putOriginal writes a fixture given in the original text format as the
+// JSON file the loaders read (path with ".json"), converted like
+// cmd/configconv does. Text that does not convert (a broken fixture) is
+// written as is, so the loader fails on it.
+func putOriginal(t *testing.T, path, text string) {
+	t.Helper()
+	slash := filepath.ToSlash(path)
+	rel := slash
+	if i := strings.LastIndex(slash, "/Custom/"); i >= 0 {
+		rel = slash[i+1:]
+	}
+	var out []byte
+	if jsonconf.IsINI([]byte(text)) {
+		if s, err := jsonconf.SettingsFromINI([]byte(text)); err == nil {
+			out, _ = s.MarshalJSON()
+		}
+	} else if tb, err := jsonconf.TableFromText([]byte(text), jsonconf.TokenizerFor(rel), jsonconf.Hints{}); err == nil {
+		out, _ = tb.MarshalJSON()
+	}
+	if out == nil {
+		out = []byte(text)
+	}
+	dst := strings.TrimSuffix(path, filepath.Ext(path)) + ".json"
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(dst, out, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestLoadTerrains(t *testing.T) {
-	ts, err := LoadTerrains(dataDir())
+	ts, err := LoadTerrains(assetDir())
 	if err != nil {
 		t.Fatal(err)
 	}

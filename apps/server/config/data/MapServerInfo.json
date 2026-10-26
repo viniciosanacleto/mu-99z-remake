@@ -1,0 +1,16 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"ServerCode": 0, "ServerGroup": 0, "InitSetVal": 1, "IpAddress": "192.168.1.1", "Port": 55900},
+      {"ServerCode": 19, "ServerGroup": 0, "InitSetVal": 0, "IpAddress": "192.168.1.1", "Port": 55919}
+    ]},
+    {"index": 1, "rows": [
+      {"ServerCode": 0, "MoveOption": 0, "NextMap": 30, "NextServerCode": 19},
+      {"ServerCode": 0, "MoveOption": 0, "NextMap": 31, "NextServerCode": 19},
+      {"ServerCode": 0, "MoveOption": 0, "NextMap": 34, "NextServerCode": 19},
+      {"ServerCode": 19, "MoveOption": 1, "NextMap": 30, "NextServerCode": "*"},
+      {"ServerCode": 19, "MoveOption": 1, "NextMap": 31, "NextServerCode": "*"},
+      {"ServerCode": 19, "MoveOption": 1, "NextMap": 34, "NextServerCode": "*"}
+    ]}
+  ]
+}

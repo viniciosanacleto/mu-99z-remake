@@ -47,8 +47,8 @@ go run ./cmd/muproxy -kind game -listen 127.0.0.1:55900 -upstream 192.168.1.1:55
 | `-listen` | `127.0.0.1:44405` | endereço onde o cliente conecta |
 | `-upstream` | (obrigatório) | servidor real |
 | `-kind` | `connect` | `connect` ou `game` |
-| `-data` | `data` | raiz dos dados do servidor |
-| `-gs-data` | `<data>/4.GameServer/DATA` | `Common.dat` (chave de fluxo) |
+| `-data` | `data` | raiz dos arquivos do servidor no formato original |
+| `-gs-config` | `config/gameservers/4.GameServer.json` | `CustomerName`/`ServerSerial` da instância (chave de fluxo) |
 | `-server-keys` | `<data>/Data/Hack` | `Enc2.dat`, `Dec1.dat` |
 | `-client-keys` | `../client/assets/Data` | `Enc1.dat`, `Dec2.dat` |
 | `-log` | `-` (stdout) | arquivo de log (append) |
@@ -62,7 +62,7 @@ Para o cliente original passar pelo proxy:
 2. Com `-rewrite`, o `-rewrite-host` precisa ser alcançável pelo cliente, por exemplo o IP do Mac na LAN quando o cliente roda numa VM Windows.
 3. Sem `-rewrite`, o cliente conecta direto no GameServer da lista. Nesse caso rode um segundo proxy `-kind game` e faça o endereço da lista apontar para ele.
 
-O `BlackList.txt` original do ConnectServer bloqueia `127.0.0.1`. Com o `muserver` local, use `-blacklist` sem entradas (veja `13-progresso.md`).
+O `BlackList.txt` original do ConnectServer (membro `BlackList` de `config/server.json`) bloqueia `127.0.0.1`. Com o `muserver` local, use `-blacklist` com uma tabela vazia, `{"rows": []}` (veja `13-progresso.md`).
 
 ## Vetores golden
 

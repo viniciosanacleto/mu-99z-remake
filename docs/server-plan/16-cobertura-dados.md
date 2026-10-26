@@ -1,6 +1,6 @@
 # 16 — Cobertura dos arquivos de dados
 
-Quais arquivos de `MuServer/Data/**`, `4.GameServer/DATA/*` e `5.GameServerCS/DATA/*` o servidor original lê, e qual loader Go faz o parse de cada um. O teste `TestDataFileCoverage` (`apps/server/internal/game/datacoverage_test.go`) percorre `apps/server/data/Data` e as pastas `DATA` das duas instâncias. Cada arquivo encontrado cai em um de três casos:
+Quais arquivos de `MuServer/Data/**`, `4.GameServer/DATA/*` e `5.GameServerCS/DATA/*` o servidor original lê, e qual loader Go faz o parse de cada um. O teste `TestDataFileCoverage` (`apps/server/internal/game/datacoverage_test.go`) percorre `apps/server/config/` (os arquivos de `Data/`, das pastas `DATA` das instâncias e dos processos convertidos para JSON, [11](11-arquivos-de-configuracao.md) seção 0) e `apps/server/data/Data` (os arquivos mantidos no formato original). As entradas do teste usam os caminhos novos (`config/data/Item/Item.json`, `config/gameservers/4.GameServer.json`, `data/Data/Terrain/Terrain1.att`); nesta página os nomes são os originais. Cada arquivo encontrado cai em um de três casos:
 
 - **carregado**: o original lê o arquivo e o loader Go listado roda sem erro sobre ele;
 - **pendente**: o original lê, mas ainda não existe parser Go (nenhum arquivo hoje);
@@ -43,14 +43,16 @@ O CastleSiege.exe lê o mesmo conjunto que o GameServer.exe, com estas diferenç
 
 `Item\Item_{Eng,Por,Spn}.bmd` (`0x4ec8d0`) só é tratado pelo comando de menu `0x801c`, nunca na partida. Os arquivos não existem na instalação, e o uso que `FUN_004940b0` faz deles (ler ou gerar) não foi verificado.
 
-## Números (árvore `apps/server/data`, 296 arquivos)
+## Números (`apps/server/config` + `apps/server/data/Data`, 279 arquivos)
 
 | Situação | Arquivos |
 |---|---|
-| Lidos pelo original e carregados em Go | 274 (inclui os 5 scripts Lua: `ScriptMain.lua`, `System/ScriptCore.lua`, `Script/WelcomeMessage.lua`, `Script/CustomWindowName.lua`, `Character/CalcCharacter.lua`) |
+| Lidos pelo original e carregados em Go | 261 (inclui `server.json`, os dois arquivos de instância e os 5 scripts Lua: `ScriptMain.lua`, `System/ScriptCore.lua`, `Script/WelcomeMessage.lua`, `Script/CustomWindowName.lua`, `Character/CalcCharacter.lua`) |
 | Lidos pelo original, sem parser Go (pendentes) | 0 |
-| Nunca lidos (ignorados) | 22 |
+| Nunca lidos (ignorados) | 18 |
 | Lido pelo original, mas ausente na instalação | 1 (`Custom/CustomPatente.txt`; `LoadCustomPatente` aceita a ausência) |
+
+Antes da conversão para JSON eram 296 arquivos (274 carregados, 22 ignorados): os 16 `GameServerInfo - *.dat` viraram 2 arquivos de instância, os arquivos dos processos viraram `server.json`, e as 4 notas do administrador (`Item/test_item.txt`, `Monster/BALANCE_CHANGELOG.txt`, `Shop/_ALTERACOES.txt`, `EventItemBag/AJUSTE_JOIAS_20_PORCENTO.txt`) saíram do repositório.
 
 Na pasta original existem 346 arquivos. Os 50 que não foram copiados são todos não lidos:
 
@@ -60,17 +62,16 @@ Na pasta original existem 346 arquivos. Os 50 que não foram copiados são todos
 - `Data/Item/BMD_Tool.exe`;
 - os `.bmp` gerados pelo XShopRecharge (`RecargaPix.bmp`, `pixA274.tmp.bmp`, `pixqr/25.bmp`).
 
-Nenhum arquivo lido pelo original estava faltando em `apps/server/data`, então esta etapa não precisou copiar dados.
+Nenhum arquivo lido pelo original estava faltando na cópia do repositório, então esta etapa não precisou copiar dados.
 
 ### Ignorados (motivo no teste)
 
-- `Common/Protect/{Encrypt,Decrypt}.dat`, `Custom/CustomMix.txt`, `Item/test_item.txt`: nenhum executável de servidor referencia esses arquivos.
+- `Common/Protect/{Encrypt,Decrypt}.dat`, `Custom/CustomMix.txt`: nenhum executável de servidor referencia esses arquivos (`Item/test_item.txt` também não; saiu do repositório).
 - `Custom/Crywolf.dat`, `Event/Crywolf.dat`, `Event/Kanturu.dat`, `Event/IllusionTemple.dat`: sistemas ausentes. `CIllusionTemple` existe, mas não carrega arquivo.
 - `Custom/CustomDailyReward.txt`: o original lê `Custom\DailyReward.txt`.
 - `Custom/pixFE31.tmp.bmp`: saída de `GetTempFileName("pix")` do XShopRecharge.
-- `Monster/BALANCE_CHANGELOG.txt`, `Shop/_ALTERACOES.txt`: documentação.
 - `Shop/239 - Arena Guard.txt`: o `ShopManager.txt` não cita esse arquivo.
-- `EventItemBag/AJUSTE_JOIAS_20_PORCENTO.txt` e `Special/{HideAndSeek,Loteria,MataMata,Quiz,Roleta}.txt`: o `EventItemBagManager.txt` não cita esses arquivos.
+- `EventItemBag/Special/{HideAndSeek,Loteria,MataMata,Quiz,Roleta}.txt`: o `EventItemBagManager.txt` não cita esses arquivos.
 - `Script/Script/TemplateScript.lua`, `CustomMonsterDie(Boss).lua` (o `require` está comentado) e `CustomMonsterDie(Boss) - Copia.lua`.
 
 ## Parsers novos (`internal/gamedata/datafiles.go`)

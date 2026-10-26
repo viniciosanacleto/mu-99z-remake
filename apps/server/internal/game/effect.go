@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -118,7 +119,7 @@ func effOpt(o *Object) effectOptions {
 
 // loadEffectList reads Data/Skill/EffectList.txt (FUN_004786c0).
 func loadEffectList(dataDir string) (map[int]effectInfo, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Skill", "EffectList.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Skill", "EffectList.json"))
 	if err != nil {
 		return nil, err
 	}

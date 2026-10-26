@@ -1,0 +1,8 @@
+{
+  "rows": [
+    {"MonsterIndex": 293, "MapNumber": 10, "MaxLife": 300, "DamageMin": 240, "DamageMax": 250, "Defense": 300, "AttackRate": 150, "DefenseRate": 125, "ExperienceRate": 100, "KillMessage": -1, "SpecialBag": -1},
+    {"MonsterIndex": 274, "MapNumber": 10, "MaxLife": 300, "DamageMin": 250, "DamageMax": 250, "Defense": 300, "AttackRate": 150, "DefenseRate": 125, "ExperienceRate": 100, "KillMessage": -1, "SpecialBag": -1},
+    {"MonsterIndex": 275, "MapNumber": 10, "MaxLife": 300, "DamageMin": 250, "DamageMax": 250, "Defense": 300, "AttackRate": 150, "DefenseRate": 125, "ExperienceRate": 100, "KillMessage": -1, "SpecialBag": -1},
+    {"MonsterIndex": 338, "MapNumber": 10, "MaxLife": 300, "DamageMin": 250, "DamageMax": 250, "Defense": 300, "AttackRate": 150, "DefenseRate": 125, "ExperienceRate": 100, "KillMessage": -1, "SpecialBag": -1}
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"MonsterIndex": 233, "SpawnRadius": 0, "LocationX": 209, "LocationY": 30, "Direction": 1},
+      {"MonsterIndex": 235, "SpawnRadius": 0, "LocationX": 183, "LocationY": 32, "Direction": 3},
+      {"MonsterIndex": 240, "SpawnRadius": 0, "LocationX": 218, "LocationY": 63, "Direction": 2},
+      {"MonsterIndex": 241, "SpawnRadius": 0, "LocationX": 215, "LocationY": 45, "Direction": 1},
+      {"MonsterIndex": 247, "SpawnRadius": 20, "LocationX": 224, "LocationY": 79, "Direction": 5},
+      {"MonsterIndex": 247, "SpawnRadius": 20, "LocationX": 219, "LocationY": 79, "Direction": 5},
+      {"MonsterIndex": 247, "SpawnRadius": 20, "LocationX": 169, "LocationY": 45, "Direction": 7},
+      {"MonsterIndex": 247, "SpawnRadius": 20, "LocationX": 169, "LocationY": 39, "Direction": 7},
+      {"MonsterIndex": 257, "SpawnRadius": 0, "LocationX": 219, "LocationY": 73, "Direction": 3},
+      {"MonsterIndex": 257, "SpawnRadius": 0, "LocationX": 172, "LocationY": 44, "Direction": 1},
+      {"MonsterIndex": 236, "SpawnRadius": 0, "LocationX": 226, "LocationY": "066", "Direction": 2},
+      {"MonsterIndex": 256, "SpawnRadius": 0, "LocationX": 192, "LocationY": 16, "Direction": 3}
+    ]},
+    {"index": 1, "rows": []},
+    {"index": 2, "rows": []},
+    {"index": 3, "rows": [
+      {"Monster": "042", "Range": 30, "BeginPosX": "010", "BeginPosY": "010", "EndPosX": 240, "EndPosY": 240, "Direction": -1, "Quantity": "01", "Comment": 0},
+      {"Monster": "053", "Range": 30, "BeginPosX": "010", "BeginPosY": "010", "EndPosX": 240, "EndPosY": 240, "Direction": -1, "Quantity": "05", "Comment": 0},
+      {"Monster": "054", "Range": 30, "BeginPosX": "010", "BeginPosY": "010", "EndPosX": 240, "EndPosY": 240, "Direction": -1, "Quantity": "05", "Comment": 0},
+      {"Monster": "079", "Range": 30, "BeginPosX": "010", "BeginPosY": "010", "EndPosX": 240, "EndPosY": 240, "Direction": -1, "Quantity": "01", "Comment": 0},
+      {"Monster": "025", "Range": 30, "BeginPosX": "010", "BeginPosY": "010", "EndPosX": 240, "EndPosY": 240, "Direction": -1, "Quantity": "01", "Comment": 0}
+    ]},
+    {"index": 1, "rows": [
+      {"Monster": 24, "Radius": 5, "X": 219, "Y": 81, "TX": 228, "TY": 90, "Dir": -1, "Count": 8},
+      {"Monster": 19, "Radius": 5, "X": 236, "Y": 83, "TX": 245, "TY": 92, "Dir": -1, "Count": 8},
+      {"Monster": 23, "Radius": 5, "X": 159, "Y": 37, "TX": 168, "TY": 46, "Dir": -1, "Count": 8},
+      {"Monster": 22, "Radius": 5, "X": 33, "Y": 21, "TX": 42, "TY": 30, "Dir": -1, "Count": 8},
+      {"Monster": 21, "Radius": 5, "X": 32, "Y": 8, "TX": 41, "TY": 17, "Dir": -1, "Count": 8},
+      {"Monster": 21, "Radius": 5, "X": 32, "Y": 35, "TX": 41, "TY": 44, "Dir": -1, "Count": 8},
+      {"Monster": 20, "Radius": 5, "X": 213, "Y": 211, "TX": 222, "TY": 220, "Dir": -1, "Count": 8},
+      {"Monster": 20, "Radius": 5, "X": 235, "Y": 212, "TX": 244, "TY": 221, "Dir": -1, "Count": 8},
+      {"Monster": 20, "Radius": 5, "X": 208, "Y": 225, "TX": 217, "TY": 234, "Dir": -1, "Count": 8},
+      {"Monster": 20, "Radius": 5, "X": 235, "Y": 231, "TX": 244, "TY": 240, "Dir": -1, "Count": 8},
+      {"Monster": 21, "Radius": 5, "X": 229, "Y": 213, "TX": 238, "TY": 222, "Dir": -1, "Count": 8},
+      {"Monster": 21, "Radius": 5, "X": 218, "Y": 211, "TX": 227, "TY": 220, "Dir": -1, "Count": 8},
+      {"Monster": 22, "Radius": 5, "X": 223, "Y": 211, "TX": 232, "TY": 220, "Dir": -1, "Count": 8},
+      {"Monster": 22, "Radius": 5, "X": 220, "Y": 211, "TX": 229, "TY": 220, "Dir": -1, "Count": 8},
+      {"Monster": 22, "Radius": 5, "X": 236, "Y": 221, "TX": 245, "TY": 230, "Dir": -1, "Count": 8},
+      {"Monster": 22, "Radius": 5, "X": 209, "Y": 217, "TX": 218, "TY": 226, "Dir": -1, "Count": 8}
+    ]}
+  ]
+}

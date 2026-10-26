@@ -1,0 +1,9 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"Monster": 304, "Name": "Witch Queen", "Type1": 0, "Unit1": 4, "Type2": 0, "Unit2": 1, "Type3": "*", "Unit3": "*", "Type4": "*", "Unit4": "*", "Type5": "*", "Unit5": "*", "Type6": "*", "Unit6": "*", "Type7": "*", "Unit7": "*", "Type8": "*", "Unit8": "*", "Type9": "*", "Unit9": "*", "Type10": "*", "Unit10": "*"},
+      {"Monster": 305, "Name": "Blue Golem", "Type1": 0, "Unit1": 5, "Type2": "*", "Unit2": "*", "Type3": "*", "Unit3": "*", "Type4": "*", "Unit4": "*", "Type5": "*", "Unit5": "*", "Type6": "*", "Unit6": "*", "Type7": "*", "Unit7": "*", "Type8": "*", "Unit8": "*", "Type9": "*", "Unit9": "*", "Type10": "*", "Unit10": "*"},
+      {"Monster": 309, "Name": "Hell Maine", "Type1": 0, "Unit1": 2, "Type2": 0, "Unit2": 3, "Type3": "*", "Unit3": "*", "Type4": "*", "Unit4": "*", "Type5": "*", "Unit5": "*", "Type6": "*", "Unit6": "*", "Type7": "*", "Unit7": "*", "Type8": "*", "Unit8": "*", "Type9": "*", "Unit9": "*", "Type10": "*", "Unit10": "*"}
+    ]}
+  ]
+}

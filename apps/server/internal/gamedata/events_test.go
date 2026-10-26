@@ -87,8 +87,8 @@ func TestLoadBonusManager(t *testing.T) {
 	}
 	dir := t.TempDir()
 	os.MkdirAll(filepath.Join(dir, "Event"), 0o755)
-	os.WriteFile(filepath.Join(dir, "Event", "BonusManager.dat"), []byte("0\n0 * * * * 20 0 0\nend\n1\n"+
-		"0 5 * 3600 \"Happy Hour\"\nend\n2\n0 0 50 60 70 80 *\n0 3 1000 1000 1000 1000 2\nend\n"), 0o644)
+	putOriginal(t, filepath.Join(dir, "Event", "BonusManager.dat"), "0\n0 * * * * 20 0 0\nend\n1\n"+
+		"0 5 * 3600 \"Happy Hour\"\nend\n2\n0 0 50 60 70 80 *\n0 3 1000 1000 1000 1000 2\nend\n")
 	ev, bonus, err = LoadBonusManager(dir)
 	if err != nil {
 		t.Fatal(err)
@@ -117,7 +117,7 @@ func TestLoadChaosCastle(t *testing.T) {
 	}
 	dir := t.TempDir()
 	os.MkdirAll(filepath.Join(dir, "Event"), 0o755)
-	os.WriteFile(filepath.Join(dir, "Event", "ChaosCastle.dat"), []byte("2\n6 1 1\n-1 2 2\n3 7 8\nend\n"), 0o644)
+	putOriginal(t, filepath.Join(dir, "Event", "ChaosCastle.dat"), "2\n6 1 1\n-1 2 2\n3 7 8\nend\n")
 	cc, err = LoadChaosCastle(dir)
 	if err != nil || cc.Experience[3] != [2]int{7, 8} || cc.Experience[0] != [2]int{} {
 		t.Fatalf("invalid levels: %v %v", err, cc)
@@ -130,8 +130,8 @@ func TestLoadDropEvent(t *testing.T) {
 	}
 	dir := t.TempDir()
 	os.MkdirAll(filepath.Join(dir, "Event"), 0o755)
-	os.WriteFile(filepath.Join(dir, "Event", "DropEvent.dat"), []byte("0\n0 * * * * 21 0 0\nend\n1\n"+
-		"0 * * 1800 \"Jewel Rain\"\nend\n2\n0 14,013 0 0 * * * * * * 0 2 * 10 * * 5000\nend\n"), 0o644)
+	putOriginal(t, filepath.Join(dir, "Event", "DropEvent.dat"), "0\n0 * * * * 21 0 0\nend\n1\n"+
+		"0 * * 1800 \"Jewel Rain\"\nend\n2\n0 14,013 0 0 * * * * * * 0 2 * 10 * * 5000\nend\n")
 	ev, items, err := LoadDropEvent(dir)
 	if err != nil {
 		t.Fatal(err)
@@ -177,11 +177,11 @@ func TestLoadCastleDeep(t *testing.T) {
 	// Unknown sections are skipped; short rows are an error.
 	dir := t.TempDir()
 	os.MkdirAll(filepath.Join(dir, "Event"), 0o755)
-	os.WriteFile(filepath.Join(dir, "Event", "CastleDeepEvent.dat"), []byte("7\n1 2 3\nend\n1\n1 100\nend\n"), 0o644)
+	putOriginal(t, filepath.Join(dir, "Event", "CastleDeepEvent.dat"), "7\n1 2 3\nend\n1\n1 100\nend\n")
 	if d, err := LoadCastleDeep(dir); err != nil || len(d.Groups) != 1 || len(d.Schedule) != 0 {
 		t.Fatalf("skip: %v %+v", err, d)
 	}
-	os.WriteFile(filepath.Join(dir, "Event", "CastleDeepEvent.dat"), []byte("3\n1 1 39 15 60\nend\n"), 0o644)
+	putOriginal(t, filepath.Join(dir, "Event", "CastleDeepEvent.dat"), "3\n1 1 39 15 60\nend\n")
 	if _, err := LoadCastleDeep(dir); err == nil {
 		t.Fatal("short row accepted")
 	}

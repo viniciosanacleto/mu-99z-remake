@@ -1,6 +1,6 @@
 # 10c — Eventos (observado no GameServer)
 
-Implementação: `apps/server/internal/game/event.go` (peças comuns) e um arquivo por evento. Dados em `apps/server/data/Data/Event/*.dat` (`internal/gamedata/events.go`).
+Implementação: `apps/server/internal/game/event.go` (peças comuns) e um arquivo por evento. Dados em `apps/server/config/data/Event/*.json` (originais `Data/Event/*.dat`) (`internal/gamedata/events.go`).
 
 ## Peças comuns
 

@@ -1,0 +1,30 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"MonsterIndex": 237, "SpawnRadius": 0, "LocationX": 171, "LocationY": 104, "Direction": 3},
+      {"MonsterIndex": 238, "SpawnRadius": 0, "LocationX": 180, "LocationY": 103, "Direction": 1},
+      {"MonsterIndex": 240, "SpawnRadius": 0, "LocationX": 172, "LocationY": 96, "Direction": 3},
+      {"MonsterIndex": 257, "SpawnRadius": 0, "LocationX": 166, "LocationY": 85, "Direction": 2},
+      {"MonsterIndex": 257, "SpawnRadius": 0, "LocationX": 201, "LocationY": 129, "Direction": 2},
+      {"MonsterIndex": 257, "SpawnRadius": 0, "LocationX": 167, "LocationY": 118, "Direction": 1},
+      {"MonsterIndex": 236, "SpawnRadius": 0, "LocationX": 189, "LocationY": 126, "Direction": 1},
+      {"MonsterIndex": 501, "SpawnRadius": 0, "LocationX": 167, "LocationY": 101, "Direction": 2}
+    ]},
+    {"index": 1, "rows": []},
+    {"index": 2, "rows": []},
+    {"index": 1, "rows": [
+      {"Monster": 26, "Radius": 5, "X": 153, "Y": 111, "TX": 162, "TY": 120, "Dir": -1, "Count": 8},
+      {"Monster": 28, "Radius": 5, "X": 159, "Y": 76, "TX": 168, "TY": 85, "Dir": -1, "Count": 8},
+      {"Monster": 27, "Radius": 5, "X": 162, "Y": 63, "TX": 171, "TY": 72, "Dir": -1, "Count": 8},
+      {"Monster": 32, "Radius": 5, "X": 203, "Y": 132, "TX": 212, "TY": 141, "Dir": -1, "Count": 8},
+      {"Monster": 26, "Radius": 5, "X": 1, "Y": 240, "TX": 9, "TY": 249, "Dir": -1, "Count": 8},
+      {"Monster": 27, "Radius": 5, "X": 2, "Y": 2, "TX": 11, "TY": 11, "Dir": -1, "Count": 8},
+      {"Monster": 28, "Radius": 5, "X": 132, "Y": 244, "TX": 141, "TY": 253, "Dir": -1, "Count": 8},
+      {"Monster": 32, "Radius": 5, "X": 32, "Y": 120, "TX": 41, "TY": 129, "Dir": -1, "Count": 8},
+      {"Monster": 26, "Radius": 5, "X": 238, "Y": 236, "TX": 247, "TY": 245, "Dir": -1, "Count": 8},
+      {"Monster": 27, "Radius": 5, "X": 240, "Y": 8, "TX": 249, "TY": 17, "Dir": -1, "Count": 8},
+      {"Monster": 28, "Radius": 5, "X": 96, "Y": 1, "TX": 105, "TY": 9, "Dir": -1, "Count": 8},
+      {"Monster": 32, "Radius": 5, "X": 68, "Y": 192, "TX": 77, "TY": 201, "Dir": -1, "Count": 8}
+    ]}
+  ]
+}

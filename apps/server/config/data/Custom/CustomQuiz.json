@@ -1,0 +1,27 @@
+{
+  "encoding": "windows-1252",
+  "sections": [
+    {"index": 0, "rows": [
+      {"Index": 0, "Year": "*", "Month": "*", "Day": "*", "DoW": "*", "Hour": 18, "Minute": 15, "Second": 0}
+    ]},
+    {"index": 1, "rows": [
+      {"Index": 0, "Name": "Quiz", "AlarmTime": 3, "EventTime": 3}
+    ]},
+    {"index": 2, "rows": [
+      {"ID": 0, "Money": 3, "Pergunta": "Em que ano foi lançado o jogo MuJogatina?", "Resposta": 2026},
+      {"ID": 1, "Money": 3, "Pergunta": "Quantas vogais tem no nome MuJogatina", "Resposta": 5},
+      {"ID": 2, "Money": 5, "Pergunta": "Nome MuReaper é hiato?", "Resposta": "Nao"},
+      {"ID": 3, "Money": 3, "Pergunta": "Um dos maiores cientistas do mundo?", "Resposta": "Albert Einstein"},
+      {"ID": 4, "Money": 1, "Pergunta": "Quantas vezes o Brasil foi campeão mundial(futebol)?", "Resposta": 5},
+      {"ID": 5, "Money": 2, "Pergunta": "Em que ano foi lançado o jogo Mu Online?", "Resposta": 2003},
+      {"ID": 6, "Money": 5, "Pergunta": "Qual a moeda oficial do Japao?", "Resposta": "Iene"},
+      {"ID": 7, "Money": 4, "Pergunta": "Qual o menor estado brasileiro", "Resposta": "Sergipe"},
+      {"ID": 8, "Money": 3, "Pergunta": "Quando um jogador é novato, qual nome lhe damos?", "Resposta": "Noob"},
+      {"ID": 9, "Money": 1, "Pergunta": "Quantos estados tem o Brasil?", "Resposta": 26},
+      {"ID": 10, "Money": 1, "Pergunta": "Em que continente fica localizada a Itália?", "Resposta": "Continente Europeu"},
+      {"ID": 11, "Money": 2, "Pergunta": "Qual o melhor Servidor de Mu Online ?", "Resposta": "MuJogatina"},
+      {"ID": 12, "Money": 1, "Pergunta": "300 + 300 = ?", "Resposta": 600},
+      {"ID": 13, "Money": 5, "Pergunta": "78 x 87 = ?", "Resposta": 6786}
+    ]}
+  ]
+}

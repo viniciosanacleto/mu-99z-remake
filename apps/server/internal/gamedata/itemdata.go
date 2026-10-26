@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
@@ -66,7 +67,7 @@ func (s *ItemStack) Max(index, level int) int {
 
 // LoadItemStack reads Data/Item/ItemStack.txt.
 func LoadItemStack(dataDir string) (*ItemStack, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "ItemStack.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Item", "ItemStack.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +116,7 @@ type ItemValueRule struct {
 
 // LoadItemValue reads Data/Item/ItemValue.txt.
 func LoadItemValue(dataDir string) ([]ItemValueRule, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "ItemValue.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Item", "ItemValue.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +148,7 @@ type ItemMoveRule struct {
 // LoadItemMove reads Data/Item/ItemMove.txt; items without a row are
 // allowed everywhere (FUN_004f42b0 lookup returning end()).
 func LoadItemMove(dataDir string) (map[int]ItemMoveRule, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "ItemMove.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Item", "ItemMove.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +181,7 @@ type ItemLootRule struct {
 
 // LoadItemLoot reads Data/Item/ItemLoot.txt.
 func LoadItemLoot(dataDir string) ([]ItemLootRule, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "ItemLoot.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Item", "ItemLoot.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +233,7 @@ type ShopInfo struct {
 // LoadShops reads Data/ShopManager.txt and every Data/Shop/<path>.txt it
 // names.
 func LoadShops(dataDir string) ([]ShopInfo, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "ShopManager.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "ShopManager.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +250,7 @@ func LoadShops(dataDir string) ([]ShopInfo, error) {
 		}
 		s := ShopInfo{Number: len(out), NPCClass: v[0], Map: v[1], X: v[2], Y: v[3], Dir: v[4],
 			AL: [4]bool{v[5] != 0, v[6] != 0, v[7] != 0, v[8] != 0}, GMLevel: v[9], Path: l.Tokens[10]}
-		if s.Items, err = loadShopItems(filepath.Join(dataDir, "Shop", s.Path+".txt")); err != nil {
+		if s.Items, err = loadShopItems(filepath.Join(dataDir, "Shop", s.Path+".json")); err != nil {
 			return nil, err
 		}
 		out = append(out, s)
@@ -260,7 +261,7 @@ func LoadShops(dataDir string) ([]ShopInfo, error) {
 // loadShopItems is FUN_004f4aa0: ItemIndex ItemLevel Durability
 // SkillSwitch LuckSwitch Aditional Excellent SetOption.
 func loadShopItems(path string) ([]ShopItem, error) {
-	lines, err := mutext.LoadFile(path)
+	lines, err := jsonconf.LoadLines(path)
 	if err != nil {
 		return nil, err
 	}

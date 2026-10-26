@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/auth"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
@@ -86,7 +87,7 @@ func loadCmdWorld(w *World) error {
 	if w.dataDir == "" {
 		return nil
 	}
-	rows, err := loadIntRows(filepath.Join(w.dataDir, "Util", "ResetTable.txt"), 14)
+	rows, err := loadIntRows(filepath.Join(w.dataDir, "Util", "ResetTable.json"), 14)
 	if err != nil {
 		return err
 	}
@@ -97,7 +98,7 @@ func loadCmdWorld(w *World) error {
 		copy(r.Point[:], v[10:14])
 		w.cmd.resetTable = append(w.cmd.resetTable, r)
 	}
-	if rows, err = loadIntRows(filepath.Join(w.dataDir, "Util", "ResetLimit.txt"), 14); err != nil {
+	if rows, err = loadIntRows(filepath.Join(w.dataDir, "Util", "ResetLimit.json"), 14); err != nil {
 		return err
 	}
 	for _, v := range rows {
@@ -112,7 +113,7 @@ func loadCmdWorld(w *World) error {
 
 // loadIntRows reads a table of n integer columns ("*" = -1) up to "end".
 func loadIntRows(path string, n int) ([][]int, error) {
-	lines, err := mutext.LoadFile(path)
+	lines, err := jsonconf.LoadLines(path)
 	if err != nil {
 		return nil, err
 	}

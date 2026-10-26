@@ -15,8 +15,8 @@ Todos os comandos abaixo rodam a partir de `apps/server`.
 ## Subir rápido (sem banco)
 
 ```sh
-printf 'end\n' > /tmp/blacklist.txt
-go run ./cmd/muserver -data data -blacklist /tmp/blacklist.txt -public-ip 127.0.0.1
+echo '{"rows": []}' > /tmp/blacklist.json
+go run ./cmd/muserver -blacklist /tmp/blacklist.json -public-ip 127.0.0.1
 ```
 
 Sem `-db`, tudo fica em memória e some ao parar o processo. Como o `account create` roda em outro processo, ele não enxerga esse store: no modo em memória só dá para testar a conexão e a lista de servidores. Para criar conta e jogar, use o PostgreSQL.
@@ -51,47 +51,48 @@ O login tem de 1 a 10 caracteres e não diferencia maiúsculas. A senha é grava
 
 ### 3. Liberar o 127.0.0.1
 
-O `data/1.ConnectServer/BlackList.txt` original bloqueia `127.0.0.1`. Para testar na mesma máquina, passe uma lista vazia:
+O `BlackList` original (membro `BlackList` de `config/server.json`) bloqueia `127.0.0.1`. Para testar na mesma máquina, passe uma lista vazia:
 
 ```sh
-printf 'end\n' > /tmp/blacklist.txt
+echo '{"rows": []}' > /tmp/blacklist.json
 ```
 
 ### 4. Subir o servidor
 
 ```sh
-go run ./cmd/muserver -data data -blacklist /tmp/blacklist.txt -public-ip 127.0.0.1
+go run ./cmd/muserver -blacklist /tmp/blacklist.json -public-ip 127.0.0.1
 ```
 
 `-db` usa `MU_DATABASE_URL` por padrão. Ao subir, o log mostra:
 
 | Módulo | Porta | Origem |
 |---|---|---|
-| ConnectServer | 44405 | `data/1.ConnectServer/ConnectServer.ini` (`ConnectServerPortTCP`) |
-| GameServer "Principal" (código 0) | 55900 | `data/4.GameServer/DATA/GameServerInfo - Common.dat` (`ServerPort`) |
-| GameServer "Castle Siege" (código 19, `ServerType = 1`) | 55919 | `data/5.GameServerCS/DATA/GameServerInfo - Common.dat` |
+| ConnectServer | 44405 | `config/server.json`, `ConnectServer.ConnectServerInfo.ConnectServerPortTCP` |
+| GameServer "Principal" (código 0) | 55900 | `config/gameservers/4.GameServer.json`, `Common.ServerPort` |
+| GameServer "Castle Siege" (código 19, `ServerType = 1`) | 55919 | `config/gameservers/5.GameServerCS.json`, `Common.ServerPort` |
 
 `Ctrl+C` encerra o processo, desconectando todos os jogadores; a desconexão dispara a gravação dos personagens.
 
 ### 5. Conectar o cliente
 
-Aponte o cliente original para o IP da máquina na porta 44405. O ConnectServer entrega a lista de servidores, e o cliente conecta no GameServer escolhido usando o IP do `ServerList.dat`. Esse IP é `192.168.1.1` nos arquivos originais, e `-public-ip` o substitui.
+Aponte o cliente original para o IP da máquina na porta 44405. O ConnectServer entrega a lista de servidores, e o cliente conecta no GameServer escolhido usando o IP do `ServerList` (`config/server.json`). Esse IP é `192.168.1.1` nos arquivos originais, e `-public-ip` o substitui.
 
 O `Main.dll` lê o IP do ConnectServer do `License.wzt`, não do `MainInfo.ini`. Para trocar: edite `IpAddress` em `PATCH CLIENTE/MainInfo.ini`, rode o `GetMainInfo.exe` nessa pasta (ele lê também `PATCH CLIENTE/Data/Custom*.txt`) e copie `PATCH CLIENTE/Path/License.wzt` para a pasta do cliente. Use o IP da máquina na rede (ex.: `192.168.18.5`), não `127.0.0.1`: com `127.0.0.1` no `License.wzt` o cliente não chega a abrir socket e a lista de servidores não aparece (observado em 2026-10-24). Passe o mesmo IP em `-public-ip`.
 
-O login exige que versão e serial do cliente batam com `ServerVersion` (`1.00.00`) e `ServerSerial` do `GameServerInfo - Common.dat`.
+O login exige que versão e serial do cliente batam com `ServerVersion` (`1.00.00`) e `ServerSerial` da seção `Common` do arquivo da instância.
 
 ## Flags do `muserver`
 
 | Flag | Padrão | Uso |
 |---|---|---|
-| `-data` | `data` | Pasta que espelha o `MuServer/` original (`Data/`, `1.ConnectServer/`, `3.JoinServer/`, `4.GameServer/`, `5.GameServerCS/`) |
+| `-config` | `config` | Configuração em JSON: `server.json`, `gameservers/`, `data/` |
+| `-data` | `data` | Arquivos mantidos no formato original: `Data/Terrain`, `Data/Hack` (chaves), `Data/Script` (Lua), `Data/Skill/SkillElect.hit`, imagens do XShopRecharge |
 | `-db` | `$MU_DATABASE_URL` | URL do PostgreSQL; vazio usa o store em memória |
-| `-instances` | `4.GameServer,5.GameServerCS` | GameServers a subir: cada pasta em `-data` com `DATA/GameServerInfo - *.dat` vira uma instância no mesmo processo |
-| `-connect-addr` | `:44405` | Endereço do ConnectServer (sobrepõe a porta do `.ini`) |
+| `-instances` | `4.GameServer,5.GameServerCS` | GameServers a subir: cada nome é um `config/gameservers/<nome>.json` e vira uma instância no mesmo processo |
+| `-connect-addr` | `:44405` | Endereço do ConnectServer (sobrepõe `ConnectServerPortTCP`) |
 | `-bind` | todas as interfaces | Host de todos os listeners |
-| `-public-ip` | — | IP enviado ao cliente no lugar dos endereços do `ServerList.dat` e do `MapServerInfo.txt` |
-| `-blacklist` | `<data>/1.ConnectServer/BlackList.txt` | Lista de IPs bloqueados no ConnectServer |
+| `-public-ip` | — | IP enviado ao cliente no lugar dos endereços do `ServerList` e do `MapServerInfo` |
+| `-blacklist` | o `BlackList` de `server.json` | Tabela JSON de IPs bloqueados no ConnectServer (`{"rows": [{"IpAddress": "..."}]}`) |
 
 Variáveis de ambiente:
 
@@ -102,24 +103,33 @@ Subcomando administrativo: `muserver account create <login> <senha>` (usa o mesm
 
 ## Configuração
 
-O servidor lê os mesmos arquivos do emulador original, copiados para `data/` com os caminhos e nomes originais. Edite-os como no original. Os `.txt` e `.dat` estão em latin1; salve-os nessa codificação.
+Toda a configuração fica em `config/`, em JSON, com os nomes originais do emulador (seções, chaves e colunas). O formato está em [`11-arquivos-de-configuracao.md`](../../docs/server-plan/11-arquivos-de-configuracao.md) seção 0. Em resumo:
+
+- arquivos de settings (`.ini` no original): `{"Seção": {"Chave": valor}}`;
+- tabelas: `{"rows": [...]}` ou `{"sections": [{"index": 0, "rows": [...]}]}`, uma linha por objeto. **As chaves de uma linha seguem a ordem das colunas**: ao acrescentar uma linha, copie uma existente;
+- números são números JSON; `*` e índices `cat,idx` (`"12,015"`) são strings;
+- arquivos com `"encoding": "windows-1252"` aceitam acentos (o servidor os envia em Windows-1252); nos outros, use só ASCII nos textos.
 
 | Arquivo | O que define |
 |---|---|
-| `1.ConnectServer/ConnectServer.ini` | Porta TCP, tempo ocioso, `MaxConnectionPerIP` (1 no original: um cliente por IP no ConnectServer), `MaxPacketPerSecond` |
-| `1.ConnectServer/ServerList.dat` | Servidores mostrados ao cliente: código, nome, IP, porta, visível |
-| `1.ConnectServer/BlackList.txt` | IPs bloqueados |
-| `3.JoinServer/JoinServer.ini` | `MaxConnectionPerIP` e `MaxConnectionPerHID` do login (0 = sem limite) |
-| `4.GameServer/DATA/GameServerInfo - *.dat` | Uma instância: `Common` (nome, código, tipo, porta, versão/serial, taxas), `Character`, `Command`, `ChaosMix`, `Event`, `Item`, `Skill`, `Custom` |
-| `5.GameServerCS/DATA/...` | O mesmo para a instância do Castle Siege |
-| `Data/MapServerInfo.txt` | Que servidor atende cada mapa (troca de servidor de mapa) |
-| `Data/Util/GameMaster.txt` | GMs: `"conta" "personagem" nível` |
-| `Data/CommandManager.txt`, `Data/CommandRequirement.txt` | Comandos de chat e seus requisitos |
-| `Data/Custom/*` | Sistemas WizardTeam (XShop, LuckyWheel, Marriage, Arena, GHRS, Pick etc.) |
-| `Data/Event/*`, `Data/EventItemBag/*` | Eventos e seus drops |
-| `Data/Monster/*`, `Data/Item/*`, `Data/Shop/*`, `Data/Move/*`, `Data/Quest/*`, `Data/Skill/*`, `Data/Terrain/*` | Monstros e spawns, itens, lojas, gates/moves, quests, skills, terreno |
-| `Data/Lang/{Eng,Por,Spn}/Message.txt` | Textos enviados ao jogador |
-| `Data/Script/**.lua` | Scripts Lua (Lua 5.2) |
+| `server.json` → `ConnectServer` | Porta TCP, tempo ocioso, `MaxConnectionPerIP` (1 no original: um cliente por IP no ConnectServer), `MaxPacketPerSecond` |
+| `server.json` → `ServerList` | Servidores mostrados ao cliente: código, nome, IP, porta, visível |
+| `server.json` → `BlackList` | IPs bloqueados |
+| `server.json` → `JoinServer` | `MaxConnectionPerIP` e `MaxConnectionPerHID` do login (0 = sem limite) |
+| `server.json` → `BadSyntax` | Palavras proibidas em nomes de personagem |
+| `gameservers/4.GameServer.json` | Uma instância: `Common` (nome, código, tipo, porta, versão/serial, taxas), `Character`, `Command`, `ChaosMix`, `Event`, `Item`, `Skill`, `Custom` (os `GameServerInfo - *.dat` originais) |
+| `gameservers/5.GameServerCS.json` | O mesmo para a instância do Castle Siege |
+| `data/MapServerInfo.json` | Que servidor atende cada mapa (troca de servidor de mapa) |
+| `data/Util/GameMaster.json` | GMs: conta, personagem, nível |
+| `data/CommandManager.json`, `data/CommandRequirement.json` | Comandos de chat e seus requisitos |
+| `data/Custom/*` | Sistemas WizardTeam (XShop, LuckyWheel, Marriage, Arena, GHRS, Pick etc.) |
+| `data/Event/*`, `data/EventItemBag/*` | Eventos e seus drops |
+| `data/Monster/*`, `data/Item/*`, `data/Shop/*`, `data/Move/*`, `data/Quest/*`, `data/Skill/*` | Monstros e spawns, itens, lojas, gates/moves, quests, skills |
+| `data/Lang/{Eng,Por,Spn}/Message.json` | Textos enviados ao jogador |
+
+Ficam em `data/Data/`, no formato original: `Terrain/*.att` (terreno), `Hack/Enc2.dat` e `Dec1.dat` (chaves), `Script/**.lua` (scripts Lua 5.2), `Skill/SkillElect.hit` e as imagens `pix*.bmp` do XShopRecharge.
+
+Para converter outra pasta `MuServer/` original: `go run ./cmd/configconv -from <MuServer> -to config` (`-report` lista colunas sem nome no cabeçalho do original).
 
 As alterações valem no próximo início do processo.
 
@@ -179,10 +189,10 @@ Para o código de rede, use `-race` num subconjunto (`go test -race -p 1 -run <T
 `cmd/mueditor` é um editor web que muda atributos, zen e itens (inventário e baú 0) de personagens **offline** direto no PostgreSQL. Contas online ficam só leitura, porque o GameServer regrava o personagem no logout.
 
 ```sh
-go run ./cmd/mueditor -db postgres://... -data data [-addr 127.0.0.1:8080] [-password segredo]
+go run ./cmd/mueditor -db postgres://... -config config [-addr 127.0.0.1:8080] [-password segredo]
 ```
 
-`-db` e `-password` também podem vir de `MU_DATABASE_URL` e `MU_EDITOR_PASSWORD` (sem senha não há autenticação). O nível máximo vem do `ServerMaxLevel` da instância em `-instance` (padrão `4.GameServer`).
+`-db` e `-password` também podem vir de `MU_DATABASE_URL` e `MU_EDITOR_PASSWORD` (sem senha não há autenticação). O nível máximo vem do `ServerMaxLevel` da instância em `-instance` (`config/gameservers/<nome>.json`, padrão `4.GameServer`).
 
 ## Estrutura
 
@@ -191,11 +201,14 @@ go run ./cmd/mueditor -db postgres://... -data data [-addr 127.0.0.1:8080] [-pas
 | `cmd/muserver` | O serviço e o subcomando `account create` |
 | `cmd/migrate` | Importação do MuOnline (SQL Server ou script) |
 | `cmd/muproxy` | Proxy de captura |
+| `cmd/configconv` | Conversão de uma pasta `MuServer/` original para `config/` |
 | `internal/connect` | ConnectServer (lista de servidores) |
 | `internal/auth` | JoinServer: login, sessões, senhas |
 | `internal/game` | GameServer: `World` (uma goroutine por instância) e todos os sistemas de jogo |
-| `internal/gamedata` | Leitores dos arquivos de `data/Data` |
+| `internal/gamedata` | Leitores das tabelas de `config/data` |
+| `internal/config` | Leitura dos JSON (`jsonconf`), instâncias (`gsconfig`), tokenizador e `.ini` originais |
 | `internal/store` | Persistência (memória e PostgreSQL) e migrações |
 | `internal/protocol` | Framing C1–C4, criptografia (SimpleModulus, XOR32, cifra de fluxo) |
 | `internal/migrate` | Leitura e conversão do banco original |
-| `data/` | Cópia dos dados do `MuServer/` original |
+| `config/` | Configuração e tabelas em JSON, convertidas do `MuServer/` original |
+| `data/` | Arquivos do `MuServer/` original mantidos no formato original (terreno, chaves, Lua, `MuOnline.sql`) |

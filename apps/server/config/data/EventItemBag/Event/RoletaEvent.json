@@ -1,0 +1,16 @@
+{
+  "sections": [
+    {"index": 2, "rows": [
+      {"ItemRate": 100, "MoneyDrop": 0, "BagUseEffect": 0, "RewardType": 2, "RewardCoin1": 200, "DropType": 1}
+    ]},
+    {"index": 3, "rows": [
+      {"BagIndex": 0, "DropRate": 10000, "MapNumber": "*"}
+    ]},
+    {"index": 4, "rows": [
+      {"BagIndex": 0, "Section": 5, "SectionRate": 10000, "SetDropRate": 0, "MinDropCount": 1, "MaxDropCount": 1, "DW": 1, "DK": 1, "FE": 1, "MG": 1, "DL": 1}
+    ]},
+    {"index": 5, "rows": [
+      {"ItemIndex": "12,015", "ItemLevel": 0, "GradeCount": 0, "Option0": "*", "Option1": "*", "Option2": "*", "Option3": "*", "Option4": "*", "Option5": "*", "Duration": 0}
+    ]}
+  ]
+}

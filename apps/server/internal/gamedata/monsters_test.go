@@ -1,6 +1,10 @@
 package gamedata
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
+)
 
 func TestLoadMonsterListRates(t *testing.T) {
 	m, err := LoadMonsterList(dataDir(), MonsterRates{110, 105, 105, 105, 105})
@@ -57,7 +61,11 @@ end
 `)
 	// rnd: dir of 257 (9&7=1), three section-1 dirs (10,11,12 -> 2,3,4),
 	// section 2 jitter (5%7=5 -> +2, 0%7 -> -3).
-	out, err := parseSpawnFile(src, 0, seq(9, 10, 11, 12, 5, 0), nil)
+	lines, err := mutext.Tokenize(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := parseSpawnFile(lines, 0, seq(9, 10, 11, 12, 5, 0), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

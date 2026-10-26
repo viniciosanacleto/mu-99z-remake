@@ -1,0 +1,24 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"EventIndex": 0, "Year": "*", "Month": "*", "Day": "*", "DoW": "*", "Hour": 20, "Minute": 0, "Second": 0}
+    ]},
+    {"index": 1, "rows": [
+      {"EventIndex": 0, "Name": "Custom Event Drop", "MapNumber": 0, "LocationX": 145, "LocationY": 135, "DropRadius": 5, "AlarmTime": 5, "EventTime": 3}
+    ]},
+    {"index": 2, "rows": [
+      {"EventIndex": 0, "ItemIndex": "12,012", "ItemLevel": 0, "DropCount": 3, "DropDelay": "00"},
+      {"EventIndex": 0, "ItemIndex": "12,012", "ItemLevel": 0, "DropCount": 3, "DropDelay": 10},
+      {"EventIndex": 0, "ItemIndex": "12,012", "ItemLevel": 0, "DropCount": 3, "DropDelay": 20},
+      {"EventIndex": 0, "ItemIndex": "14,013", "ItemLevel": 0, "DropCount": 3, "DropDelay": 30},
+      {"EventIndex": 0, "ItemIndex": "14,013", "ItemLevel": 0, "DropCount": 3, "DropDelay": 40},
+      {"EventIndex": 0, "ItemIndex": "14,014", "ItemLevel": 0, "DropCount": 3, "DropDelay": 50},
+      {"EventIndex": 0, "ItemIndex": "14,014", "ItemLevel": 0, "DropCount": 3, "DropDelay": 60},
+      {"EventIndex": 0, "ItemIndex": "14,014", "ItemLevel": 0, "DropCount": 3, "DropDelay": 70},
+      {"EventIndex": 0, "ItemIndex": "14,014", "ItemLevel": 0, "DropCount": 3, "DropDelay": 80},
+      {"EventIndex": 0, "ItemIndex": "14,016", "ItemLevel": 0, "DropCount": 3, "DropDelay": 90},
+      {"EventIndex": 0, "ItemIndex": "14,016", "ItemLevel": 0, "DropCount": 3, "DropDelay": 100},
+      {"EventIndex": 0, "ItemIndex": "14,016", "ItemLevel": 0, "DropCount": 3, "DropDelay": 110}
+    ]}
+  ]
+}

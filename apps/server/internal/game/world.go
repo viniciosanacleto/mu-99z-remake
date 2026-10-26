@@ -12,6 +12,7 @@ import (
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/auth"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/gsconfig"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/charset"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
@@ -29,7 +30,8 @@ type Reporter interface {
 
 // Options configure an instance.
 type Options struct {
-	DataDir  string // MuServer/Data equivalent
+	DataDir  string // config/data: the JSON tables of MuServer/Data
+	AssetDir string // MuServer/Data files kept in their original format (terrain, keys, scripts)
 	Config   *gsconfig.Config
 	Store    store.Store
 	Auth     *auth.Service
@@ -75,6 +77,7 @@ type World struct {
 	publicIP       string
 	hub            *Hub
 	dataDir        string    // Options.DataDir (modules load their tables from it)
+	assetDir       string    // Options.AssetDir
 	moveData       *moveData // move.go / chat.go / teleport.go tables
 	hackRules      *hackRules
 	messages       messageTable
@@ -126,11 +129,11 @@ func New(o Options) (*World, error) {
 	if err != nil {
 		return nil, err
 	}
-	enc, err := crypto.LoadKeyFile(filepath.Join(o.DataDir, "Hack", "Enc2.dat"))
+	enc, err := crypto.LoadKeyFile(filepath.Join(o.AssetDir, "Hack", "Enc2.dat"))
 	if err != nil {
 		return nil, err
 	}
-	dec, err := crypto.LoadKeyFile(filepath.Join(o.DataDir, "Hack", "Dec1.dat"))
+	dec, err := crypto.LoadKeyFile(filepath.Join(o.AssetDir, "Hack", "Dec1.dat"))
 	if err != nil {
 		return nil, err
 	}
@@ -142,8 +145,8 @@ func New(o Options) (*World, error) {
 		log: o.Log.With("server", cfg.ServerName, "code", cfg.ServerCode), now: o.Now,
 		keys:   gscodec.Keys{Stream: stream, Encrypt: enc, Decrypt: dec},
 		events: make(chan func(), 4096), nextUser: PlayerStart, publicIP: o.PublicIP,
-		dataDir: o.DataDir}
-	if w.terrains, err = gamedata.LoadTerrains(o.DataDir); err != nil {
+		dataDir: o.DataDir, assetDir: o.AssetDir}
+	if w.terrains, err = gamedata.LoadTerrains(o.AssetDir); err != nil {
 		return nil, err
 	}
 	if w.hackRules, err = loadHackRules(o.DataDir); err != nil {
@@ -152,10 +155,10 @@ func New(o Options) (*World, error) {
 	if w.messages, err = loadMessages(o.DataDir); err != nil {
 		return nil, err
 	}
-	if w.connectMembers, err = loadNameList(filepath.Join(o.DataDir, "ConnectMember.txt")); err != nil {
+	if w.connectMembers, err = loadNameList(filepath.Join(o.DataDir, "ConnectMember.json")); err != nil {
 		return nil, err
 	}
-	if w.badWords, err = loadNameList(filepath.Join(o.DataDir, "..", "2.DataServer", "BadSyntax.txt")); err != nil {
+	if w.badWords, err = loadBadSyntax(filepath.Join(o.DataDir, "..", "server.json")); err != nil {
 		return nil, err
 	}
 	for i := range w.objects {
@@ -451,15 +454,32 @@ func (w *World) objectOf(c *conn) *Object {
 
 func (w *World) String() string { return fmt.Sprintf("World(%s)", w.cfg.ServerName) }
 
-// loadNameList reads a one-column table (ConnectMember.txt, BadSyntax.txt).
+// loadNameList reads a one-column table (ConnectMember.txt).
 func loadNameList(path string) ([]string, error) {
-	lines, err := mutext.LoadFile(path)
+	lines, err := jsonconf.LoadLines(path)
 	if err != nil {
 		return nil, err
 	}
+	return firstColumn(lines), nil
+}
+
+// loadBadSyntax reads the DataServer BadSyntax.txt list of server.json.
+func loadBadSyntax(path string) ([]string, error) {
+	f, err := jsonconf.LoadServer(path)
+	if err != nil {
+		return nil, err
+	}
+	lines, err := f.BadSyntax.Lines()
+	if err != nil {
+		return nil, fmt.Errorf("%s: BadSyntax: %w", path, err)
+	}
+	return firstColumn(lines), nil
+}
+
+func firstColumn(lines []mutext.Line) []string {
 	var out []string
 	for _, l := range mutext.Table(lines) {
 		out = append(out, l.Tokens[0])
 	}
-	return out, nil
+	return out
 }

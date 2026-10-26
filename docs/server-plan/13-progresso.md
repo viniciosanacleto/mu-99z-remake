@@ -9,7 +9,7 @@ Legenda: `[x]` feito e testado · `[~]` em andamento/parcial · `[ ]` a fazer.
 1. Ler esta página e a seção "Próximo passo".
 2. `cd apps/server && go test ./...` deve passar antes de qualquer mudança.
 3. Fases e critérios de pronto: [12-roadmap-e-incognitas.md](12-roadmap-e-incognitas.md).
-4. Originais em `/Users/viniciosanacleto/Downloads/99zFREE-AM-VS2026`; dados copiados para `apps/server/data/` conforme a necessidade (mesmos caminhos relativos).
+4. Originais em `/Users/viniciosanacleto/Downloads/99zFREE-AM-VS2026`. A configuração e as tabelas convertidas para JSON ficam em `apps/server/config/` (`cmd/configconv`, layout em [11](11-arquivos-de-configuracao.md) seção 0); terreno, chaves, Lua e outros binários ficam em `apps/server/data/` com os caminhos originais.
 
 ## Fase 0 — Fundação
 
@@ -69,7 +69,7 @@ Briefing comum em `.re/AGENT_BRIEF.md`. Pontos de extensão em `internal/game/ex
   - EXP solo aplica a taxa CustomMonster (`0x4670a0`) e o `9C` mostra 0 quando houve level up;
   - `samePartyHook`: direito de loot compartilhado na party;
   - `equipmentChanged` não chama mais `recalcHook` duas vezes (`rebuildCharSet` já recalcula, como `0x4c6ba0`).
-- **Ambiente local:** o `BlackList.txt` original lista `127.0.0.1`, então o ConnectServer recusa conexões do próprio host. Para testar com o cliente na mesma máquina, remova a linha de `apps/server/data/1.ConnectServer/BlackList.txt` ou aponte `-blacklist` para um arquivo sem entradas.
+- **Ambiente local:** o `BlackList.txt` original lista `127.0.0.1`, então o ConnectServer recusa conexões do próprio host. Para testar com o cliente na mesma máquina, remova a linha do membro `BlackList` de `apps/server/config/server.json` ou aponte `-blacklist` para uma tabela vazia (`{"rows": []}`).
 - **Bloco 14, primeiro contato (2026-10-24):** o `Main.exe` original recebeu a lista de servidores do `muserver` (PostgreSQL local, `-public-ip 192.168.18.5`). O cliente ignora `127.0.0.1` no `License.wzt` (não abre socket), então use o IP da máquina na rede; procedimento no README do servidor e em `docs/client-plan/03-rede-e-protocolo.md`. Login e entrada no jogo funcionam. A janela C (tecla C) mostrava nível 0, resets = pontos livres e atributos com lixo: o `F3 03` tinha 116 bytes e o `Main.dll` lê 176 (corrigido, U-PROTO-09). Os textos `MuOriX`/`MuOrix`/`MuReaper` da cópia de `data/` viraram `MuJogatina` (Message 990, Notice, Quiz, Lua, XShopRecharge). Os `.txt` em Latin-1 (`Message.txt`, `CustomQuiz.txt`) precisam ser editados num editor que preserve essa codificação: ao salvar como UTF-8, os acentos viraram U+FFFD e foram restaurados a partir do git.
 
 Pendentes sem dono: guild (50..66, E1..EB, protocolo DS), quests (A0/A2), Chaos Machine (86–88), loja pessoal (3F), duelo (AA–AC), eventos (BC, DS, CC, Kalima, Golden Archer, invasões), Castle Siege, customs WizardTeam (XShop, JewelBank, LuckyWheel, attack/offline, reset).
@@ -107,6 +107,14 @@ Plano completo dos blocos restantes, na ordem: 1 quests · 2 Chaos Machine · 3 
 
 Depois da rodada 2: 10 eventos, 11 Castle Siege, 12 customs, 13 migração, 14 teste com o cliente original.
 
+## Configuração em JSON (2026-10-26)
+
+- [x] `apps/server/config/` substitui os `.ini`/`.dat`/`.txt` dos processos: `server.json` (ConnectServer, ServerList, BlackList, JoinServer, BadSyntax), `gameservers/<instância>.json` (uma seção por `GameServerInfo - *.dat`) e `data/**.json` (tabelas de `MuServer/Data`). Nomes originais de seções, chaves e colunas (cabeçalhos dos arquivos). Formato e regras em [11](11-arquivos-de-configuracao.md) seção 0.
+- [x] `jsonconf.LoadLines` devolve os mesmos tokens do arquivo original; os parsers posicionais não mudaram. O conversor (`cmd/configconv`) recusa uma tabela cujo JSON não devolva os tokens originais.
+- [x] Escritas em tempo de execução em JSON: preço do XShop pelo GM, upload do recarga PIX (BMP em `data/Data/Custom`), reset das chaves do Castle Siege.
+- [x] `TestDataFileCoverage` percorre `config/` e `data/Data`: 279 arquivos, 261 carregados, 18 ignorados.
+- Perdas aceitas: comentários dos arquivos originais; o comentário `// alterado/criado ingame por GM` das linhas do XShop criadas pelo GM.
+
 ## Descobertas desta reconstrução (REA)
 
 Já refletidas em [02](02-protocolo-de-rede.md) e [03](03-connect-server.md):
@@ -143,18 +151,20 @@ Já refletidas em [02](02-protocolo-de-rede.md) e [03](03-connect-server.md):
 | `internal/protocol/frame` | `Next` (parser incremental), `Build`, `Head`, `Sub`, `Payload`, limites `MaxSizeConnect/Game` |
 | `internal/protocol/crypto` | `Xor32Encrypt/Decrypt`, `ModulusKeys` (`LoadKeyFile`, `Encrypt`, `Decrypt`), `Bux`, `StreamKeys`/`DeriveStreamKeys` |
 | `internal/protocol/gscodec` | `Server` (Feed/Encode) e `Client` (inverso, para testes e bots) |
-| `internal/config/ini` | `Load/Parse`, `String(sec,key,def,size)`, `Int(sec,key,def)` |
-| `internal/config/mutext` | `Tokenize`, `Table`, `Sections`, `Line.Int/String` |
-| `internal/config/serverlist` | `Load` → `[]Entry` |
+| `internal/config/ini` | `Load/Parse/FromSections`, `String(sec,key,def,size)`, `Int(sec,key,def)` |
+| `internal/config/mutext` | `Tokenize`, `TokenizeScript`, `Table`, `Sections`, `Line.Int/String` |
+| `internal/config/jsonconf` | JSON de `config/`: `Table` (`LoadLines` devolve as linhas do tokenizador), `Settings` (`LoadINI`), `ServerFile` (`server.json`), conversão `TableFromText`/`SettingsFromINI` |
+| `internal/config/serverlist` | `FromTable` → `[]Entry` |
+| `cmd/configconv` | converte uma pasta MuServer original para `config/` |
 | `internal/connect` | `Registry` (estado vivo, `Report`, `MarkDown`, `SetAuthStatus`), builders `Hello/ServerNames/ServerList/ServerInfo`, `Handle`, `Server` TCP |
-| `internal/config/gsconfig` | `GameServerInfo - *.dat` + `Common.dat` de cada instância |
+| `internal/config/gsconfig` | `config/gameservers/<instância>.json` (os 8 `GameServerInfo - *.dat`), `WriteKeys` |
 | `internal/store` | `Store` (memória e PostgreSQL), migrações, templates de classe, amigos/mail |
 | `internal/auth` | login/logout de contas, sessões, troca de servidor |
 | `internal/gamedata` | terreno, mapas/gates, EXP, skills, itens, quests, monstros/spawns, dados de personagem |
 | `internal/game` | `World` (goroutine única por instância) e os módulos: login/personagens/entrada (`login.go`, `character.go`, `enterworld.go`), viewport, movimento/teleporte/chat/comandos (A), monstros/NPC/combate (B), itens/lojas/baú/trade (C), atributos/level/party/PK (D), amigos, avisos, HackPacketCheck, Hub |
 | `internal/game/item`, `internal/game/charset` | codecs de item (16 bytes DB / 7 bytes wire) e CharSet de 18 bytes |
 
-Dados copiados dos originais em `apps/server/data/`, com os caminhos originais: `Data/**`, `1.ConnectServer/`, `2.DataServer/BadSyntax.txt`, `3.JoinServer/JoinServer.ini`, `4.GameServer/DATA/`, `5.GameServerCS/DATA/`. Chaves do cliente usadas só em teste: `internal/protocol/crypto/testdata/{Enc1,Dec2}.dat`.
+Configuração e tabelas em `apps/server/config/` (JSON, gerado por `cmd/configconv` a partir dos originais `Data/**`, `1.ConnectServer/`, `2.DataServer/BadSyntax.txt`, `3.JoinServer/JoinServer.ini`, `4.GameServer/DATA/`, `5.GameServerCS/DATA/`). Arquivos no formato original em `apps/server/data/`: `Data/Terrain`, `Data/Hack/{Enc2,Dec1}.dat`, `Data/Common/Protect`, `Data/Skill/SkillElect.hit`, `Data/Script/**`, `Data/Custom/pix*.bmp`, `DB/MuOnline.sql`. Chaves do cliente usadas só em teste: `internal/protocol/crypto/testdata/{Enc1,Dec2}.dat`.
 
 ## Testes
 
@@ -170,6 +180,7 @@ Dados copiados dos originais em `apps/server/data/`, com os caminhos originais: 
 | 2026-10-23 | idem, após corrigir os bugs do original no JewelBank (U-JWL-03/04), LuckyWheel (U-LW-01/03) e GHRS (U-GHRS-01) | 19 pacotes, todos `ok`; `TestLuaAPIBasics` passou a usar a mensagem 993 como exemplo de inexistente (a 991 agora existe) |
 | 2026-10-24 | `go vet ./... && go test -p 2 -count=1 ./...` (Windows, sem `MU_TEST_DATABASE_URL`) após o editor e o vazamento de memória | 21 pacotes, todos `ok` (`internal/game` 96 s). Antes, `internal/game` caía com `fatal error: out of memory` (VirtualAlloc errno 1455): `chaosTables`, `petTables`, `castleSyncs` e `guildManagers` eram `sync.Map` globais com chave `*World`/`*Hub` e retinham cerca de 152 MB por World de teste. Agora ficam no `World` e no `Hub` (`hub_gc_test.go`) |
 | 2026-10-24 | idem, após o limite de atributos do editor e o `F3 03` de 176 bytes (U-PROTO-09) | 21 pacotes, todos `ok` |
+| 2026-10-26 | `go vet ./... && gofmt -l . && go test ./...` após mover a configuração para JSON (`config/`) | 23 pacotes `ok`; `cmd/muproxy` e `internal/capture` falham por falta de `apps/client/assets/Data/{Enc1,Dec2}.dat` (removidos no commit `6ae0638`; falham igual no HEAD anterior). `config/` regenerado dos originais do HEAD é idêntico ao do repositório. `go test -race` em `internal/connect` e `cmd/muserver` `ok`; o `muserver` sobe ConnectServer 44405, GS 55900 e GS-CS 55919 lendo só `config/` e `data/Data` |
 
 ## Bugs do original ainda reproduzidos (não corrigidos)
 
@@ -193,7 +204,7 @@ Comportamentos errados do binário original que o Go reproduz de propósito, à 
 
 Blocos 1–13 concluídos. Resta:
 
-1. **Bloco 14 — teste com o cliente original** (depende do usuário, Windows): subir `go run ./cmd/muserver -data data -db ...` com um `-blacklist` sem `127.0.0.1`, apontar o `Main.exe` para o ConnectServer (ou para o `cmd/muproxy`, doc [15](15-captura.md)) e gravar sessões golden em `internal/capture/testdata/golden/`. Dúvidas abertas: serial C3 após troca de servidor de mapa e endereço do ConnectServer no `License.wzt`.
+1. **Bloco 14 — teste com o cliente original** (depende do usuário, Windows): subir `go run ./cmd/muserver -db ...` com um `-blacklist` sem `127.0.0.1` (`{"rows": []}`), apontar o `Main.exe` para o ConnectServer (ou para o `cmd/muproxy`, doc [15](15-captura.md)) e gravar sessões golden em `internal/capture/testdata/golden/`. Dúvidas abertas: serial C3 após troca de servidor de mapa e endereço do ConnectServer no `License.wzt`.
 2. **Migração real**: restaurar o `MuOnline.bak` num SQL Server e rodar `cmd/migrate -from sqlserver://...`.
 3. ~~Decisões pendentes~~ **corrigidas em 2026-10-23** a pedido do usuário: saque de Chaos/Life do JewelBank (U-JWL-03/04), custo da LuckyWheel debitado dos créditos (U-LW-01/03), resposta `F8` do GHRS feita pelo próprio serviço (U-GHRS-01); mensagens 909/991/992 acrescentadas à cópia do `Message.txt`.
 4. Bugs do original ainda reproduzidos: ver a seção acima; corrigir só com aval do usuário.

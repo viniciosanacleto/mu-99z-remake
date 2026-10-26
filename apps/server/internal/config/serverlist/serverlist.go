@@ -1,4 +1,5 @@
-// Package serverlist loads the ConnectServer ServerList.dat
+// Package serverlist loads the ConnectServer ServerList.dat, the
+// ServerList member of config/server.json
 // (docs/server-plan/03-connect-server.md §1):
 //
 //	ServerCode   ServerName   IpAddress   Port   Visible
@@ -7,6 +8,7 @@ package serverlist
 import (
 	"fmt"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
@@ -19,9 +21,9 @@ type Entry struct {
 	Visible bool
 }
 
-// Load reads ServerList.dat.
-func Load(path string) ([]Entry, error) {
-	lines, err := mutext.LoadFile(path)
+// FromTable reads the ServerList table.
+func FromTable(t *jsonconf.Table) ([]Entry, error) {
+	lines, err := t.Lines()
 	if err != nil {
 		return nil, err
 	}

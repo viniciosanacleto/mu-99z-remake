@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-const eventData = "../../data/Data"
+const eventData = "../../config/data"
 
 func TestLoadCustomEvents(t *testing.T) {
 	d, err := LoadDeathEvent(eventData)
@@ -60,9 +60,7 @@ func TestEventScriptDefaults(t *testing.T) {
 	// A missing cell reads as -1 (ints) or 0xFF (bytes); ';' and '//'
 	// start comments.
 	src := "; comment\n0\n 1 \"/x y\" // tail\nend\n"
-	if err := os.WriteFile(filepath.Join(p, "SobreEvent.txt"), []byte(src), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	putOriginal(t, filepath.Join(p, "SobreEvent.txt"), src)
 	so, err := LoadSobreEvent(dir)
 	if err != nil {
 		t.Fatal(err)
@@ -71,13 +69,11 @@ func TestEventScriptDefaults(t *testing.T) {
 		so.MinPlayers != 0xFF || so.Starts != nil {
 		t.Fatalf("defaults %+v", so)
 	}
-	if _, err := LoadEventScript(filepath.Join(p, "missing.txt")); err == nil {
+	if _, err := LoadEventScript(filepath.Join(p, "missing.json")); err == nil {
 		t.Fatal("missing file read")
 	}
-	if err := os.WriteFile(filepath.Join(p, "bad.txt"), []byte("0\n1\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := LoadEventScript(filepath.Join(p, "bad.txt")); err == nil {
+	putOriginal(t, filepath.Join(p, "bad.txt"), "0\n1\n")
+	if _, err := LoadEventScript(filepath.Join(p, "bad.json")); err == nil {
 		t.Fatal("section without end accepted")
 	}
 }

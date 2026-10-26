@@ -202,7 +202,7 @@ func TestPacketLayouts(t *testing.T) {
 }
 
 func TestItemDataLoaders(t *testing.T) {
-	dir := repoData("Data")
+	dir := repoConfig("data")
 	st, err := gamedata.LoadItemStack(dir)
 	if err != nil {
 		t.Fatal(err)

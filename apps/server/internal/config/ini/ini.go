@@ -61,6 +61,26 @@ func Parse(data []byte) *File {
 	return f
 }
 
+// FromSections builds a File from section -> key -> value maps, as the
+// JSON configuration holds them (values already unquoted). Names are
+// case-insensitive, like Parse.
+func FromSections(sections map[string]map[string]string) *File {
+	f := &File{sections: map[string]map[string]string{}}
+	for name, keys := range sections {
+		sec := f.sections[strings.ToLower(name)]
+		if sec == nil {
+			sec = map[string]string{}
+			f.sections[strings.ToLower(name)] = sec
+		}
+		for k, v := range keys {
+			if _, dup := sec[strings.ToLower(k)]; !dup {
+				sec[strings.ToLower(k)] = v
+			}
+		}
+	}
+	return f
+}
+
 func unquote(v string) string {
 	if len(v) >= 2 && (v[0] == '"' || v[0] == '\'') && v[len(v)-1] == v[0] {
 		return v[1 : len(v)-1]

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
@@ -11,7 +12,7 @@ import (
 // closed by "end"; "*" = -1).
 
 func customTable(dataDir, name string) ([]mutext.Line, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Custom", name))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Custom", name))
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +46,7 @@ type CustomMoveRow struct {
 
 // LoadCustomMove reads Custom/CustomMove.txt, sorted by Id.
 func LoadCustomMove(dataDir string) ([]CustomMoveRow, error) {
-	rows, err := customTable(dataDir, "CustomMove.txt")
+	rows, err := customTable(dataDir, "CustomMove.json")
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +90,7 @@ type CustomGateRow struct {
 
 // LoadCustomGate reads Custom/CustomGate.txt, sorted by GateIndex.
 func LoadCustomGate(dataDir string) ([]CustomGateRow, error) {
-	rows, err := customTable(dataDir, "CustomGate.txt")
+	rows, err := customTable(dataDir, "CustomGate.json")
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +122,7 @@ type CustomRespawnRow struct {
 
 // LoadCustomRespawn reads Custom/CustomRespawn.txt.
 func LoadCustomRespawn(dataDir string) ([]CustomRespawnRow, error) {
-	rows, err := customTable(dataDir, "CustomRespawn.txt")
+	rows, err := customTable(dataDir, "CustomRespawn.json")
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +147,7 @@ type CustomNPCCommandRow struct {
 
 // LoadCustomNPCCommand reads Custom/CustomNPCCommand.txt.
 func LoadCustomNPCCommand(dataDir string) ([]CustomNPCCommandRow, error) {
-	rows, err := customTable(dataDir, "CustomNPCCommand.txt")
+	rows, err := customTable(dataDir, "CustomNPCCommand.json")
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +169,7 @@ func LoadCustomNPCCommand(dataDir string) ([]CustomNPCCommandRow, error) {
 // (CustomDeathMessage, FUN_0044aac0): monster class -> the sentence the
 // monster says after a kill (std::map: the first row of a class wins).
 func LoadCustomDeathMessage(dataDir string) (map[int]string, error) {
-	rows, err := customTable(dataDir, "CustomDeathMessage.txt")
+	rows, err := customTable(dataDir, "CustomDeathMessage.json")
 	if err != nil {
 		return nil, err
 	}

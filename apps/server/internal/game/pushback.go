@@ -204,7 +204,7 @@ func (w *World) monsterPushMessage(o *Object, code, sender int) {
 // loadMobCombo reads Custom/CustomMobCombo.txt section 0 (FUN_0044ef50,
 // at most 100 classes).
 func loadMobCombo(dataDir string) ([]int, error) {
-	path := filepath.Join(dataDir, "Custom", "CustomMobCombo.txt")
+	path := filepath.Join(dataDir, "Custom", "CustomMobCombo.json")
 	if _, err := os.Stat(path); err != nil {
 		return nil, nil
 	}

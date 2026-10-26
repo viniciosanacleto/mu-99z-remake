@@ -1,0 +1,57 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"WarningTime": 5, "NotifyTime": 1, "EventTime": 15, "CloseTime": 4}
+    ]},
+    {"index": 1, "rows": [
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 0, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 2, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 4, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 6, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 8, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 10, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 12, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 14, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 16, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 18, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 20, "StartMin": 0, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 22, "StartMin": 0, "StartSec": 0}
+    ]},
+    {"index": 2, "rows": [
+      {"EventIndex": 0, "ExperienceTable1": 20000, "ExperienceTable2": 5000},
+      {"EventIndex": 1, "ExperienceTable1": 50000, "ExperienceTable2": 10000},
+      {"EventIndex": 2, "ExperienceTable1": 80000, "ExperienceTable2": 15000},
+      {"EventIndex": 3, "ExperienceTable1": 90000, "ExperienceTable2": 20000},
+      {"EventIndex": 4, "ExperienceTable1": 100000, "ExperienceTable2": 25000},
+      {"EventIndex": 5, "ExperienceTable1": 110000, "ExperienceTable2": 30000},
+      {"EventIndex": 6, "ExperienceTable1": 120000, "ExperienceTable2": 35000}
+    ]},
+    {"index": 3, "rows": [
+      {"EventIndex": 0, "MoneyTable1": 20000, "MoneyTable2": 10000},
+      {"EventIndex": 1, "MoneyTable1": 50000, "MoneyTable2": 25000},
+      {"EventIndex": 2, "MoneyTable1": 100000, "MoneyTable2": 50000},
+      {"EventIndex": 3, "MoneyTable1": 150000, "MoneyTable2": 80000},
+      {"EventIndex": 4, "MoneyTable1": 200000, "MoneyTable2": 100000},
+      {"EventIndex": 5, "MoneyTable1": 250000, "MoneyTable2": 120000},
+      {"EventIndex": 6, "MoneyTable1": 300000, "MoneyTable2": 140000}
+    ]},
+    {"index": 4, "rows": [
+      {"EventIndex": 0, "GateNpcLife": 65000, "StatueNpcLife": 150000},
+      {"EventIndex": 1, "GateNpcLife": 105000, "StatueNpcLife": 205000},
+      {"EventIndex": 2, "GateNpcLife": 145000, "StatueNpcLife": 260000},
+      {"EventIndex": 3, "GateNpcLife": 185000, "StatueNpcLife": 325000},
+      {"EventIndex": 4, "GateNpcLife": 225000, "StatueNpcLife": 400000},
+      {"EventIndex": 5, "GateNpcLife": 265000, "StatueNpcLife": 480000},
+      {"EventIndex": 6, "GateNpcLife": 305000, "StatueNpcLife": 565000}
+    ]},
+    {"index": 5, "rows": [
+      {"EventIndex": 0, "SaintStatueX": "014", "SaintStatueY": "095"},
+      {"EventIndex": 1, "SaintStatueX": "014", "SaintStatueY": "095"},
+      {"EventIndex": 2, "SaintStatueX": "014", "SaintStatueY": "095"},
+      {"EventIndex": 3, "SaintStatueX": "014", "SaintStatueY": "095"},
+      {"EventIndex": 4, "SaintStatueX": "014", "SaintStatueY": "095"},
+      {"EventIndex": 5, "SaintStatueX": "014", "SaintStatueY": "095"},
+      {"EventIndex": 6, "SaintStatueX": "014", "SaintStatueY": "095"}
+    ]}
+  ]
+}

@@ -169,11 +169,11 @@ func (w *World) runScriptFile(l *lua.State, path, tag string) bool {
 	return true
 }
 
-// luaFilePath maps an original "..\Data\..." path to the data directory.
+// luaFilePath maps an original "..\Data\..." path to the asset directory.
 func (w *World) luaFilePath(path string) string {
 	rel := strings.TrimPrefix(path, luaDataBase)
 	rel = strings.TrimLeft(strings.ReplaceAll(rel, `\`, "/"), "/")
-	return filepath.Join(w.dataDir, filepath.FromSlash(rel))
+	return filepath.Join(w.assetDir, filepath.FromSlash(rel))
 }
 
 // luaLoadFile is luaL_loadfilex with the original file name as the chunk

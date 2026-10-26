@@ -1,0 +1,36 @@
+{
+  "ConnectServer": {
+    "ConnectServerInfo": {
+      "ConnectServerPortTCP": 44405,
+      "ConnectServerPortUDP": 55557,
+      "MaxConnectionIdle": 60,
+      "MaxConnectionPerIP": 1,
+      "MaxPacketPerSecond": 10
+    }
+  },
+  "ServerList": {
+    "rows": [
+      {"ServerCode": 0, "ServerName": "Servidor 01", "IpAddress": "192.168.1.1", "Port": 55900, "Visible": 1},
+      {"ServerCode": 19, "ServerName": "EventServer", "IpAddress": "192.168.1.1", "Port": 55919, "Visible": 0}
+    ]
+  },
+  "BlackList": {
+    "rows": [
+      {"IpAddress": "127.0.0.1"}
+    ]
+  },
+  "JoinServer": {
+    "JoinServerInfo": {
+      "JoinServerODBC": "MuOnline",
+      "JoinServerPort": 55970,
+      "ConnectServerAddress": "127.0.0.1",
+      "ConnectServerPort": 55557,
+      "MaxConnectionPerIP": 0,
+      "MaxConnectionPerHID": 0,
+      "MD5Encryption": 0
+    }
+  },
+  "BadSyntax": {
+    "rows": []
+  }
+}

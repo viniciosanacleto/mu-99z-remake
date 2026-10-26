@@ -1,8 +1,8 @@
 package ini
 
 import (
+	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 )
 
@@ -53,11 +53,20 @@ func TestParse(t *testing.T) {
 }
 
 func TestLoadConnectServerIni(t *testing.T) {
-	_, file, _, _ := runtime.Caller(0)
-	path := filepath.Join(filepath.Dir(file), "..", "..", "..", "data", "1.ConnectServer", "ConnectServer.ini")
+	// The original 1.ConnectServer/ConnectServer.ini.
+	path := filepath.Join(t.TempDir(), "ConnectServer.ini")
+	src := "[ConnectServerInfo]\r\n;==================================================\r\n; Connection Settings\r\n" +
+		";==================================================\r\nConnectServerPortTCP = 44405\r\nConnectServerPortUDP = 55557\r\n" +
+		"MaxConnectionIdle = 60\r\nMaxConnectionPerIP = 1\r\nMaxPacketPerSecond = 10\r\n"
+	if err := os.WriteFile(path, []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	f, err := Load(path)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if _, err := Load(filepath.Join(t.TempDir(), "missing.ini")); err == nil {
+		t.Fatal("missing file read")
 	}
 	want := map[string]int{
 		"ConnectServerPortTCP": 44405,
@@ -70,5 +79,16 @@ func TestLoadConnectServerIni(t *testing.T) {
 		if got := f.Int("ConnectServerInfo", k, -1); got != v {
 			t.Errorf("%s = %d, want %d", k, got, v)
 		}
+	}
+}
+
+func TestFromSections(t *testing.T) {
+	f := FromSections(map[string]map[string]string{"GameServerInfo": {"ServerName": "Principal", "ServerPort": "55900"}})
+	if f.String("gameserverinfo", "SERVERNAME", "", 0x20) != "Principal" || f.Int("GameServerInfo", "ServerPort", 0) != 55900 {
+		t.Fatal("case-insensitive lookup")
+	}
+	if f.String("GameServerInfo", "ServerName", "", 4) != "Pri" || f.Int("GameServerInfo", "Missing", 7) != 7 ||
+		!f.Has("GameServerInfo", "serverport") || f.Has("Other", "ServerPort") {
+		t.Fatal("GetPrivateProfile semantics")
 	}
 }

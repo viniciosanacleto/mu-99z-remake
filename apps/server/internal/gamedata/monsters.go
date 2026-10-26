@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
@@ -73,7 +74,7 @@ func monsterRate(v, rate int) int {
 // LoadMonsterList reads Data/Monster/MonsterList.txt (FUN_004ba0c0: 31
 // columns, rows until "end"; index >= 1000 is ignored by FUN_004ba3b0).
 func LoadMonsterList(dataDir string, rates MonsterRates) (map[int]*MonsterInfo, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Monster", "MonsterList.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Monster", "MonsterList.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -137,9 +138,9 @@ type SpawnRecord struct {
 	TX, TY  int // section 1 only
 }
 
-// LoadSpawns reads every Data/Monster/Spawn/"NNN - Name.txt" whose map is
-// accepted (FUN_004bbaa0: three digits, " - ", map known to MapManager),
-// in file-name order. rnd returns a non-negative random int (the original
+// LoadSpawns reads every Monster/Spawn/"NNN - Name.json" (the original
+// "NNN - Name.txt") whose map is accepted (FUN_004bbaa0: three digits,
+// " - ", map known to MapManager), in file-name order. rnd returns a non-negative random int (the original
 // Mersenne generator FUN_005138d0); it decides random directions (-1 =>
 // rand&7, FUN_004bbf10) and the +-3 offset of section 2 (FUN_004bbc70).
 func LoadSpawns(dataDir string, mapOK func(int) bool, rnd func() int) ([]SpawnRecord, error) {
@@ -152,7 +153,7 @@ func LoadSpawns(dataDir string, mapOK func(int) bool, rnd func() int) ([]SpawnRe
 	for _, e := range entries {
 		n := e.Name()
 		if e.IsDir() || len(n) < 6 || !isDigit(n[0]) || !isDigit(n[1]) || !isDigit(n[2]) ||
-			n[3] != ' ' || n[4] != '-' || n[5] != ' ' {
+			n[3] != ' ' || n[4] != '-' || n[5] != ' ' || filepath.Ext(n) != ".json" {
 			continue
 		}
 		names = append(names, n)
@@ -164,11 +165,11 @@ func LoadSpawns(dataDir string, mapOK func(int) bool, rnd func() int) ([]SpawnRe
 		if mapOK != nil && !mapOK(mp) {
 			continue
 		}
-		data, err := os.ReadFile(filepath.Join(dir, n))
+		lines, err := jsonconf.LoadLines(filepath.Join(dir, n))
 		if err != nil {
 			return nil, err
 		}
-		if out, err = parseSpawnFile(data, mp, rnd, out); err != nil {
+		if out, err = parseSpawnFile(lines, mp, rnd, out); err != nil {
 			return nil, fmt.Errorf("Spawn/%s: %w", n, err)
 		}
 	}
@@ -182,11 +183,7 @@ func isDigit(b byte) bool { return b >= '0' && b <= '9' }
 // more columns are therefore re-read as further records, exactly like the
 // original), section 1 rows are eight numbers and expand to Quantity
 // records, and section 5 is skipped.
-func parseSpawnFile(data []byte, mp int, rnd func() int, out []SpawnRecord) ([]SpawnRecord, error) {
-	lines, err := mutext.Tokenize(data)
-	if err != nil {
-		return nil, err
-	}
+func parseSpawnFile(lines []mutext.Line, mp int, rnd func() int, out []SpawnRecord) ([]SpawnRecord, error) {
 	var toks []string
 	for _, l := range lines {
 		toks = append(toks, l.Tokens...)
@@ -272,7 +269,7 @@ type NpcTalkEntry struct {
 
 // LoadNpcTalk reads Data/Monster/NpcTalk.txt.
 func LoadNpcTalk(dataDir string) ([]NpcTalkEntry, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Monster", "NpcTalk.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Monster", "NpcTalk.json"))
 	if err != nil {
 		return nil, err
 	}

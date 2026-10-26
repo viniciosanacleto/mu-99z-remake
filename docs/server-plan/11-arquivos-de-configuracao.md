@@ -1,8 +1,72 @@
 # 11 — Arquivos de configuração e de dados
 
-O serviço Go deve ler os mesmos arquivos (diretório `Data/` configurável) para reaproveitar o conteúdo existente. Todos são texto Latin-1 com `\r\n`.
+O servidor original lê arquivos texto (`.ini`, `.dat`, `.txt`, Latin-1 com `\r\n`) espalhados pelas pastas dos processos. O serviço Go lê o mesmo conteúdo, convertido para JSON numa pasta só, `apps/server/config/` (seção 0). As seções 1 a 4 descrevem os arquivos originais, que continuam sendo a referência de comportamento.
 
-Licenças dos arquivos originais são ignoradas. Quando uma tarefa precisar deles, copiar de `MuServer/Data/**` (e dos `.dat`/`.ini` dos processos) para `apps/server/data/`, mantendo caminhos e nomes originais; o diretório padrão de dados do servidor é essa pasta do repositório.
+Licenças dos arquivos originais são ignoradas. Quando uma tarefa precisar de um arquivo original ainda não convertido, copiar de `MuServer/**` e converter com `cmd/configconv` (seção 0.5). Arquivos que não são texto de configuração ficam no formato original em `apps/server/data/`, com os caminhos originais.
+
+## 0. Configuração em JSON (`apps/server/config/`)
+
+### 0.1 Layout
+
+| Arquivo JSON | Arquivos originais |
+|---|---|
+| `config/server.json` | membros `ConnectServer` (`1.ConnectServer/ConnectServer.ini`), `ServerList` (`1.ConnectServer/ServerList.dat`), `BlackList` (`1.ConnectServer/BlackList.txt`), `JoinServer` (`3.JoinServer/JoinServer.ini`), `BadSyntax` (`2.DataServer/BadSyntax.txt`) |
+| `config/gameservers/<instância>.json` | os 8 `<instância>/DATA/GameServerInfo - <Nome>.dat`; cada arquivo vira uma seção (`Common`, `Character`, `ChaosMix`, `Command`, `Custom`, `Event`, `Item`, `Skill`) com as chaves do seu `[GameServerInfo]` |
+| `config/data/<caminho>.json` | `MuServer/Data/<caminho>.txt` / `.dat` / `.ini`, mesmo caminho relativo, extensão trocada |
+
+Ficam em `apps/server/data/Data/` (formato original): `Terrain/*.att`, `Hack/Enc2.dat` e `Dec1.dat` (chaves SimpleModulus), `Common/Protect/*.dat`, `Skill/SkillElect.hit`, `Script/**.lua` e as imagens `.bmp` do XShopRecharge (`Custom/`). O `data/DB/MuOnline.sql` continua lá para o `cmd/migrate`.
+
+Flags: `muserver -config config -data data` (`-config` = JSON, `-data` = arquivos no formato original); `-instances` nomeia os arquivos de `config/gameservers/`; `-blacklist` aceita uma tabela JSON (`{"rows": []}` libera `127.0.0.1`). `mueditor -config config`; `muproxy -gs-config config/gameservers/4.GameServer.json`.
+
+### 0.2 Tabelas (arquivos tokenizados)
+
+```json
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"WarningTime": 5, "NotifyTime": 1, "EventTime": 15, "CloseTime": 4}
+    ]},
+    {"index": 1, "rows": [
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 0, "StartMin": 0, "StartSec": 0}
+    ]}
+  ]
+}
+```
+
+- Um bloco por seção numerada (`index`); arquivo sem seções numeradas: `{"rows": [...]}`. `"end": false` marca um bloco que o original não fechava com `end`.
+- Cada linha é um objeto: chave = nome da coluna, **na ordem das colunas** (os leitores são posicionais; a ordem das chaves é a ordem dos tokens).
+- Os nomes vêm do comentário de cabeçalho do arquivo original (`// Index   Type   Name ...`, `; #  LEVEL  WAITMAP ...`). Uma linha usa o último cabeçalho acima dela com a mesma quantidade de colunas; senão o cabeçalho em vigor ou um anterior dessa largura; senão um cabeçalho mais largo. Colunas sem nome no original ficam `Col1`, `Col2`, ... Exceções do conversor: `ACTIVE SYNTAX PLAYER PATENTE` (3 colunas, `SYNTAX_PLAYER`), `Item/ItemDrop.txt` (sem cabeçalho: nomes da struct `gamedata.ItemDropRule`) e a seção 0 de `Custom/CustomXShop.txt` (`Type`, `Preco`).
+- Valores: número JSON quando o token é um inteiro que se relê igual; o resto é string (`"*"`, `"12,015"`, `"010"`, `"1.5"`, textos).
+- `"encoding": "windows-1252"`: o original não era UTF-8 (`Lang/*/Message`, `Monster/NpcTalk`, `Custom/CustomQuiz`). O JSON guarda UTF-8 e o leitor devolve os bytes Windows-1252 que o cliente espera. Em arquivos sem esse campo, use só ASCII nos textos.
+- Comentários do original não são preservados.
+
+O leitor (`jsonconf.LoadLines`) devolve as mesmas `mutext.Line` que o tokenizador dava ao arquivo original (números de seção, linhas e `end`), então os parsers posicionais de `internal/gamedata` e `internal/game` não mudaram. Os scripts WizardTeam (`Custom/Event/*.txt`, `Custom/CustomPatente.txt`) são convertidos com o tokenizador deles (`mutext.TokenizeScript`: `;` também comenta).
+
+### 0.3 Settings (arquivos `.ini`)
+
+```json
+{
+  "ConnectServerInfo": {
+    "ConnectServerPortTCP": 44405,
+    "MaxConnectionIdle": 60
+  }
+}
+```
+
+Seção → chave → valor, na ordem e com a grafia da primeira ocorrência no original. O leitor (`jsonconf.LoadINI`) reproduz `GetPrivateProfileIntA/StringA` (nomes sem diferença de maiúsculas, inteiro lido até o primeiro não dígito, truncamento pelo tamanho do buffer). Vale para `CustomGHRS.ini`, `CreationGold.txt`, `CustomXShopRecharge.txt`, os membros `ConnectServer`/`JoinServer` de `server.json` e as seções dos arquivos de instância.
+
+### 0.4 Escritas em tempo de execução
+
+| Original | JSON |
+|---|---|
+| `/xshop` de GM reescreve a linha `Type Index Preco` da seção 1 do `CustomXShop.txt` (`FUN_00403920`) | `gamedata.WriteXShopPrice` altera/acrescenta a linha em `Custom/CustomXShop.json` (sem o comentário `// alterado/criado ingame por GM`) |
+| upload do GM grava `CustomXShopRecharge.txt` e `pix*.tmp.bmp` (`FUN_00405350`) | `Custom/CustomXShopRecharge.json`; o BMP vai para `data/Data/Custom/` |
+| `CCastleSiege::LoadData` zera as chaves de ciclo/estado no `GameServerInfo - Event.dat` (`FUN_0041ab60`) | `gsconfig.Config.WriteKeys` na seção `Event` do arquivo da instância |
+| `ConfigSaveString` (Lua, `WritePrivateProfileStringA`) | inalterado: `.ini` do script em `data/<instância>/` (a pasta é criada se faltar) |
+
+### 0.5 Conversão
+
+`go run ./cmd/configconv -from <MuServer> -to config [-report]` converte uma pasta MuServer original. Cada tabela é conferida: os tokens do JSON precisam ser os mesmos do arquivo original, senão a conversão falha. `-report` lista as linhas com colunas sem nome no cabeçalho. Ficam de fora os binários (seção 0.1) e as notas do administrador (`Item/test_item.txt`, `Monster/BALANCE_CHANGELOG.txt`, `Shop/_ALTERACOES.txt`, `EventItemBag/AJUSTE_JOIAS_20_PORCENTO.txt`).
 
 ## 1. Convenções de formato (observado)
 
@@ -13,7 +77,7 @@ Licenças dos arquivos originais são ignoradas. Quando uma tarefa precisar dele
 - Colunas separadas por espaços/tabs.
 - `.ini`/`.dat` de servidor: formato `GetPrivateProfile` (`[Seção]` + `Chave = Valor`, comentários `;`).
 
-Recomendação: um único tokenizer (`internal/config/mutext`) com suporte a seções, `*`, aspas e `cc,iii`, e structs por arquivo com tags de coluna; testes que carregam todos os arquivos reais.
+O tokenizador `internal/config/mutext` trata seções, `*`, aspas e `cc,iii`; o conversor da seção 0 usa o mesmo tokenizador, e `TestDataFileCoverage` carrega todos os arquivos convertidos.
 
 ## 2. Configuração dos processos
 

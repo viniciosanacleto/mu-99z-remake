@@ -1,0 +1,8 @@
+{
+  "rows": [
+    {"Index": 229, "MapNumber": 0, "MapPosX": 137, "MapPosY": 87, "Direction": 1, "KeepTime": 1200},
+    {"Index": 229, "MapNumber": 2, "MapPosX": 198, "MapPosY": 52, "Direction": 2, "KeepTime": 1200},
+    {"Index": 229, "MapNumber": 3, "MapPosX": 170, "MapPosY": 88, "Direction": 2, "KeepTime": 1200},
+    {"Index": 229, "MapNumber": 7, "MapPosX": 17, "MapPosY": 25, "Direction": 2, "KeepTime": 1200}
+  ]
+}

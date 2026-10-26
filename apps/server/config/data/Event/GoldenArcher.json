@@ -1,0 +1,24 @@
+{
+  "rows": [
+    {"ItemIndex": "12,015", "RewardGroup": 0, "Option0": "*", "Option1": "*", "Option2": "*", "Option3": "*", "Option4": "*", "Option5": "*", "Duration": 0, "DropRate": 1000},
+    {"ItemIndex": "14,013", "RewardGroup": 0, "Option0": "*", "Option1": "*", "Option2": "*", "Option3": "*", "Option4": "*", "Option5": "*", "Duration": 0, "DropRate": 100},
+    {"ItemIndex": "14,013", "RewardGroup": 0, "Option0": "*", "Option1": "*", "Option2": "*", "Option3": "*", "Option4": "*", "Option5": "*", "Duration": 0, "DropRate": 100},
+    {"ItemIndex": "14,016", "RewardGroup": 0, "Option0": "*", "Option1": "*", "Option2": "*", "Option3": "*", "Option4": "*", "Option5": "*", "Duration": 0, "DropRate": 100},
+    {"ItemIndex": "12,015", "RewardGroup": 1, "Option0": "*", "Option1": "*", "Option2": "*", "Option3": "*", "Option4": "*", "Option5": "*", "Duration": 0, "DropRate": 1000},
+    {"ItemIndex": "14,013", "RewardGroup": 1, "Option0": "*", "Option1": "*", "Option2": "*", "Option3": "*", "Option4": "*", "Option5": "*", "Duration": 0, "DropRate": 300},
+    {"ItemIndex": "14,013", "RewardGroup": 1, "Option0": "*", "Option1": "*", "Option2": "*", "Option3": "*", "Option4": "*", "Option5": "*", "Duration": 0, "DropRate": 300},
+    {"ItemIndex": "14,016", "RewardGroup": 1, "Option0": "*", "Option1": "*", "Option2": "*", "Option3": "*", "Option4": "*", "Option5": "*", "Duration": 0, "DropRate": 300},
+    {"ItemIndex": "12,015", "RewardGroup": 2, "Option0": "*", "Option1": "*", "Option2": "*", "Option3": "*", "Option4": "*", "Option5": "*", "Duration": 0, "DropRate": 1000},
+    {"ItemIndex": "14,013", "RewardGroup": 2, "Option0": "*", "Option1": "*", "Option2": "*", "Option3": "*", "Option4": "*", "Option5": "*", "Duration": 0, "DropRate": 500},
+    {"ItemIndex": "14,013", "RewardGroup": 2, "Option0": "*", "Option1": "*", "Option2": "*", "Option3": "*", "Option4": "*", "Option5": "*", "Duration": 0, "DropRate": 500},
+    {"ItemIndex": "14,016", "RewardGroup": 2, "Option0": "*", "Option1": "*", "Option2": "*", "Option3": "*", "Option4": "*", "Option5": "*", "Duration": 0, "DropRate": 500},
+    {"ItemIndex": "12,015", "RewardGroup": 3, "Option0": "*", "Option1": "*", "Option2": "*", "Option3": "*", "Option4": "*", "Option5": "*", "Duration": 0, "DropRate": 1000},
+    {"ItemIndex": "14,013", "RewardGroup": 3, "Option0": "*", "Option1": "*", "Option2": "*", "Option3": "*", "Option4": "*", "Option5": "*", "Duration": 0, "DropRate": 700},
+    {"ItemIndex": "14,013", "RewardGroup": 3, "Option0": "*", "Option1": "*", "Option2": "*", "Option3": "*", "Option4": "*", "Option5": "*", "Duration": 0, "DropRate": 700},
+    {"ItemIndex": "14,016", "RewardGroup": 3, "Option0": "*", "Option1": "*", "Option2": "*", "Option3": "*", "Option4": "*", "Option5": "*", "Duration": 0, "DropRate": 700},
+    {"ItemIndex": "12,015", "RewardGroup": 4, "Option0": "*", "Option1": "*", "Option2": "*", "Option3": "*", "Option4": "*", "Option5": "*", "Duration": 0, "DropRate": 1000},
+    {"ItemIndex": "14,013", "RewardGroup": 4, "Option0": "*", "Option1": "*", "Option2": "*", "Option3": "*", "Option4": "*", "Option5": "*", "Duration": 0, "DropRate": 1000},
+    {"ItemIndex": "14,013", "RewardGroup": 4, "Option0": "*", "Option1": "*", "Option2": "*", "Option3": "*", "Option4": "*", "Option5": "*", "Duration": 0, "DropRate": 1000},
+    {"ItemIndex": "14,016", "RewardGroup": 4, "Option0": "*", "Option1": "*", "Option2": "*", "Option3": "*", "Option4": "*", "Option5": "*", "Duration": 0, "DropRate": 1000}
+  ]
+}

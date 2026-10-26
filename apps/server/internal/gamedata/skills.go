@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
@@ -29,7 +30,7 @@ type SkillInfo struct {
 
 // LoadSkills reads Data/Skill/SkillList.txt.
 func LoadSkills(dataDir string) (map[int]SkillInfo, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Skill", "SkillList.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Skill", "SkillList.json"))
 	if err != nil {
 		return nil, err
 	}

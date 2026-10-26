@@ -1,0 +1,5 @@
+{
+  "rows": [
+    {"ItemIndex": "07,106", "AttackSuccess": 0, "Defense": 0, "SucessDefense": 0, "AddLife": 0, "DamageReflect": 20, "DamageMin": 10, "DamageMax": 20, "CriticalDamage": 0, "ExcellentDamageRate": 30}
+  ]
+}

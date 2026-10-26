@@ -7,7 +7,7 @@ import (
 
 func TestLoadNotices(t *testing.T) {
 	now := time.Unix(0, 0)
-	ns, err := loadNotices(repoData("Data"), now)
+	ns, err := loadNotices(repoConfig("data"), now)
 	if err != nil {
 		t.Fatal(err)
 	}

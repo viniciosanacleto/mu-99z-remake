@@ -1,0 +1,25 @@
+{
+  "rows": [
+    {"NPCIndex": 230, "MapNumber": 0, "LocationX": 130, "LocationY": 148, "Direction": 2, "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GMLevel": "*", "ShopPath": "230 - Wandering Merchant Alex"},
+    {"NPCIndex": 231, "MapNumber": 2, "LocationX": "008", "LocationY": "077", "Direction": 3, "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GMLevel": "*", "ShopPath": "231 - Thompson Kenel"},
+    {"NPCIndex": 242, "MapNumber": 3, "LocationX": 173, "LocationY": 125, "Direction": 1, "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GMLevel": "*", "ShopPath": "242 - Elf Lala"},
+    {"NPCIndex": 243, "MapNumber": 3, "LocationX": 195, "LocationY": 124, "Direction": 2, "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GMLevel": "*", "ShopPath": "243 - Eo the Craftsman"},
+    {"NPCIndex": 244, "MapNumber": 2, "LocationX": 226, "LocationY": "025", "Direction": 3, "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GMLevel": "*", "ShopPath": "244 - Caren the Barmaid"},
+    {"NPCIndex": 245, "MapNumber": 2, "LocationX": 225, "LocationY": "041", "Direction": 3, "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GMLevel": "*", "ShopPath": "245 - Wizard Izabel"},
+    {"NPCIndex": 246, "MapNumber": 2, "LocationX": 186, "LocationY": "047", "Direction": 3, "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GMLevel": "*", "ShopPath": "246 - Weapons Merchant Zienna"},
+    {"NPCIndex": 248, "MapNumber": 34, "LocationX": 101, "LocationY": "041", "Direction": 3, "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GMLevel": "*", "ShopPath": "248 - Wandering Merchant Martin"},
+    {"NPCIndex": 250, "MapNumber": 0, "LocationX": 183, "LocationY": 137, "Direction": 2, "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GMLevel": "*", "ShopPath": "250 - Wandering Merchant"},
+    {"NPCIndex": 251, "MapNumber": 0, "LocationX": 116, "LocationY": 141, "Direction": 3, "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GMLevel": "*", "ShopPath": "251 - Hanzo the Blacksmith"},
+    {"NPCIndex": 251, "MapNumber": 34, "LocationX": 145, "LocationY": "014", "Direction": 1, "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GMLevel": "*", "ShopPath": "251 - Hanzo the Blacksmith"},
+    {"NPCIndex": 253, "MapNumber": 0, "LocationX": 127, "LocationY": "086", "Direction": 2, "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GMLevel": "*", "ShopPath": "253 - Potion Girl Amy"},
+    {"NPCIndex": 254, "MapNumber": 0, "LocationX": 118, "LocationY": 113, "Direction": 3, "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GMLevel": "*", "ShopPath": "254 - Pasi the Mage"},
+    {"NPCIndex": 255, "MapNumber": 0, "LocationX": 123, "LocationY": 135, "Direction": 1, "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GMLevel": "*", "ShopPath": "255 - Lumen the Barmaid"},
+    {"NPCIndex": 259, "MapNumber": 24, "LocationX": "007", "LocationY": "019", "Direction": 2, "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GMLevel": "*", "ShopPath": "259 - Oracle Layla"},
+    {"NPCIndex": 259, "MapNumber": 25, "LocationX": "007", "LocationY": "019", "Direction": 2, "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GMLevel": "*", "ShopPath": "259 - Oracle Layla"},
+    {"NPCIndex": 259, "MapNumber": 26, "LocationX": "007", "LocationY": "019", "Direction": 2, "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GMLevel": "*", "ShopPath": "259 - Oracle Layla"},
+    {"NPCIndex": 259, "MapNumber": 27, "LocationX": "007", "LocationY": "019", "Direction": 2, "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GMLevel": "*", "ShopPath": "259 - Oracle Layla"},
+    {"NPCIndex": 259, "MapNumber": 28, "LocationX": "007", "LocationY": "019", "Direction": 2, "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GMLevel": "*", "ShopPath": "259 - Oracle Layla"},
+    {"NPCIndex": 259, "MapNumber": 29, "LocationX": "007", "LocationY": "019", "Direction": 2, "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GMLevel": "*", "ShopPath": "259 - Oracle Layla"},
+    {"NPCIndex": 259, "MapNumber": 36, "LocationX": "007", "LocationY": "019", "Direction": 2, "AL0": 1, "AL1": 1, "AL2": 1, "AL3": 1, "GMLevel": "*", "ShopPath": "259 - Oracle Layla"}
+  ]
+}

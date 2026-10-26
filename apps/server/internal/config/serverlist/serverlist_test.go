@@ -6,12 +6,17 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
 func TestLoadOriginalServerList(t *testing.T) {
 	_, file, _, _ := runtime.Caller(0)
-	got, err := Load(filepath.Join(filepath.Dir(file), "..", "..", "..", "data", "1.ConnectServer", "ServerList.dat"))
+	sf, err := jsonconf.LoadServer(filepath.Join(filepath.Dir(file), "..", "..", "..", "config", "server.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := FromTable(sf.ServerList)
 	if err != nil {
 		t.Fatal(err)
 	}

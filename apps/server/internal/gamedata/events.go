@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
@@ -28,7 +29,7 @@ func scheduleRow(l mutext.Line) (Schedule, error) {
 }
 
 func loadSections(path string) ([]mutext.Section, error) {
-	lines, err := mutext.LoadFile(path)
+	lines, err := jsonconf.LoadLines(path)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +63,7 @@ type DevilSquare struct {
 
 // LoadDevilSquare reads Data/Event/DevilSquare.dat.
 func LoadDevilSquare(dataDir string) (*DevilSquare, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Event", "DevilSquare.dat"))
+	secs, err := loadSections(filepath.Join(dataDir, "Event", "DevilSquare.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +115,7 @@ type EventEntryLevel map[int][]EntryLevel
 // LoadEventEntryLevel reads Data/Event/EventEntryLevel.dat (CEventEntryLevel,
 // FUN_0047aec0).
 func LoadEventEntryLevel(dataDir string) (EventEntryLevel, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Event", "EventEntryLevel.dat"))
+	secs, err := loadSections(filepath.Join(dataDir, "Event", "EventEntryLevel.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +160,7 @@ type StageSpawn struct {
 
 // LoadEventStageSpawn reads Data/Event/EventStageSpawn.dat (CEventSpawnStage).
 func LoadEventStageSpawn(dataDir string) ([]StageSpawn, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Event", "EventStageSpawn.dat"))
+	secs, err := loadSections(filepath.Join(dataDir, "Event", "EventStageSpawn.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +191,7 @@ type BloodCastle struct {
 
 // LoadBloodCastle reads Data/Event/BloodCastle.dat.
 func LoadBloodCastle(dataDir string) (*BloodCastle, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Event", "BloodCastle.dat"))
+	secs, err := loadSections(filepath.Join(dataDir, "Event", "BloodCastle.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +267,7 @@ type InvasionSpawn struct {
 
 // LoadInvasions reads Data/Event/InvasionManager.dat (20 events at most).
 func LoadInvasions(dataDir string) ([]*Invasion, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Event", "InvasionManager.dat"))
+	secs, err := loadSections(filepath.Join(dataDir, "Event", "InvasionManager.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -395,7 +396,7 @@ func loadTimedEvents(secs []mutext.Section) ([]*TimedEvent, error) {
 
 // LoadBonusManager reads Data/Event/BonusManager.dat (CBonusManager).
 func LoadBonusManager(dataDir string) ([]*TimedEvent, []Bonus, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Event", "BonusManager.dat"))
+	secs, err := loadSections(filepath.Join(dataDir, "Event", "BonusManager.json"))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -433,7 +434,7 @@ type ChaosCastle struct {
 // LoadChaosCastle reads Data/Event/ChaosCastle.dat. Rows of section 2
 // outside 0..5 are skipped ("Invalid experience level" in the original).
 func LoadChaosCastle(dataDir string) (*ChaosCastle, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Event", "ChaosCastle.dat"))
+	secs, err := loadSections(filepath.Join(dataDir, "Event", "ChaosCastle.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -482,7 +483,7 @@ type DropEventItem struct {
 
 // LoadDropEvent reads Data/Event/DropEvent.dat (CDropEvent).
 func LoadDropEvent(dataDir string) ([]*TimedEvent, []DropEventItem, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Event", "DropEvent.dat"))
+	secs, err := loadSections(filepath.Join(dataDir, "Event", "DropEvent.json"))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -518,7 +519,7 @@ type GoldenArcherReward struct {
 // LoadGoldenArcher reads Data/Event/GoldenArcher.dat (CGoldenArcher,
 // FUN_00461660).
 func LoadGoldenArcher(dataDir string) ([]GoldenArcherReward, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Event", "GoldenArcher.dat"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Event", "GoldenArcher.json"))
 	if err != nil {
 		return nil, err
 	}

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
@@ -30,7 +31,7 @@ type SetItemTypes struct {
 
 // LoadSetItemType reads Data/Item/SetItemType.txt.
 func LoadSetItemType(dataDir string) (*SetItemTypes, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "SetItemType.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Item", "SetItemType.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +89,7 @@ type SetItemOptions [100]SetItemOption
 // LoadSetItemOption reads Data/Item/SetItemOption.txt; rows with an index
 // >= 100 are ignored like the original.
 func LoadSetItemOption(dataDir string) (*SetItemOptions, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Item", "SetItemOption.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Item", "SetItemOption.json"))
 	if err != nil {
 		return nil, err
 	}

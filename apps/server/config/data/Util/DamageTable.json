@@ -1,0 +1,10 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"MapNumber": "*", "MinLevel": "*", "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "MinDefense": "*", "MaxDefense": "*", "DamageRate": 100}
+    ]},
+    {"index": 1, "rows": [
+      {"MapNumber": "*", "MinLevel": "*", "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "MonsterIndex": "*", "MonsterMinLevel": "*", "MonsterMaxLevel": "*", "DamageRate": 100}
+    ]}
+  ]
+}

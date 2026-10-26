@@ -1,0 +1,8 @@
+{
+  "rows": [
+    {"SkillIndex": 41, "MapNumber": 40, "UsePvM": 1, "UsePvP": 1},
+    {"SkillIndex": 56, "MapNumber": 40, "UsePvM": 1, "UsePvP": 1},
+    {"SkillIndex": 41, "MapNumber": "*", "UsePvM": 1, "UsePvP": 0},
+    {"SkillIndex": 56, "MapNumber": "*", "UsePvM": 1, "UsePvP": 0}
+  ]
+}

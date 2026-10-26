@@ -44,7 +44,7 @@ const (
 // Keys are the cipher keys of both ends of a GameServer connection.
 type Keys struct {
 	// Stream is derived from CustomerName/ServerSerial of the GameServer's
-	// "GameServerInfo - Common.dat" (FUN_00487a60).
+	// Common settings ("GameServerInfo - Common.dat", FUN_00487a60).
 	Stream crypto.StreamKeys
 	// ServerEnc/ServerDec are Data/Hack/Enc2.dat and Dec1.dat; ClientEnc
 	// and ClientDec are the client's Data/Enc1.dat and Dec2.dat.
@@ -52,13 +52,13 @@ type Keys struct {
 	ClientEnc, ClientDec crypto.ModulusKeys
 }
 
-// LoadKeys reads the stream keys from the GameServer DATA folder
-// (gsDataDir, e.g. data/4.GameServer/DATA), Enc2.dat/Dec1.dat from
-// serverHackDir (data/Data/Hack) and Enc1.dat/Dec2.dat from clientDataDir
-// (the client's Data folder).
-func LoadKeys(gsDataDir, serverHackDir, clientDataDir string) (Keys, error) {
+// LoadKeys reads the stream keys from the GameServer instance file
+// (gsConfig, e.g. config/gameservers/4.GameServer.json), Enc2.dat/Dec1.dat
+// from serverHackDir (data/Data/Hack) and Enc1.dat/Dec2.dat from
+// clientDataDir (the client's Data folder).
+func LoadKeys(gsConfig, serverHackDir, clientDataDir string) (Keys, error) {
 	var k Keys
-	cfg, err := gsconfig.Load(gsDataDir)
+	cfg, err := gsconfig.Load(gsConfig)
 	if err != nil {
 		return k, err
 	}

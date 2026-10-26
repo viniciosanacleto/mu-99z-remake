@@ -1,0 +1,11 @@
+{
+  "sections": [
+    {"index": 0, "rows": []},
+    {"index": 1, "rows": [
+      {"SkillIndex": 1, "EffectRate": 100},
+      {"SkillIndex": 7, "EffectRate": 100},
+      {"SkillIndex": 38, "EffectRate": 100},
+      {"SkillIndex": 51, "EffectRate": 100}
+    ]}
+  ]
+}

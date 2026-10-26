@@ -1,0 +1,45 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"Mode": 0, "State": 1, "StartMonth": "*", "StartDay": "*", "StartDoW": 4, "StartHour": 20, "StartMin": 30, "ContinuanceTime": "*"},
+      {"Mode": 0, "State": 1, "StartMonth": "*", "StartDay": "*", "StartDoW": 7, "StartHour": 20, "StartMin": 30, "ContinuanceTime": "*"}
+    ]},
+    {"index": 1, "rows": [
+      {"State": 1, "Hour": 0, "Minute": 5, "Second": 0},
+      {"State": 2, "Hour": 0, "Minute": 1, "Second": 0},
+      {"State": 3, "Hour": 0, "Minute": 2, "Second": 0},
+      {"State": 4, "Hour": 0, "Minute": 15, "Second": 0},
+      {"State": 5, "Hour": 0, "Minute": 0, "Second": 15},
+      {"State": 6, "Hour": 0, "Minute": 0, "Second": 10}
+    ]},
+    {"index": 2, "rows": [
+      {"AIGroup": 1},
+      {"AIGroup": 2},
+      {"AIGroup": 3},
+      {"AIGroup": 4},
+      {"AIGroup": 6},
+      {"AIGroup": 7},
+      {"AIGroup": 8},
+      {"AIGroup": 9},
+      {"AIGroup": 10},
+      {"AIGroup": 11},
+      {"AIGroup": 12},
+      {"AIGroup": 13}
+    ]},
+    {"index": 3, "rows": [
+      {"AIGroup": 5, "TurnUpTime": 600}
+    ]},
+    {"index": 4, "rows": [
+      {"AIChangeTime": 300}
+    ]},
+    {"index": 5, "rows": [
+      {"MVPScoreTable1": 7000, "MVPScoreTable2": 3000, "MVPScoreTable3": 600, "MVPScoreTable4": 700, "MVPScoreTable5": 600, "MVPScoreTable6": 1000, "MVPScoreTable7": 6000}
+    ]},
+    {"index": 6, "rows": [
+      {"MVPRankScoreTable1": 0, "MVPRankScoreTable2": 1001, "MVPRankScoreTable3": 3001, "MVPRankScoreTable4": 5001, "MVPRankScoreTable5": 10001}
+    ]},
+    {"index": 7, "rows": [
+      {"MVPRankExpTable1": 0, "MVPRankExpTable2": 200000, "MVPRankExpTable3": 800000, "MVPRankExpTable4": 1200000, "MVPRankExpTable5": 1800000}
+    ]}
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"ACTIVE": 1, "SYNTAX_PLAYER": "/prainhapvp", "PATENTE": 1},
+      {"LEVEL": 210, "MAPNUMBER": 0, "X": 240, "Y": 130, "Players": 2}
+    ]},
+    {"index": 1, "rows": [
+      {"DAY": 0, "HOURS": 18, "MINUTES": 30, "TIME": 5},
+      {"DAY": 1, "HOURS": 18, "MINUTES": 30, "TIME": 5},
+      {"DAY": 2, "HOURS": 18, "MINUTES": 30, "TIME": 5},
+      {"DAY": 3, "HOURS": 18, "MINUTES": 30, "TIME": 5},
+      {"DAY": 4, "HOURS": 18, "MINUTES": 30, "TIME": 5},
+      {"DAY": 5, "HOURS": 18, "MINUTES": 30, "TIME": 5},
+      {"DAY": 6, "HOURS": 18, "MINUTES": 30, "TIME": 5}
+    ]}
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"EventTime": 5}
+    ]},
+    {"index": 1, "rows": [
+      {"MapNumber": 0, "MonsterClass": 258, "RangeStartX": 1, "RangeStartY": 1, "RangeEndX": 255, "RangeEndY": 255, "BagSpecial": 21},
+      {"MapNumber": 2, "MonsterClass": 258, "RangeStartX": 1, "RangeStartY": 1, "RangeEndX": 255, "RangeEndY": 255, "BagSpecial": 21},
+      {"MapNumber": 3, "MonsterClass": 258, "RangeStartX": 1, "RangeStartY": 1, "RangeEndX": 255, "RangeEndY": 255, "BagSpecial": 21}
+    ]},
+    {"index": 2, "rows": [
+      {"Year": "*", "Month": "*", "Day": "*", "DoW": "*", "Hour": 8, "Minute": 0, "Second": 0},
+      {"Year": "*", "Month": "*", "Day": "*", "DoW": "*", "Hour": 18, "Minute": 0, "Second": 0}
+    ]}
+  ]
+}

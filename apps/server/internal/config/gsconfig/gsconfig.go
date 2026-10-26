@@ -1,6 +1,8 @@
-// Package gsconfig loads the "GameServerInfo - *.dat" files of one game
-// server instance (4.GameServer/DATA, 5.GameServerCS/DATA). Every key lives
-// in section [GameServerInfo]; the original reads each with
+// Package gsconfig loads the configuration of one game server instance,
+// config/gameservers/<instance>.json: one section per original
+// "GameServerInfo - <name>.dat" file of 4.GameServer/DATA or
+// 5.GameServerCS/DATA, holding that file's [GameServerInfo] keys under
+// their original names. The original reads each key with
 // GetPrivateProfileIntA/StringA (CServerInfo loaders 0x4ecb40, 0x4eff70,
 // 0x4eda70, 0x4eeee0, 0x4ecf70, ... — the offset/key dictionary is in
 // .re/cfgmap.txt).
@@ -10,19 +12,23 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/ini"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 )
 
 const section = "GameServerInfo"
 
-// Files are the eight per-instance configuration files.
+// Files are the eight original per-instance configuration files, the
+// sections of the JSON file.
 var Files = []string{"Common", "Character", "ChaosMix", "Command", "Custom", "Event", "Item", "Skill"}
 
 // Config gives typed access to the instance configuration.
 type Config struct {
 	files map[string]*ini.File
-	Dir   string
+	Path  string // the JSON file
+	Name  string // the instance, the file name without ".json" ("4.GameServer")
 
 	CustomerName       string
 	ServerName         string // 0x20 buffer
@@ -46,17 +52,25 @@ type Config struct {
 	DLCreateLevel      [4]int
 }
 
-// Load reads every file under dir. Missing files are an error: the
-// original refuses to start without them.
-func Load(dir string) (*Config, error) {
-	c := &Config{files: map[string]*ini.File{}, Dir: dir}
+// Load reads an instance file. A missing section is an error: the
+// original refuses to start without one of its files.
+func Load(path string) (*Config, error) {
+	s, err := jsonconf.LoadSettings(path)
+	if err != nil {
+		return nil, err
+	}
+	return FromSettings(s, path)
+}
+
+// FromSettings builds the configuration of an instance file already read.
+func FromSettings(s *jsonconf.Settings, path string) (*Config, error) {
+	c := &Config{files: map[string]*ini.File{}, Path: path,
+		Name: strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))}
 	for _, name := range Files {
-		path := filepath.Join(dir, "GameServerInfo - "+name+".dat")
-		f, err := ini.Load(path)
-		if err != nil {
-			return nil, err
+		if !s.Has(name) {
+			return nil, fmt.Errorf("%s: missing section %q", path, name)
 		}
-		c.files[name] = f
+		c.files[name] = s.SectionINI(name, section)
 	}
 	c.fill()
 	return c, nil
@@ -117,8 +131,22 @@ func (c *Config) ALInt(file, key string, accountLevel, def int) int {
 	return c.Int(file, fmt.Sprintf("%s_AL%d", key, accountLevel), def)
 }
 
-// Exists reports whether the directory looks like a game server DATA dir.
-func Exists(dir string) bool {
-	_, err := os.Stat(filepath.Join(dir, "GameServerInfo - Common.dat"))
-	return err == nil
+// WriteKeys sets keys of one section in the instance file (the
+// WritePrivateProfileStringA of the original). The loaded values do not
+// change.
+func (c *Config) WriteKeys(file string, keys map[string]string) error {
+	s, err := jsonconf.LoadSettings(c.Path)
+	if err != nil {
+		return err
+	}
+	for k, v := range keys {
+		s.Set(file, k, v)
+	}
+	return jsonconf.WriteSettings(c.Path, s)
+}
+
+// Exists reports whether path is an instance file.
+func Exists(path string) bool {
+	st, err := os.Stat(path)
+	return err == nil && !st.IsDir()
 }

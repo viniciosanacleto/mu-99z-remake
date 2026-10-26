@@ -1,0 +1,17 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"ACTIVE": 1, "SYNTAX_PLAYER": "/dupla", "PATENTE": 1},
+      {"LEVEL": 400, "WAITMAP": 0, "WAITX": 240, "WAITY": 130, "FIGHTMAP": 0, "FIGHTX": 240, "FIGHTY": 130}
+    ]},
+    {"index": 1, "rows": [
+      {"DAY": 0, "HOURS": 21, "MINUTES": 30, "TIME": 5},
+      {"DAY": 1, "HOURS": 21, "MINUTES": 30, "TIME": 5},
+      {"DAY": 2, "HOURS": 21, "MINUTES": 30, "TIME": 5},
+      {"DAY": 3, "HOURS": 21, "MINUTES": 30, "TIME": 5},
+      {"DAY": 4, "HOURS": 21, "MINUTES": 30, "TIME": 5},
+      {"DAY": 5, "HOURS": 21, "MINUTES": 30, "TIME": 5},
+      {"DAY": 6, "HOURS": 21, "MINUTES": 30, "TIME": 5}
+    ]}
+  ]
+}

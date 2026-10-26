@@ -1,0 +1,15 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"MonsterIndex": 217, "SpawnRadius": 0, "LocationX": 167, "LocationY": 195, "Direction": 7},
+      {"MonsterIndex": 218, "SpawnRadius": 0, "LocationX": 184, "LocationY": 195, "Direction": 7},
+      {"MonsterIndex": 216, "SpawnRadius": 0, "LocationX": 176, "LocationY": 212, "Direction": 1},
+      {"MonsterIndex": 220, "SpawnRadius": 0, "LocationX": 139, "LocationY": 101, "Direction": 3},
+      {"MonsterIndex": 224, "SpawnRadius": 0, "LocationX": 86, "LocationY": 61, "Direction": 1},
+      {"MonsterIndex": 224, "SpawnRadius": 0, "LocationX": 99, "LocationY": 61, "Direction": 1},
+      {"MonsterIndex": 223, "SpawnRadius": 0, "LocationX": 179, "LocationY": 214, "Direction": 1}
+    ]},
+    {"index": 1, "rows": []},
+    {"index": 2, "rows": []}
+  ]
+}

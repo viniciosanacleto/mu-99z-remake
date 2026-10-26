@@ -140,7 +140,7 @@ func loadCashWorld(w *World) error {
 	if w.dataDir == "" {
 		return nil
 	}
-	c.xshopPath = filepath.Join(w.dataDir, "Custom", "CustomXShop.txt")
+	c.xshopPath = filepath.Join(w.dataDir, "Custom", "CustomXShop.json")
 	prices, ok, err := gamedata.LoadXShopPrices(c.xshopPath)
 	if err != nil {
 		return err

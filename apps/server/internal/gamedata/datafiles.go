@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/ini"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
@@ -34,7 +34,7 @@ func streamRows(rows []mutext.Line, n int) [][]int {
 }
 
 func loadTable(path string) ([]mutext.Line, error) {
-	lines, err := mutext.LoadFile(path)
+	lines, err := jsonconf.LoadLines(path)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ type ClassFreebies struct {
 
 // LoadDefaultClassFreebies reads Data/Character/DefaultClassFreebies.txt.
 func LoadDefaultClassFreebies(dataDir string) (*ClassFreebies, error) {
-	secs, err := dropSections(filepath.Join(dataDir, "Character", "DefaultClassFreebies.txt"))
+	secs, err := dropSections(filepath.Join(dataDir, "Character", "DefaultClassFreebies.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ type CommandRequirement struct {
 
 // LoadCommandRequirement reads Data/CommandRequirement.txt.
 func LoadCommandRequirement(dataDir string) ([]CommandRequirement, error) {
-	rows, err := loadTable(filepath.Join(dataDir, "CommandRequirement.txt"))
+	rows, err := loadTable(filepath.Join(dataDir, "CommandRequirement.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +182,7 @@ type EvolutionRow struct {
 
 // LoadCustomEvolution reads Data/Custom/CustomEvolution.txt.
 func LoadCustomEvolution(dataDir string) (map[int]EvolutionRow, error) {
-	rows, err := loadTable(filepath.Join(dataDir, "Custom", "CustomEvolution.txt"))
+	rows, err := loadTable(filepath.Join(dataDir, "Custom", "CustomEvolution.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +222,7 @@ func monsterClassList(path string) ([]int, error) {
 // LoadCustomMobCombo reads Data/Custom/CustomMobCombo.txt (same reader as
 // CustomGuard.txt, FUN_0044ef50 on DAT_0173d940).
 func LoadCustomMobCombo(dataDir string) ([]int, error) {
-	return monsterClassList(filepath.Join(dataDir, "Custom", "CustomMobCombo.txt"))
+	return monsterClassList(filepath.Join(dataDir, "Custom", "CustomMobCombo.json"))
 }
 
 // --- Custom/CustomGHRS.ini (CastleSiege.exe only) ------------------------------
@@ -239,7 +239,7 @@ type CustomGHRS struct {
 
 // LoadCustomGHRS reads Data/Custom/CustomGHRS.ini.
 func LoadCustomGHRS(dataDir string) (*CustomGHRS, error) {
-	f, err := ini.Load(filepath.Join(dataDir, "Custom", "CustomGHRS.ini"))
+	f, err := jsonconf.LoadINI(filepath.Join(dataDir, "Custom", "CustomGHRS.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +265,7 @@ type ItemLevelName struct {
 
 // LoadItemLevel reads Data/Item/ItemLevel.txt.
 func LoadItemLevel(dataDir string) ([]ItemLevelName, error) {
-	rows, err := loadTable(filepath.Join(dataDir, "Item", "ItemLevel.txt"))
+	rows, err := loadTable(filepath.Join(dataDir, "Item", "ItemLevel.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -294,7 +294,7 @@ type MonsterMoveRow struct {
 
 // LoadMonsterMove reads Data/Monster/MonsterMove.txt.
 func LoadMonsterMove(dataDir string) ([]MonsterMoveRow, error) {
-	rows, err := loadTable(filepath.Join(dataDir, "Monster", "MonsterMove.txt"))
+	rows, err := loadTable(filepath.Join(dataDir, "Monster", "MonsterMove.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -324,7 +324,7 @@ type MonsterScheduleGroup struct {
 
 // LoadMonsterSchedule reads Data/Monster/MonsterSchedule.txt by group.
 func LoadMonsterSchedule(dataDir string) (map[int]*MonsterScheduleGroup, error) {
-	secs, err := dropSections(filepath.Join(dataDir, "Monster", "MonsterSchedule.txt"))
+	secs, err := dropSections(filepath.Join(dataDir, "Monster", "MonsterSchedule.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -372,7 +372,7 @@ type MoveSummonRow struct {
 
 // LoadMoveSummon reads Data/Move/MoveSummon.txt.
 func LoadMoveSummon(dataDir string) ([]MoveSummonRow, error) {
-	rows, err := loadTable(filepath.Join(dataDir, "Move", "MoveSummon.txt"))
+	rows, err := loadTable(filepath.Join(dataDir, "Move", "MoveSummon.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -401,7 +401,7 @@ type SkillSpeedRule struct {
 
 // LoadHackSkillSpeedCheck reads Data/Hack/HackSkillSpeedCheck.txt.
 func LoadHackSkillSpeedCheck(dataDir string) ([]SkillSpeedRule, error) {
-	rows, err := loadTable(filepath.Join(dataDir, "Hack", "HackSkillSpeedCheck.txt"))
+	rows, err := loadTable(filepath.Join(dataDir, "Hack", "HackSkillSpeedCheck.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -432,7 +432,7 @@ type ExperienceTable []ExperienceRateRow
 
 // LoadExperienceTable reads Data/Util/ExperienceTable.txt.
 func LoadExperienceTable(dataDir string) (ExperienceTable, error) {
-	rows, err := loadTable(filepath.Join(dataDir, "Util", "ExperienceTable.txt"))
+	rows, err := loadTable(filepath.Join(dataDir, "Util", "ExperienceTable.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -470,7 +470,7 @@ type PetDamageRow struct {
 
 // LoadPetDamageTable reads Data/Util/PetDamageTable.txt.
 func LoadPetDamageTable(dataDir string) ([]PetDamageRow, error) {
-	rows, err := loadTable(filepath.Join(dataDir, "Util", "PetDamageTable.txt"))
+	rows, err := loadTable(filepath.Join(dataDir, "Util", "PetDamageTable.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -492,7 +492,7 @@ type BlackList struct {
 
 // LoadBlackList reads Data/BlackList.txt.
 func LoadBlackList(dataDir string) (*BlackList, error) {
-	secs, err := dropSections(filepath.Join(dataDir, "BlackList.txt"))
+	secs, err := dropSections(filepath.Join(dataDir, "BlackList.json"))
 	if err != nil {
 		return nil, err
 	}

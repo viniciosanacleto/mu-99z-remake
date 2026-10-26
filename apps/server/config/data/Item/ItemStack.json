@@ -1,0 +1,21 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"WizarD": "04,007", "TeaM": "*", "Emulator": 255},
+      {"WizarD": "04,015", "TeaM": "*", "Emulator": 255},
+      {"WizarD": "14,000", "TeaM": "*", "Emulator": 255},
+      {"WizarD": "14,001", "TeaM": "*", "Emulator": 255},
+      {"WizarD": "14,002", "TeaM": "*", "Emulator": 255},
+      {"WizarD": "14,003", "TeaM": "*", "Emulator": 255},
+      {"WizarD": "14,004", "TeaM": "*", "Emulator": 255},
+      {"WizarD": "14,005", "TeaM": "*", "Emulator": 255},
+      {"WizarD": "14,006", "TeaM": "*", "Emulator": 255},
+      {"WizarD": "14,007", "TeaM": "*", "Emulator": 255},
+      {"WizarD": "14,008", "TeaM": "*", "Emulator": 255},
+      {"WizarD": "14,021", "TeaM": 3, "Emulator": 255}
+    ]},
+    {"index": 1, "rows": [
+      {"WizarD": "14,029", "TeaM": 5, "Emulator": "14,028"}
+    ]}
+  ]
+}

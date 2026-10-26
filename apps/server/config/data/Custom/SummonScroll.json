@@ -1,0 +1,15 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"Index": 0, "ItemIndex": "14,213"}
+    ]},
+    {"index": 1, "rows": [
+      {"Index": 0, "Group": 0, "MonsterClass": "053", "CreateRate": 80},
+      {"Index": 0, "Group": 1, "MonsterClass": "053", "CreateRate": 60},
+      {"Index": 0, "Group": 2, "MonsterClass": "054", "CreateRate": 50},
+      {"Index": 0, "Group": 3, "MonsterClass": "079", "CreateRate": 40},
+      {"Index": 0, "Group": 4, "MonsterClass": "082", "CreateRate": 30},
+      {"Index": 0, "Group": 5, "MonsterClass": "083", "CreateRate": 20}
+    ]}
+  ]
+}

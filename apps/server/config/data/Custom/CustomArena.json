@@ -1,0 +1,20 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"EventIndex": 0, "StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 20, "StartMin": 0, "StartSec": 0},
+      {"EventIndex": 1, "StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 20, "StartMin": 15, "StartSec": 0},
+      {"EventIndex": 2, "StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 20, "StartMin": 30, "StartSec": 0},
+      {"EventIndex": 3, "StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 20, "StartMin": 45, "StartSec": 0},
+      {"EventIndex": 4, "StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 21, "StartMin": 0, "StartSec": 0},
+      {"EventIndex": 5, "StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 21, "StartMin": 15, "StartSec": 0}
+    ]},
+    {"index": 1, "rows": [
+      {"EventIndex": 0, "Name": "[SMxSM]", "AlarmTime": 5, "StandTime": 1, "EventTime": 10, "CloseTime": 4, "StartGate": 100, "FinalGate": 170, "MinUser": 5, "MaxUser": 100, "MaxDeath": "*", "MinLevel": "*", "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "MinMasterReset": "*", "MaxMasterReset": "*", "RewardBagIndex": "*", "DW": 1, "DK": 0, "FE": 0, "MG": 0, "DL": 0},
+      {"EventIndex": 1, "Name": "[BKxBK]", "AlarmTime": 5, "StandTime": 1, "EventTime": 10, "CloseTime": 4, "StartGate": 100, "FinalGate": 170, "MinUser": 5, "MaxUser": 100, "MaxDeath": "*", "MinLevel": "*", "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "MinMasterReset": "*", "MaxMasterReset": "*", "RewardBagIndex": "*", "DW": 0, "DK": 1, "FE": 0, "MG": 0, "DL": 0},
+      {"EventIndex": 2, "Name": "[ELFxELF]", "AlarmTime": 5, "StandTime": 1, "EventTime": 10, "CloseTime": 4, "StartGate": 100, "FinalGate": 170, "MinUser": 5, "MaxUser": 100, "MaxDeath": "*", "MinLevel": "*", "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "MinMasterReset": "*", "MaxMasterReset": "*", "RewardBagIndex": "*", "DW": 0, "DK": 0, "FE": 1, "MG": 0, "DL": 0},
+      {"EventIndex": 3, "Name": "[MGxMG]", "AlarmTime": 5, "StandTime": 1, "EventTime": 10, "CloseTime": 4, "StartGate": 100, "FinalGate": 170, "MinUser": 5, "MaxUser": 100, "MaxDeath": "*", "MinLevel": "*", "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "MinMasterReset": "*", "MaxMasterReset": "*", "RewardBagIndex": "*", "DW": 0, "DK": 0, "FE": 0, "MG": 1, "DL": 0},
+      {"EventIndex": 4, "Name": "[DLxDL]", "AlarmTime": 5, "StandTime": 1, "EventTime": 10, "CloseTime": 4, "StartGate": 100, "FinalGate": 170, "MinUser": 5, "MaxUser": 100, "MaxDeath": "*", "MinLevel": "*", "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "MinMasterReset": "*", "MaxMasterReset": "*", "RewardBagIndex": "*", "DW": 0, "DK": 0, "FE": 0, "MG": 0, "DL": 1},
+      {"EventIndex": 5, "Name": "[ALLxALL]", "AlarmTime": 5, "StandTime": 1, "EventTime": 10, "CloseTime": 4, "StartGate": 10, "FinalGate": 10, "MinUser": 5, "MaxUser": 100, "MaxDeath": "*", "MinLevel": "*", "MaxLevel": "*", "MinReset": "*", "MaxReset": "*", "MinMasterReset": "*", "MaxMasterReset": "*", "RewardBagIndex": "*", "DW": 1, "DK": 1, "FE": 1, "MG": 1, "DL": 1}
+    ]}
+  ]
+}

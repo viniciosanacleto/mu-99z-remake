@@ -1,0 +1,24 @@
+{
+  "rows": [
+    {"ItemIndex": "12,000", "AllowDrop": 0, "AllowSell": 1, "AllowTrade": 1, "AllowVault": 1},
+    {"ItemIndex": "12,001", "AllowDrop": 0, "AllowSell": 1, "AllowTrade": 1, "AllowVault": 1},
+    {"ItemIndex": "12,002", "AllowDrop": 0, "AllowSell": 1, "AllowTrade": 1, "AllowVault": 1},
+    {"ItemIndex": "12,003", "AllowDrop": 0, "AllowSell": 1, "AllowTrade": 1, "AllowVault": 1},
+    {"ItemIndex": "12,004", "AllowDrop": 0, "AllowSell": 1, "AllowTrade": 1, "AllowVault": 1},
+    {"ItemIndex": "12,005", "AllowDrop": 0, "AllowSell": 1, "AllowTrade": 1, "AllowVault": 1},
+    {"ItemIndex": "12,006", "AllowDrop": 0, "AllowSell": 1, "AllowTrade": 1, "AllowVault": 1},
+    {"ItemIndex": "12,015", "AllowDrop": 0, "AllowSell": 1, "AllowTrade": 1, "AllowVault": 1},
+    {"ItemIndex": "12,030", "AllowDrop": 0, "AllowSell": 1, "AllowTrade": 1, "AllowVault": 1},
+    {"ItemIndex": "12,031", "AllowDrop": 0, "AllowSell": 1, "AllowTrade": 1, "AllowVault": 1},
+    {"ItemIndex": "13,000", "AllowDrop": 0, "AllowSell": 1, "AllowTrade": 1, "AllowVault": 1},
+    {"ItemIndex": "13,001", "AllowDrop": 0, "AllowSell": 1, "AllowTrade": 1, "AllowVault": 1},
+    {"ItemIndex": "13,002", "AllowDrop": 0, "AllowSell": 1, "AllowTrade": 1, "AllowVault": 1},
+    {"ItemIndex": "13,003", "AllowDrop": 0, "AllowSell": 1, "AllowTrade": 1, "AllowVault": 1},
+    {"ItemIndex": "13,019", "AllowDrop": 1, "AllowSell": 0, "AllowTrade": 0, "AllowVault": 0},
+    {"ItemIndex": "13,020", "AllowDrop": 1, "AllowSell": 1, "AllowTrade": 0, "AllowVault": 0},
+    {"ItemIndex": "14,013", "AllowDrop": 0, "AllowSell": 1, "AllowTrade": 1, "AllowVault": 1},
+    {"ItemIndex": "14,014", "AllowDrop": 0, "AllowSell": 1, "AllowTrade": 1, "AllowVault": 1},
+    {"ItemIndex": "14,016", "AllowDrop": 0, "AllowSell": 1, "AllowTrade": 1, "AllowVault": 1},
+    {"ItemIndex": "14,022", "AllowDrop": 0, "AllowSell": 1, "AllowTrade": 1, "AllowVault": 1}
+  ]
+}

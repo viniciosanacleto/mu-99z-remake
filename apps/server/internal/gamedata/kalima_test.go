@@ -22,9 +22,7 @@ func TestLoadKalimaIgnoresOutOfRange(t *testing.T) {
 		t.Fatal(err)
 	}
 	src := "// c\n2 1\n6 1\n-1 1\n0 1\nend\n3 1\n"
-	if err := os.WriteFile(filepath.Join(dir, "Event", "Kalima.dat"), []byte(src), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	putOriginal(t, filepath.Join(dir, "Event", "Kalima.dat"), src)
 	r, err := LoadKalima(dir)
 	if err != nil {
 		t.Fatal(err)

@@ -93,9 +93,7 @@ func TestLoadCustomFixtures(t *testing.T) {
 		if err := os.MkdirAll(filepath.Join(dir, "Custom"), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(dir, "Custom", name), []byte(text), 0o644); err != nil {
-			t.Fatal(err)
-		}
+		putOriginal(t, filepath.Join(dir, "Custom", name), text)
 	}
 	write("CustomMonsterKillCount.txt", "0\n5 3 1 0 1 1 10 100 \"Spiders\"\n2 4 1 1 1 1 2 0 \"Two\"\n5 9 1 1 1 1 1 1 \"dup\"\nend\n"+
 		"1\n5 12,015 1 0 0 1 2 3 4 60\n7 12,015 0 0 0 0 0 0 0 0\nend\n")

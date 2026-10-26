@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"path/filepath"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -58,7 +59,7 @@ func loadMoveData(w *World) error {
 	if w.dataDir == "" {
 		return nil
 	}
-	lines, err := mutext.LoadFile(filepath.Join(w.dataDir, "Util", "Filter.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(w.dataDir, "Util", "Filter.json"))
 	if err != nil {
 		return err
 	}
@@ -67,7 +68,7 @@ func loadMoveData(w *World) error {
 			d.filter = append(d.filter, l.Tokens[0])
 		}
 	}
-	lines, err = mutext.LoadFile(filepath.Join(w.dataDir, "Util", "GameMaster.txt"))
+	lines, err = jsonconf.LoadLines(filepath.Join(w.dataDir, "Util", "GameMaster.json"))
 	if err != nil {
 		return err
 	}

@@ -62,7 +62,7 @@ type CastleUpgrade struct {
 
 // LoadCastleSiege reads Data/Event/CastleSiege.dat.
 func LoadCastleSiege(dataDir string) (*CastleSiege, error) {
-	secs, err := loadSections(filepath.Join(dataDir, "Event", "CastleSiege.dat"))
+	secs, err := loadSections(filepath.Join(dataDir, "Event", "CastleSiege.json"))
 	if err != nil {
 		return nil, err
 	}

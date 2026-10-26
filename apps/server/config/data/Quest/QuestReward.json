@@ -1,0 +1,9 @@
+{
+  "rows": [
+    {"Sort": 0, "Type": 1, "Index": 200, "Quantity": 10, "Level": 0, "Option1": 0, "Option2": 0, "Option3": 0, "NewOption": 0, "RequireIndex": 0, "RequireState": 1, "DW": 1, "DK": 1, "FE": 1, "MG": 0, "DL": 0},
+    {"Sort": 0, "Type": 1, "Index": 200, "Quantity": 10, "Level": 0, "Option1": 0, "Option2": 0, "Option3": 0, "NewOption": 0, "RequireIndex": 1, "RequireState": 1, "DW": 1, "DK": 1, "FE": 1, "MG": 0, "DL": 0},
+    {"Sort": 1, "Type": 2, "Index": 201, "Quantity": 0, "Level": 0, "Option1": 0, "Option2": 0, "Option3": 0, "NewOption": 0, "RequireIndex": 1, "RequireState": 1, "DW": 1, "DK": 1, "FE": 1, "MG": 0, "DL": 0},
+    {"Sort": 0, "Type": 4, "Index": 202, "Quantity": 0, "Level": 0, "Option1": 0, "Option2": 0, "Option3": 0, "NewOption": 0, "RequireIndex": 2, "RequireState": 1, "DW": 2, "DK": 2, "FE": 2, "MG": 0, "DL": 0},
+    {"Sort": 0, "Type": 8, "Index": 203, "Quantity": 0, "Level": 0, "Option1": 0, "Option2": 0, "Option3": 0, "NewOption": 0, "RequireIndex": 3, "RequireState": 1, "DW": 0, "DK": 2, "FE": 0, "MG": 0, "DL": 0}
+  ]
+}

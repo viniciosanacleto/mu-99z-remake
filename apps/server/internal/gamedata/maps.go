@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
@@ -36,7 +37,7 @@ const DefaultViewRange = 12
 
 // LoadMapManager reads Data/MapManager.txt.
 func LoadMapManager(dataDir string) (map[int]MapInfo, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "MapManager.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "MapManager.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +77,7 @@ type Gate struct {
 
 // LoadGates reads Data/Move/Gate.txt.
 func LoadGates(dataDir string) (map[int]Gate, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Move", "Gate.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Move", "Gate.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +127,7 @@ type MapServerMove struct {
 
 // LoadMapServer reads Data/MapServerInfo.txt.
 func LoadMapServer(dataDir string) (*MapServer, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "MapServerInfo.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "MapServerInfo.json"))
 	if err != nil {
 		return nil, err
 	}

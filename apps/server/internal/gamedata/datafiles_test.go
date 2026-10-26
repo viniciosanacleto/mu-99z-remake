@@ -17,9 +17,7 @@ func writeData(t *testing.T, files map[string]string) string {
 		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
-			t.Fatal(err)
-		}
+		putOriginal(t, p, body)
 	}
 	return dir
 }

@@ -7,8 +7,6 @@ import (
 	"io"
 	"log/slog"
 	"net"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -25,25 +23,9 @@ import (
 // minimum lowered so one-member test guilds can register.
 func csConfig(t *testing.T) *gsconfig.Config {
 	t.Helper()
-	dir := t.TempDir()
-	for _, name := range gsconfig.Files {
-		file := "GameServerInfo - " + name + ".dat"
-		b, err := os.ReadFile(repoData("5.GameServerCS", "DATA", file))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if name == "Event" {
-			b = bytes.Replace(b, []byte("CastleSiegeEvent = 0"), []byte("CastleSiegeEvent = 1"), 1)
-			b = bytes.Replace(b, []byte("CastleSiegeRegisterMinGuildMember = 10"), []byte("CastleSiegeRegisterMinGuildMember = 1"), 1)
-		}
-		if err := os.WriteFile(filepath.Join(dir, file), b, 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	cfg, err := gsconfig.Load(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	cfg := instanceConfig(t, "5.GameServerCS", map[string]map[string]string{
+		"Event": {"CastleSiegeEvent": "1", "CastleSiegeRegisterMinGuildMember": "1"},
+	})
 	if cfg.ServerType != 1 || cfg.Int("Event", "CastleSiegeEvent", 0) != 1 {
 		t.Fatal("config not patched")
 	}
@@ -942,7 +924,7 @@ func newTestEnvWith(t *testing.T, cfg *gsconfig.Config) *testEnv {
 		t.Fatal(err)
 	}
 	a := auth.New(mem, auth.Config{})
-	w, err := New(Options{DataDir: repoData("Data"), Config: cfg, Store: mem, Auth: a,
+	w, err := New(Options{DataDir: repoConfig("data"), AssetDir: repoData("Data"), Config: cfg, Store: mem, Auth: a,
 		Log: slog.New(slog.NewTextHandler(io.Discard, nil))})
 	if err != nil {
 		t.Fatal(err)

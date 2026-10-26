@@ -12,15 +12,51 @@ import (
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/auth"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/gsconfig"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/crypto"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/gscodec"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
+// repoData is a path under apps/server/data (the files kept in their
+// original format).
 func repoData(parts ...string) string {
 	_, file, _, _ := runtime.Caller(0)
 	return filepath.Join(append([]string{filepath.Dir(file), "..", "..", "data"}, parts...)...)
+}
+
+// repoConfig is a path under apps/server/config.
+func repoConfig(parts ...string) string {
+	_, file, _, _ := runtime.Caller(0)
+	return filepath.Join(append([]string{filepath.Dir(file), "..", "..", "config"}, parts...)...)
+}
+
+// repoInstance is config/gameservers/<instance>.json.
+func repoInstance(instance string) string { return repoConfig("gameservers", instance+".json") }
+
+// instanceConfig copies an instance file with keys replaced (or added):
+// section ("Event", "Common", ...) -> key -> value.
+func instanceConfig(t *testing.T, instance string, sections map[string]map[string]string) *gsconfig.Config {
+	t.Helper()
+	s, err := jsonconf.LoadSettings(repoInstance(instance))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for sec, kv := range sections {
+		for k, v := range kv {
+			s.Set(sec, k, v)
+		}
+	}
+	path := filepath.Join(t.TempDir(), instance+".json")
+	if err := jsonconf.WriteSettings(path, s); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := gsconfig.Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return cfg
 }
 
 type testEnv struct {
@@ -33,7 +69,7 @@ type testEnv struct {
 
 func newTestEnv(t *testing.T) *testEnv {
 	t.Helper()
-	cfg, err := gsconfig.Load(repoData("4.GameServer", "DATA"))
+	cfg, err := gsconfig.Load(repoInstance("4.GameServer"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +82,7 @@ func newTestEnv(t *testing.T) *testEnv {
 		t.Fatal(err)
 	}
 	a := auth.New(mem, auth.Config{})
-	w, err := New(Options{DataDir: repoData("Data"), Config: cfg, Store: mem, Auth: a,
+	w, err := New(Options{DataDir: repoConfig("data"), AssetDir: repoData("Data"), Config: cfg, Store: mem, Auth: a,
 		Log: slog.New(slog.NewTextHandler(io.Discard, nil))})
 	if err != nil {
 		t.Fatal(err)

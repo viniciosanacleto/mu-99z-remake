@@ -1,0 +1,13 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"WizarD": 0, "TeaM": 0, "Emulator": 3000},
+      {"WizarD": 1, "TeaM": 0, "Emulator": 3000},
+      {"WizarD": 2, "TeaM": 0, "Emulator": 3000},
+      {"WizarD": 3, "TeaM": 0, "Emulator": 3000},
+      {"WizarD": 4, "TeaM": 0, "Emulator": 3000}
+    ]},
+    {"index": 1, "rows": []},
+    {"index": 2, "rows": []}
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "rows": [
+    {"ItemIndex": "14,000", "ItemLevel": 0, "Durability": "050", "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "14,008", "ItemLevel": 0, "Durability": 255, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "14,001", "ItemLevel": 0, "Durability": 50, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "14,002", "ItemLevel": 0, "Durability": 50, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "14,004", "ItemLevel": 0, "Durability": 50, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "14,005", "ItemLevel": 0, "Durability": 50, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "14,006", "ItemLevel": 0, "Durability": 50, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "14,035", "ItemLevel": 0, "Durability": 50, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "14,036", "ItemLevel": 0, "Durability": 50, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "14,037", "ItemLevel": 0, "Durability": 50, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "14,038", "ItemLevel": 0, "Durability": 50, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "14,039", "ItemLevel": 0, "Durability": 50, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "14,040", "ItemLevel": 0, "Durability": 50, "SkillSwitch": 0, "LuckSwitch": 0, "Aditional": 0, "Excellent": 0, "SetOption": 0},
+    {"ItemIndex": "13,2", "ItemLevel": 0, "Durability": 0, "SkillSwitch": 1, "LuckSwitch": 1, "Aditional": 1, "Excellent": 0, "SetOption": 1}
+  ]
+}

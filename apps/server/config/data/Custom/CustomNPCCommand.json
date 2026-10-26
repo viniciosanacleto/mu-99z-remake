@@ -1,0 +1,6 @@
+{
+  "rows": [
+    {"Npc": 247, "Map": 0, "X": 130, "Y": 126, "Command": "/reset"},
+    {"Npc": 249, "Map": 0, "X": 130, "Y": 128, "Command": "/pkclear"}
+  ]
+}

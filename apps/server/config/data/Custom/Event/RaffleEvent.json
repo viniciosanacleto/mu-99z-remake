@@ -1,0 +1,30 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"ACTIVE": 1}
+    ]},
+    {"index": 1, "rows": [
+      {"DAY": 0, "HOURS": "08", "MINUTES": "00"},
+      {"DAY": 0, "HOURS": 16, "MINUTES": "00"},
+      {"DAY": 0, "HOURS": 23, "MINUTES": 59},
+      {"DAY": 1, "HOURS": "08", "MINUTES": "00"},
+      {"DAY": 1, "HOURS": 16, "MINUTES": "00"},
+      {"DAY": 1, "HOURS": 23, "MINUTES": 59},
+      {"DAY": 2, "HOURS": "08", "MINUTES": "00"},
+      {"DAY": 2, "HOURS": 16, "MINUTES": "00"},
+      {"DAY": 2, "HOURS": 23, "MINUTES": 59},
+      {"DAY": 3, "HOURS": "08", "MINUTES": "00"},
+      {"DAY": 3, "HOURS": 16, "MINUTES": "00"},
+      {"DAY": 3, "HOURS": 23, "MINUTES": 59},
+      {"DAY": 4, "HOURS": "08", "MINUTES": "00"},
+      {"DAY": 4, "HOURS": 16, "MINUTES": "00"},
+      {"DAY": 4, "HOURS": 23, "MINUTES": 59},
+      {"DAY": 5, "HOURS": "08", "MINUTES": "00"},
+      {"DAY": 5, "HOURS": 16, "MINUTES": "00"},
+      {"DAY": 5, "HOURS": 23, "MINUTES": 59},
+      {"DAY": 6, "HOURS": "08", "MINUTES": "00"},
+      {"DAY": 6, "HOURS": 16, "MINUTES": "00"},
+      {"DAY": 6, "HOURS": 23, "MINUTES": 59}
+    ]}
+  ]
+}

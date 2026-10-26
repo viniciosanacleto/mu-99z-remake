@@ -1,0 +1,72 @@
+{
+  "sections": [
+    {"index": 2, "rows": [
+      {"ItemRate": 100, "MoneyDrop": 0, "BagUseEffect": 0, "DropType": 0}
+    ]},
+    {"index": 3, "rows": [
+      {"BagIndex": 0, "DropRate": 10000, "MapNumber": "*"}
+    ]},
+    {"index": 4, "rows": [
+      {"BagIndex": 0, "Section": 5, "SectionRate": 10000, "SetDropRate": 0, "MinDropCount": 1, "MaxDropCount": 1, "DW": 1, "DK": 1, "FE": 1, "MG": 1, "DL": 1}
+    ]},
+    {"index": 5, "rows": [
+      {"ItemIndex": "0,", "ItemLevel": 0, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "0,", "ItemLevel": 1, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "0,", "ItemLevel": 2, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "0,", "ItemLevel": 3, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "0,", "ItemLevel": 9, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "0,", "ItemLevel": 10, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "1,", "ItemLevel": 0, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "1,", "ItemLevel": 1, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "1,", "ItemLevel": 2, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "1,", "ItemLevel": 3, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "2,", "ItemLevel": 0, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "2,", "ItemLevel": 1, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "2,", "ItemLevel": 4, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "2,", "ItemLevel": 5, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "3,", "ItemLevel": 0, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "3,", "ItemLevel": 1, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "3,", "ItemLevel": 2, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "3,", "ItemLevel": 3, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "3,", "ItemLevel": 4, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "4,", "ItemLevel": 0, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "4,", "ItemLevel": 1, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "4,", "ItemLevel": 2, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "4,", "ItemLevel": 8, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "4,", "ItemLevel": 9, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "4,", "ItemLevel": 10, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "4,", "ItemLevel": 11, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "5,", "ItemLevel": 0, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "5,", "ItemLevel": 1, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "6,", "ItemLevel": 0, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "6,", "ItemLevel": 1, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "6,", "ItemLevel": 2, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 13, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "7,", "ItemLevel": 2, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "8,", "ItemLevel": 2, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "9,", "ItemLevel": 2, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "10,", "ItemLevel": 2, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "11,", "ItemLevel": 2, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "7,", "ItemLevel": 5, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "8,", "ItemLevel": 5, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "9,", "ItemLevel": 5, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "10,", "ItemLevel": 5, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "11,", "ItemLevel": 5, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "7,", "ItemLevel": 0, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "8,", "ItemLevel": 0, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "9,", "ItemLevel": 0, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "10,", "ItemLevel": 0, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "11,", "ItemLevel": 0, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "7,", "ItemLevel": 10, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "8,", "ItemLevel": 10, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "9,", "ItemLevel": 10, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "10,", "ItemLevel": 10, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "11,", "ItemLevel": 10, "GradeCount": 0, "Option0": 0, "Option1": "*", "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "13,", "ItemLevel": 8, "GradeCount": 0, "Option0": 0, "Option1": 28, "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "13,", "ItemLevel": 9, "GradeCount": 0, "Option0": 0, "Option1": 28, "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "13,", "ItemLevel": 21, "GradeCount": 0, "Option0": 0, "Option1": 28, "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "13,", "ItemLevel": 22, "GradeCount": 0, "Option0": 0, "Option1": 28, "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "13,", "ItemLevel": 23, "GradeCount": 0, "Option0": 0, "Option1": 28, "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0},
+      {"ItemIndex": "13,", "ItemLevel": 24, "GradeCount": 0, "Option0": 0, "Option1": 28, "Option2": 0, "Option3": 13, "Option4": "*", "Option5": 20, "Duration": "*", "Comment": 0}
+    ]}
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"WizarD": 0, "TeaM": 0, "Emulator": 0},
+      {"WizarD": 1, "TeaM": 0, "Emulator": 0},
+      {"WizarD": 2, "TeaM": 0, "Emulator": 0},
+      {"WizarD": 3, "TeaM": 0, "Emulator": 0},
+      {"WizarD": 4, "TeaM": 0, "Emulator": 0},
+      {"WizarD": 5, "TeaM": 1, "Emulator": 0}
+    ]},
+    {"index": 1, "rows": [
+      {"WizarD": 0, "TeaM": 0, "Emulator": 0},
+      {"WizarD": 1, "TeaM": 1, "Emulator": 14400},
+      {"WizarD": 2, "TeaM": 1, "Emulator": 60},
+      {"WizarD": 3, "TeaM": 0, "Emulator": 0}
+    ]},
+    {"index": 2, "rows": [
+      {"WizarD": 0, "TeaM": 1, "Emulator": 900},
+      {"WizarD": 1, "TeaM": 1, "Emulator": 900},
+      {"WizarD": 2, "TeaM": 1, "Emulator": 1200}
+    ]},
+    {"index": 3, "rows": [
+      {"WizarD": 0, "TeaM": 0, "Emulator": 0},
+      {"WizarD": 1, "TeaM": 1, "Emulator": 120},
+      {"WizarD": 2, "TeaM": 1, "Emulator": 15},
+      {"WizarD": 3, "TeaM": 0, "Emulator": 0},
+      {"WizarD": 4, "TeaM": 0, "Emulator": 0},
+      {"WizarD": 5, "TeaM": 1, "Emulator": 5},
+      {"WizarD": 6, "TeaM": 1, "Emulator": 3},
+      {"WizarD": 7, "TeaM": 1, "Emulator": 60},
+      {"WizarD": 8, "TeaM": 0, "Emulator": 0},
+      {"WizarD": 9, "TeaM": 0, "Emulator": 0},
+      {"WizarD": 10, "TeaM": 1, "Emulator": 5},
+      {"WizarD": 11, "TeaM": 1, "Emulator": 3},
+      {"WizarD": 12, "TeaM": 1, "Emulator": 120},
+      {"WizarD": 13, "TeaM": 0, "Emulator": 0},
+      {"WizarD": 14, "TeaM": 0, "Emulator": 0},
+      {"WizarD": 15, "TeaM": 1, "Emulator": 5},
+      {"WizarD": 16, "TeaM": 1, "Emulator": 10},
+      {"WizarD": 17, "TeaM": 1, "Emulator": 3},
+      {"WizarD": 18, "TeaM": 0, "Emulator": 0}
+    ]},
+    {"index": 4, "rows": [
+      {"AIChangeTime": 3},
+      {"AIChangeTime": 60},
+      {"AIChangeTime": 60},
+      {"AIChangeTime": 900}
+    ]},
+    {"index": 5, "rows": [
+      {"AIGroupNumber": 20},
+      {"AIGroupNumber": 21},
+      {"AIGroupNumber": 22}
+    ]},
+    {"index": 6, "rows": [
+      {"IceStormRate": 60}
+    ]},
+    {"index": 7, "rows": [
+      {"WizarD": 0, "TeaM": 0, "Emulator": 0},
+      {"WizarD": 1, "TeaM": 1, "Emulator": 5},
+      {"WizarD": 2, "TeaM": 1, "Emulator": 10},
+      {"WizarD": 3, "TeaM": 1, "Emulator": 1200},
+      {"WizarD": 4, "TeaM": 1, "Emulator": 5},
+      {"WizarD": 5, "TeaM": 0, "Emulator": 0}
+    ]},
+    {"index": 8, "rows": [
+      {"AIGroupNumber": 23}
+    ]},
+    {"index": 9, "rows": [
+      {"WizarD": 0, "TeaM": 0, "Emulator": 0},
+      {"WizarD": 1, "TeaM": 1, "Emulator": 82500},
+      {"WizarD": 2, "TeaM": 1, "Emulator": 300},
+      {"WizarD": 3, "TeaM": 1, "Emulator": 2220},
+      {"WizarD": 4, "TeaM": 1, "Emulator": 180},
+      {"WizarD": 5, "TeaM": 1, "Emulator": 5}
+    ]},
+    {"index": 10, "rows": [
+      {"EnableCheckMoonStone": 1}
+    ]}
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"WarningTime": 5, "NotifyTime": 1, "EventTime": 20, "CloseTime": 4}
+    ]},
+    {"index": 1, "rows": [
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 0, "StartMin": 30, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 4, "StartMin": 30, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 8, "StartMin": 30, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 12, "StartMin": 30, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 16, "StartMin": 30, "StartSec": 0},
+      {"StartYear": "*", "StartMonth": "*", "StartDay": "*", "StartDoW": "*", "StartHour": 20, "StartMin": 30, "StartSec": 0}
+    ]},
+    {"index": 2, "rows": [
+      {"EventIndex": 0, "RewardExperience1": 6000, "RewardExperience2": 4000, "RewardExperience3": 4000, "RewardExperience4": 2000, "RewardExperience5": 2000, "RewardExperience6": 2000, "RewardExperience7": 1000, "RewardExperience8": 1000, "RewardExperience9": 1000, "RewardExperience10": 1000},
+      {"EventIndex": 1, "RewardExperience1": 8000, "RewardExperience2": 6000, "RewardExperience3": 6000, "RewardExperience4": 4000, "RewardExperience5": 4000, "RewardExperience6": 4000, "RewardExperience7": 2000, "RewardExperience8": 2000, "RewardExperience9": 2000, "RewardExperience10": 2000},
+      {"EventIndex": 2, "RewardExperience1": 10000, "RewardExperience2": 8000, "RewardExperience3": 8000, "RewardExperience4": 6000, "RewardExperience5": 6000, "RewardExperience6": 6000, "RewardExperience7": 4000, "RewardExperience8": 4000, "RewardExperience9": 4000, "RewardExperience10": 4000},
+      {"EventIndex": 3, "RewardExperience1": 20000, "RewardExperience2": 10000, "RewardExperience3": 10000, "RewardExperience4": 8000, "RewardExperience5": 8000, "RewardExperience6": 8000, "RewardExperience7": 6000, "RewardExperience8": 6000, "RewardExperience9": 6000, "RewardExperience10": 6000},
+      {"EventIndex": 4, "RewardExperience1": 22000, "RewardExperience2": 20000, "RewardExperience3": 20000, "RewardExperience4": 10000, "RewardExperience5": 10000, "RewardExperience6": 10000, "RewardExperience7": 8000, "RewardExperience8": 8000, "RewardExperience9": 8000, "RewardExperience10": 8000},
+      {"EventIndex": 5, "RewardExperience1": 24000, "RewardExperience2": 22000, "RewardExperience3": 22000, "RewardExperience4": 20000, "RewardExperience5": 20000, "RewardExperience6": 20000, "RewardExperience7": 10000, "RewardExperience8": 10000, "RewardExperience9": 10000, "RewardExperience10": 10000}
+    ]},
+    {"index": 3, "rows": [
+      {"EventIndex": 0, "RewardMoney1": 30000, "RewardMoney2": 25000, "RewardMoney3": 25000, "RewardMoney4": 20000, "RewardMoney5": 20000, "RewardMoney6": 20000, "RewardMoney7": 15000, "RewardMoney8": 15000, "RewardMoney9": 15000, "RewardMoney10": 15000},
+      {"EventIndex": 1, "RewardMoney1": 40000, "RewardMoney2": 35000, "RewardMoney3": 35000, "RewardMoney4": 30000, "RewardMoney5": 30000, "RewardMoney6": 30000, "RewardMoney7": 25000, "RewardMoney8": 25000, "RewardMoney9": 25000, "RewardMoney10": 25000},
+      {"EventIndex": 2, "RewardMoney1": 50000, "RewardMoney2": 45000, "RewardMoney3": 45000, "RewardMoney4": 40000, "RewardMoney5": 40000, "RewardMoney6": 40000, "RewardMoney7": 35000, "RewardMoney8": 35000, "RewardMoney9": 35000, "RewardMoney10": 35000},
+      {"EventIndex": 3, "RewardMoney1": 60000, "RewardMoney2": 55000, "RewardMoney3": 55000, "RewardMoney4": 50000, "RewardMoney5": 50000, "RewardMoney6": 50000, "RewardMoney7": 45000, "RewardMoney8": 45000, "RewardMoney9": 45000, "RewardMoney10": 45000},
+      {"EventIndex": 4, "RewardMoney1": 70000, "RewardMoney2": 65000, "RewardMoney3": 65000, "RewardMoney4": 60000, "RewardMoney5": 60000, "RewardMoney6": 60000, "RewardMoney7": 55000, "RewardMoney8": 55000, "RewardMoney9": 55000, "RewardMoney10": 55000},
+      {"EventIndex": 5, "RewardMoney1": 80000, "RewardMoney2": 75000, "RewardMoney3": 75000, "RewardMoney4": 70000, "RewardMoney5": 70000, "RewardMoney6": 70000, "RewardMoney7": 65000, "RewardMoney8": 65000, "RewardMoney9": 65000, "RewardMoney10": 65000}
+    ]}
+  ]
+}

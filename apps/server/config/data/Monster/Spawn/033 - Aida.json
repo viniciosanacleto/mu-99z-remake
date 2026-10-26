@@ -1,0 +1,34 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"MonsterIndex": 369, "SpawnRadius": 0, "LocationX": 78, "LocationY": 13, "Direction": 2},
+      {"MonsterIndex": 370, "SpawnRadius": 0, "LocationX": 86, "LocationY": 13, "Direction": 1},
+      {"MonsterIndex": 240, "SpawnRadius": 0, "LocationX": 82, "LocationY": 15, "Direction": 1}
+    ]},
+    {"index": 1, "rows": [
+      {"MonsterIndex": 309, "SpawnRadius": 5, "RangeStartX": 119, "RangeStartY": 101, "RangeEndX": 119, "RangeEndY": 101, "Direction": "*", "MaxSpawnCount": 6}
+    ]},
+    {"index": 2, "rows": []},
+    {"index": 1, "rows": [
+      {"Monster": 308, "Radius": 5, "X": 95, "Y": 7, "TX": 104, "TY": 16, "Dir": -1, "Count": 8},
+      {"Monster": 307, "Radius": 5, "X": 110, "Y": 9, "TX": 119, "TY": 18, "Dir": -1, "Count": 8},
+      {"Monster": 306, "Radius": 5, "X": 135, "Y": 15, "TX": 144, "TY": 24, "Dir": -1, "Count": 8},
+      {"Monster": 305, "Radius": 5, "X": 159, "Y": 164, "TX": 168, "TY": 173, "Dir": -1, "Count": 8},
+      {"Monster": 305, "Radius": 5, "X": 206, "Y": 166, "TX": 215, "TY": 175, "Dir": -1, "Count": 8},
+      {"Monster": 304, "Radius": 5, "X": 232, "Y": 147, "TX": 241, "TY": 156, "Dir": -1, "Count": 8},
+      {"Monster": 304, "Radius": 5, "X": 164, "Y": 116, "TX": 173, "TY": 125, "Dir": -1, "Count": 8},
+      {"Monster": 306, "Radius": 5, "X": 232, "Y": 40, "TX": 241, "TY": 49, "Dir": -1, "Count": 8},
+      {"Monster": 307, "Radius": 5, "X": 80, "Y": 96, "TX": 89, "TY": 105, "Dir": -1, "Count": 8},
+      {"Monster": 308, "Radius": 5, "X": 84, "Y": 168, "TX": 93, "TY": 177, "Dir": -1, "Count": 8},
+      {"Monster": 304, "Radius": 5, "X": 168, "Y": 60, "TX": 177, "TY": 69, "Dir": -1, "Count": 8},
+      {"Monster": 305, "Radius": 5, "X": 216, "Y": 92, "TX": 225, "TY": 101, "Dir": -1, "Count": 8},
+      {"Monster": 306, "Radius": 5, "X": 188, "Y": 8, "TX": 197, "TY": 17, "Dir": -1, "Count": 8},
+      {"Monster": 307, "Radius": 5, "X": 116, "Y": 60, "TX": 125, "TY": 69, "Dir": -1, "Count": 8}
+    ]},
+    {"index": 1, "rows": [
+      {"Monster": 304, "Radius": 2, "X": 226, "Y": 15, "TX": 227, "TY": 16, "Dir": -1, "Count": 8},
+      {"Monster": 305, "Radius": 2, "X": 228, "Y": 11, "TX": 229, "TY": 12, "Dir": -1, "Count": 8},
+      {"Monster": 306, "Radius": 2, "X": 230, "Y": 15, "TX": 231, "TY": 16, "Dir": -1, "Count": 8}
+    ]}
+  ]
+}

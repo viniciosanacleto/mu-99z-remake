@@ -5,6 +5,7 @@ import (
 	"math"
 	"path/filepath"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
@@ -304,7 +305,7 @@ type monsterSkillData struct {
 func loadMonsterSkills(dataDir string) (*monsterSkillData, error) {
 	dir := filepath.Join(dataDir, "Monster", "Skill")
 	rows := func(name string) ([]mutext.Line, error) {
-		lines, err := mutext.LoadFile(filepath.Join(dir, name))
+		lines, err := jsonconf.LoadLines(filepath.Join(dir, name))
 		if err != nil {
 			return nil, err
 		}
@@ -331,7 +332,7 @@ func loadMonsterSkills(dataDir string) (*monsterSkillData, error) {
 		return v
 	}
 	elems := map[int]*monsterSkillElement{}
-	ls, err := rows("MonsterSkillElement.txt")
+	ls, err := rows("MonsterSkillElement.json")
 	if err != nil {
 		return nil, err
 	}
@@ -341,7 +342,7 @@ func loadMonsterSkills(dataDir string) (*monsterSkillData, error) {
 		elems[e.Index] = e
 	}
 	units := map[int]*monsterSkillUnit{}
-	if ls, err = rows("MonsterSkillUnit.txt"); err != nil {
+	if ls, err = rows("MonsterSkillUnit.json"); err != nil {
 		return nil, err
 	}
 	for _, l := range ls {
@@ -355,7 +356,7 @@ func loadMonsterSkills(dataDir string) (*monsterSkillData, error) {
 		}
 	}
 	d := &monsterSkillData{byClass: map[int]*monsterSkillInfo{}}
-	if ls, err = rows("MonsterSkill.txt"); err != nil {
+	if ls, err = rows("MonsterSkill.json"); err != nil {
 		return nil, err
 	}
 	for _, l := range ls {

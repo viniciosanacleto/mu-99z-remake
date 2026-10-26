@@ -1,0 +1,37 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"DAY": 1, "ITEM": "00,000", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Kris", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 2, "ITEM": "00,001", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Short Sword", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 3, "ITEM": "00,002", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Rapier", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 4, "ITEM": "00,003", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Katana", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 5, "ITEM": "00,004", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Sword of Assassin", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 6, "ITEM": "00,005", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Blade", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 7, "ITEM": "00,006", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Gladius", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 8, "ITEM": "00,007", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Falchion", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 9, "ITEM": "00,008", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Serpent Sword", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 10, "ITEM": "00,009", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Sword of Salamander", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 11, "ITEM": "00,010", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Light Saber", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 12, "ITEM": "00,011", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Legendary Sword", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 13, "ITEM": "00,012", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Heliacal Sword", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 14, "ITEM": "00,013", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Double Blade", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 15, "ITEM": "00,014", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Lighting Sword", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 16, "ITEM": "00,015", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Giant Sword", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 17, "ITEM": "00,016", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Sword of Destruction", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 18, "ITEM": "00,017", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Dark Breaker", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 19, "ITEM": "00,018", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Thunder Blade", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 20, "ITEM": "00,019", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Divine Sword of Archangel", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 21, "ITEM": "00,020", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Knight Blade", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 22, "ITEM": "00,021", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Dark Reign Blade", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 23, "ITEM": "00,022", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Bone Blade", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 24, "ITEM": "00,023", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Explosion Blade", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 25, "ITEM": "00,024", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Daybreak", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 26, "ITEM": "00,025", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Sword Dancer", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 27, "ITEM": "00,026", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Flameberge", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 28, "ITEM": "00,027", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Sword Breaker", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 29, "ITEM": "00,028", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Rune Bastard Sword", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 30, "ITEM": "00,031", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Rune Blade", "INFO_2": "Excelente +13 Full"},
+      {"DAY": 31, "ITEM": "01,000", "LEVEL": 15, "SKILL": 1, "LUCK": 1, "ADDOPTION": 7, "DUR": 0, "EXC": 63, "ANC": 0, "DURATION": 0, "INFO": "Small Axe", "INFO_2": "Excelente +13 Full"}
+    ]}
+  ]
+}

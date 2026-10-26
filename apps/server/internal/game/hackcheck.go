@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/gscodec"
@@ -30,7 +31,7 @@ type hackRules struct {
 }
 
 func loadHackRules(dataDir string) (*hackRules, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Hack", "HackPacketCheck.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Hack", "HackPacketCheck.json"))
 	if err != nil {
 		return nil, err
 	}

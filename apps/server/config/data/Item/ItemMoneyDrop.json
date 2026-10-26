@@ -1,0 +1,5 @@
+{
+  "rows": [
+    {"MapNumber": "*", "MonsterIndex": "*", "MonsterMinLevel": "*", "MonsterMaxLevel": "*", "AccountLevel": "*", "MoneyAmount": "*", "MoneyDropRate": 1000}
+  ]
+}

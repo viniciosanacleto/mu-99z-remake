@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
@@ -666,7 +667,7 @@ type damageRule struct {
 
 func loadDamageTable(dataDir string) ([2][]damageRule, error) {
 	var out [2][]damageRule
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Util", "DamageTable.txt"))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Util", "DamageTable.json"))
 	if err != nil {
 		return out, err
 	}

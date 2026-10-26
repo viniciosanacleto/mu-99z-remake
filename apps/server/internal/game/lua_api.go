@@ -288,15 +288,16 @@ func luaItemTable(l *lua.State, it item.Item) {
 }
 
 // luaProfilePath resolves a GetPrivateProfile* file name: relative paths
-// start in the instance folder (the process directory, parent of DATA).
+// start in the instance folder (the process directory, parent of DATA):
+// <AssetDir>/../<instance>, as in the original MuServer layout.
 func (w *World) luaProfilePath(name string) string {
 	p := filepath.FromSlash(strings.ReplaceAll(name, `\`, "/"))
 	if filepath.IsAbs(p) {
 		return p
 	}
-	base := filepath.Dir(w.dataDir)
-	if w.cfg != nil && w.cfg.Dir != "" {
-		base = filepath.Dir(filepath.Clean(w.cfg.Dir))
+	base := filepath.Dir(w.assetDir)
+	if w.cfg != nil && w.cfg.Name != "" {
+		base = filepath.Join(base, w.cfg.Name)
 	}
 	return filepath.Join(base, p)
 }
@@ -1225,6 +1226,11 @@ func readFileIfExists(path string) ([]byte, error) {
 	return b, err
 }
 
+// writeFileLines writes a profile file; the instance folder no longer
+// holds the configuration (config/gameservers), so it may not exist yet.
 func writeFileLines(path string, lines []string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
 	return os.WriteFile(path, []byte(strings.Join(lines, "\r\n")+"\r\n"), 0o644)
 }

@@ -1,9 +1,6 @@
 package game
 
 import (
-	"bytes"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -16,24 +13,7 @@ import (
 // shipped files have it off).
 func cdConfig(t *testing.T, instance string) *gsconfig.Config {
 	t.Helper()
-	dir := t.TempDir()
-	for _, name := range gsconfig.Files {
-		file := "GameServerInfo - " + name + ".dat"
-		b, err := os.ReadFile(repoData(instance, "DATA", file))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if name == "Event" {
-			b = bytes.Replace(b, []byte("CastleDeepEvent = 0"), []byte("CastleDeepEvent = 1"), 1)
-		}
-		if err := os.WriteFile(filepath.Join(dir, file), b, 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	cfg, err := gsconfig.Load(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	cfg := instanceConfig(t, instance, map[string]map[string]string{"Event": {"CastleDeepEvent": "1"}})
 	if cfg.Int("Event", "CastleDeepEvent", 0) != 1 || cfg.Int("Event", "CastleDeepEventTime", 0) != 30 {
 		t.Fatal("config not patched")
 	}
@@ -259,7 +239,7 @@ func TestCastleDeepKillNotice(t *testing.T) {
 func TestCastleDeepGroupNotice(t *testing.T) {
 	b := newBareWorld(t)
 	o := b.player(PlayerStart, "Here", 0, 130, 130)
-	cfg, err := gsconfig.Load(repoData("5.GameServerCS", "DATA"))
+	cfg, err := gsconfig.Load(repoInstance("5.GameServerCS"))
 	if err != nil {
 		t.Fatal(err)
 	}

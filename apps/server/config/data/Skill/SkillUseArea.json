@@ -1,0 +1,30 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"SkillIndex": 16},
+      {"SkillIndex": 26},
+      {"SkillIndex": 27},
+      {"SkillIndex": 28},
+      {"SkillIndex": 48},
+      {"SkillIndex": 63},
+      {"SkillIndex": 64}
+    ]},
+    {"index": 1, "rows": [
+      {"MapNumber": 9, "RangeStartX": "045", "RangeStartY": "060", "RangeEndX": 160, "RangeEndY": 190},
+      {"MapNumber": 11, "RangeStartX": "008", "RangeStartY": "003", "RangeEndX": "019", "RangeEndY": "014"},
+      {"MapNumber": 12, "RangeStartX": "008", "RangeStartY": "003", "RangeEndX": "019", "RangeEndY": "014"},
+      {"MapNumber": 13, "RangeStartX": "008", "RangeStartY": "003", "RangeEndX": "019", "RangeEndY": "014"},
+      {"MapNumber": 14, "RangeStartX": "008", "RangeStartY": "003", "RangeEndX": "019", "RangeEndY": "014"},
+      {"MapNumber": 15, "RangeStartX": "008", "RangeStartY": "003", "RangeEndX": "019", "RangeEndY": "014"},
+      {"MapNumber": 16, "RangeStartX": "008", "RangeStartY": "003", "RangeEndX": "019", "RangeEndY": "014"},
+      {"MapNumber": 17, "RangeStartX": "008", "RangeStartY": "003", "RangeEndX": "019", "RangeEndY": "014"},
+      {"MapNumber": 18, "RangeStartX": "021", "RangeStartY": "073", "RangeEndX": "045", "RangeEndY": 109},
+      {"MapNumber": 19, "RangeStartX": "021", "RangeStartY": "073", "RangeEndX": "045", "RangeEndY": 109},
+      {"MapNumber": 20, "RangeStartX": "021", "RangeStartY": "073", "RangeEndX": "045", "RangeEndY": 109},
+      {"MapNumber": 21, "RangeStartX": "021", "RangeStartY": "073", "RangeEndX": "045", "RangeEndY": 109},
+      {"MapNumber": 22, "RangeStartX": "021", "RangeStartY": "073", "RangeEndX": "045", "RangeEndY": 109},
+      {"MapNumber": 23, "RangeStartX": "021", "RangeStartY": "073", "RangeEndX": "045", "RangeEndY": 109},
+      {"MapNumber": 32, "RangeStartX": "045", "RangeStartY": "060", "RangeEndX": 160, "RangeEndY": 190}
+    ]}
+  ]
+}

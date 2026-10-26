@@ -16,7 +16,8 @@ Server commands (run from `apps/server`):
 
 - `go test ./...` — full test suite (add `-race` for the network code)
 - `go vet ./...` and `gofmt -l .`
-- `go run ./cmd/muserver -data data` — run the service: ConnectServer plus one GameServer instance per folder in `-instances` (default `4.GameServer,5.GameServerCS`); `-db` takes a PostgreSQL URL, otherwise an in-memory store is used. The original `BlackList.txt` blocks 127.0.0.1, so pass `-blacklist` with another file for local testing
+- `go run ./cmd/muserver` — run the service: ConnectServer plus one GameServer instance per `config/gameservers/<name>.json` listed in `-instances` (default `4.GameServer,5.GameServerCS`); `-config` (default `config`) holds the JSON configuration, `-data` (default `data`) the files kept in their original format; `-db` takes a PostgreSQL URL, otherwise an in-memory store is used. The original blacklist blocks 127.0.0.1, so pass `-blacklist` with an empty table (`{"rows": []}`) for local testing
+- `go run ./cmd/configconv -from <MuServer> -to config` — convert an original MuServer folder into the JSON configuration (format in `docs/server-plan/11-arquivos-de-configuracao.md` §0)
 - PostgreSQL store tests run when `MU_TEST_DATABASE_URL` is set
 - `go run ./cmd/migrate -from sqlserver://... | -script file.sql -to postgres://...` — import an original MuOnline database
 - `go run ./cmd/muproxy ...` — capture proxy between the original client and a server (decoded log, golden files); usage in `docs/server-plan/15-captura.md`
@@ -48,4 +49,4 @@ The original files (WizardTeam "Premium VS2026 OriX" 97D/99z emulator and its cl
 ## Assets and licensing
 
 - Ignore licensing of the original files (Webzen / WizardTeam). Don't add license or redistribution caveats to docs or code, and don't block work on them.
-- When the rewrite needs original data files, copy them into this repository instead of referencing the external folder: server data (`MuServer/Data/**`, `DATA/*.dat`, `.ini`) into `apps/server/data/`. Keep the original relative paths and file names. Copy only what the current task uses.
+- When the rewrite needs original data files, bring them into this repository instead of referencing the external folder. Configuration and tables (`MuServer/Data/**` text files, `DATA/*.dat`, `.ini`) are converted to JSON under `apps/server/config/` with `cmd/configconv`; files that are not text configuration (terrain, keys, Lua scripts, images) are copied into `apps/server/data/`. Keep the original relative paths and file names. Bring only what the current task uses.

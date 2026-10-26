@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/ini"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
@@ -19,7 +19,7 @@ import (
 // "*" = -1).
 
 func customSections(dataDir, name string) (map[int][]mutext.Line, error) {
-	lines, err := mutext.LoadFile(filepath.Join(dataDir, "Custom", name))
+	lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Custom", name))
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ type CustomArena struct {
 // LoadCustomArena reads Custom/CustomArena.txt. Rows with an index out of
 // 0..29 are ignored.
 func LoadCustomArena(dataDir string) (*CustomArena, error) {
-	secs, err := customSections(dataDir, "CustomArena.txt")
+	secs, err := customSections(dataDir, "CustomArena.json")
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ type CustomEventDrop struct {
 // LoadCustomEventDrop reads Custom/CustomEventDrop.txt. An item reference
 // outside 0..0x1FFF becomes -1 (the loader's range test).
 func LoadCustomEventDrop(dataDir string) (*CustomEventDrop, error) {
-	secs, err := customSections(dataDir, "CustomEventDrop.txt")
+	secs, err := customSections(dataDir, "CustomEventDrop.json")
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +223,7 @@ type CustomLukeHelper struct {
 
 // LoadCustomLukeHelper reads Custom/CustomLukeHelper.txt.
 func LoadCustomLukeHelper(dataDir string) (*CustomLukeHelper, error) {
-	secs, err := customSections(dataDir, "CustomLukeHelper.txt")
+	secs, err := customSections(dataDir, "CustomLukeHelper.json")
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +261,7 @@ type HealthBarRow struct {
 
 // LoadCustomHealthBar reads Custom/CustomHealthBar.txt (one table).
 func LoadCustomHealthBar(dataDir string) ([]HealthBarRow, error) {
-	rows, err := customTable(dataDir, "CustomHealthBar.txt")
+	rows, err := customTable(dataDir, "CustomHealthBar.json")
 	if err != nil {
 		return nil, err
 	}
@@ -313,7 +313,7 @@ type KillCountRow struct {
 // (FUN_004b8920), sorted by DBIndex. Item rows of an unknown DBIndex are
 // dropped.
 func LoadCustomMonsterKillCount(dataDir string) ([]KillCountRow, error) {
-	secs, err := customSections(dataDir, "CustomMonsterKillCount.txt")
+	secs, err := customSections(dataDir, "CustomMonsterKillCount.json")
 	if err != nil {
 		return nil, err
 	}
@@ -375,7 +375,7 @@ type SummonScroll struct {
 
 // LoadSummonScroll reads Custom/SummonScroll.txt.
 func LoadSummonScroll(dataDir string) (*SummonScroll, error) {
-	secs, err := customSections(dataDir, "SummonScroll.txt")
+	secs, err := customSections(dataDir, "SummonScroll.json")
 	if err != nil {
 		return nil, err
 	}
@@ -410,7 +410,7 @@ func LoadSummonScroll(dataDir string) (*SummonScroll, error) {
 // CreationGoldValue is GetPrivateProfileInt("CreationGold", "GoldValue",
 // 50, "Custom\CreationGold.txt"), read on every use (FUN_0049a690).
 func CreationGoldValue(dataDir string) int {
-	f, err := ini.Load(filepath.Join(dataDir, "Custom", "CreationGold.txt"))
+	f, err := jsonconf.LoadINI(filepath.Join(dataDir, "Custom", "CreationGold.json"))
 	if err != nil {
 		return 0x32
 	}
@@ -433,7 +433,7 @@ type DailyRewardRow struct {
 // LoadDailyReward reads Custom/DailyReward.txt by day (the first row of a
 // day wins).
 func LoadDailyReward(dataDir string) (map[int]DailyRewardRow, error) {
-	secs, err := customSections(dataDir, "DailyReward.txt")
+	secs, err := customSections(dataDir, "DailyReward.json")
 	if err != nil {
 		return nil, err
 	}
@@ -477,7 +477,7 @@ func LoadDailyReward(dataDir string) (map[int]DailyRewardRow, error) {
 // shown by C1 0C F3 E5. At most 50 values. A missing file gives an empty
 // list, as in this installation.
 func LoadCustomPatente(dataDir string) ([]int, error) {
-	secs, err := LoadEventScript(filepath.Join(dataDir, "Custom", "CustomPatente.txt"))
+	secs, err := LoadEventScript(filepath.Join(dataDir, "Custom", "CustomPatente.json"))
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}

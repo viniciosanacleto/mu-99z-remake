@@ -12,14 +12,12 @@ func writeCustom(t *testing.T, name, body string) string {
 	if err := os.MkdirAll(filepath.Join(dir, "Custom"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "Custom", name), []byte(body), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	putOriginal(t, filepath.Join(dir, "Custom", name), body)
 	return dir
 }
 
 func TestLoadCustomAttackOriginal(t *testing.T) {
-	a, err := LoadCustomAttack("../../data/Data")
+	a, err := LoadCustomAttack("../../config/data")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,14 +105,14 @@ end
 		t.Fatalf("items %+v", g[1].Items)
 	}
 	// The original file has only the commented demonstration rows.
-	orig, err := LoadCustomGift("../../data/Data")
+	orig, err := LoadCustomGift("../../config/data")
 	if err != nil || len(orig) != 0 {
 		t.Fatalf("original %v %v", orig, err)
 	}
 }
 
 func TestLoadCustomMarriageOriginal(t *testing.T) {
-	m, err := LoadCustomMarriage("../../data/Data")
+	m, err := LoadCustomMarriage("../../config/data")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,13 +138,13 @@ end
 	if len(p) != 2 || p["month"] != (VipPlan{0, 1, 31, 1000, "month"}) || p["week"].AccountLevel != -1 {
 		t.Fatalf("%+v", p)
 	}
-	if orig, err := LoadCustomBuyVip("../../data/Data"); err != nil || len(orig) != 0 {
+	if orig, err := LoadCustomBuyVip("../../config/data"); err != nil || len(orig) != 0 {
 		t.Fatalf("original %v %v", orig, err)
 	}
 }
 
 func TestLoadCustomPickOriginal(t *testing.T) {
-	p, err := LoadCustomPick("../../data/Data")
+	p, err := LoadCustomPick("../../config/data")
 	if err != nil {
 		t.Fatal(err)
 	}

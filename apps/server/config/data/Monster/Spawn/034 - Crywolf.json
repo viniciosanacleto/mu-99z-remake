@@ -1,0 +1,24 @@
+{
+  "sections": [
+    {"index": 0, "rows": [
+      {"MonsterIndex": 406, "SpawnRadius": 0, "LocationX": 228, "LocationY": "048", "Direction": 1},
+      {"MonsterIndex": 407, "SpawnRadius": 0, "LocationX": 62, "LocationY": 239, "Direction": 1},
+      {"MonsterIndex": 204, "SpawnRadius": 0, "LocationX": 121, "LocationY": "031", "Direction": 2},
+      {"MonsterIndex": 205, "SpawnRadius": 0, "LocationX": 125, "LocationY": "027", "Direction": 2},
+      {"MonsterIndex": 206, "SpawnRadius": 0, "LocationX": 126, "LocationY": "035", "Direction": 2},
+      {"MonsterIndex": 207, "SpawnRadius": 0, "LocationX": 120, "LocationY": "038", "Direction": 2},
+      {"MonsterIndex": 208, "SpawnRadius": 0, "LocationX": 115, "LocationY": "035", "Direction": 2},
+      {"MonsterIndex": 209, "SpawnRadius": 0, "LocationX": 117, "LocationY": "027", "Direction": 2},
+      {"MonsterIndex": 226, "SpawnRadius": 0, "LocationX": 135, "LocationY": "047", "Direction": 2},
+      {"MonsterIndex": 256, "SpawnRadius": 0, "LocationX": 96, "LocationY": "025", "Direction": 2},
+      {"MonsterIndex": 240, "SpawnRadius": 0, "LocationX": 223, "LocationY": "048", "Direction": 1},
+      {"MonsterIndex": 224, "SpawnRadius": 0, "LocationX": 118, "LocationY": "011", "Direction": 4}
+    ]},
+    {"index": 1, "rows": [
+      {"MonsterIndex": 310, "SpawnRadius": 5, "RangeStartX": 206, "RangeStartY": "043", "RangeEndX": 206, "RangeEndY": "043", "Direction": "*", "MaxSpawnCount": 10},
+      {"MonsterIndex": 311, "SpawnRadius": 5, "RangeStartX": 180, "RangeStartY": "035", "RangeEndX": 180, "RangeEndY": "035", "Direction": "*", "MaxSpawnCount": 10},
+      {"MonsterIndex": 312, "SpawnRadius": 5, "RangeStartX": 209, "RangeStartY": "071", "RangeEndX": 209, "RangeEndY": "071", "Direction": "*", "MaxSpawnCount": 10}
+    ]},
+    {"index": 2, "rows": []}
+  ]
+}

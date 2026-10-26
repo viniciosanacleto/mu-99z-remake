@@ -30,7 +30,7 @@ func TestHackRulesLookup(t *testing.T) {
 }
 
 func TestLoadOriginalHackRules(t *testing.T) {
-	r, err := loadHackRules(repoData("Data"))
+	r, err := loadHackRules(repoConfig("data"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,0 +1,10 @@
+{
+  "rows": [
+    {"ItemIndex": 0, "AddHP": "13,070", "AddMP": 0, "DamageRate": 0, "AttackSpeed": 10, "DoubleDmgRate": 50, "TripleDmgRate": 0, "AddExp": 0, "ResistDoubleDmg": 1000, "ResistIgnoreDefense": 0, "ResistIgnoreSD": 0, "ResistCriticalDMG": 0, "ResistExceDMG": 0, "BlockStuck": 0, "ReflectRate": 10, "PetRecovery": 5, "Commnet": 1},
+    {"ItemIndex": 1, "AddHP": "13,071", "AddMP": 0, "DamageRate": 0, "AttackSpeed": 10, "DoubleDmgRate": 50, "TripleDmgRate": 0, "AddExp": 0, "ResistDoubleDmg": 1000, "ResistIgnoreDefense": 0, "ResistIgnoreSD": 0, "ResistCriticalDMG": 0, "ResistExceDMG": 0, "BlockStuck": 0, "ReflectRate": 10, "PetRecovery": 5, "Commnet": 1},
+    {"ItemIndex": 2, "AddHP": "13,072", "AddMP": 0, "DamageRate": 0, "AttackSpeed": 10, "DoubleDmgRate": 50, "TripleDmgRate": 0, "AddExp": 0, "ResistDoubleDmg": 1000, "ResistIgnoreDefense": 0, "ResistIgnoreSD": 0, "ResistCriticalDMG": 0, "ResistExceDMG": 0, "BlockStuck": 0, "ReflectRate": 10, "PetRecovery": 5, "Commnet": 1},
+    {"ItemIndex": 3, "AddHP": "13,073", "AddMP": 0, "DamageRate": 0, "AttackSpeed": 10, "DoubleDmgRate": 50, "TripleDmgRate": 0, "AddExp": 0, "ResistDoubleDmg": 1000, "ResistIgnoreDefense": 0, "ResistIgnoreSD": 0, "ResistCriticalDMG": 0, "ResistExceDMG": 0, "BlockStuck": 0, "ReflectRate": 10, "PetRecovery": 5, "Commnet": 1},
+    {"ItemIndex": 4, "AddHP": "13,074", "AddMP": 0, "DamageRate": 0, "AttackSpeed": 10, "DoubleDmgRate": 50, "TripleDmgRate": 0, "AddExp": 0, "ResistDoubleDmg": 1000, "ResistIgnoreDefense": 0, "ResistIgnoreSD": 0, "ResistCriticalDMG": 0, "ResistExceDMG": 0, "BlockStuck": 0, "ReflectRate": 10, "PetRecovery": 5, "Commnet": 1},
+    {"ItemIndex": 5, "AddHP": "13,075", "AddMP": 0, "DamageRate": 0, "AttackSpeed": 10, "DoubleDmgRate": 50, "TripleDmgRate": 0, "AddExp": 0, "ResistDoubleDmg": 1000, "ResistIgnoreDefense": 0, "ResistIgnoreSD": 0, "ResistCriticalDMG": 0, "ResistExceDMG": 0, "BlockStuck": 0, "ReflectRate": 10, "PetRecovery": 5, "Commnet": 1}
+  ]
+}

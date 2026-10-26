@@ -31,12 +31,12 @@ func main() {
 }
 
 type options struct {
-	listen, upstream, kind   string
-	dataDir, gsData, hackDir string
-	clientKeys               string
-	logPath, golden          string
-	rewrite                  bool
-	rewriteHost              string
+	listen, upstream, kind     string
+	dataDir, gsConfig, hackDir string
+	clientKeys                 string
+	logPath, golden            string
+	rewrite                    bool
+	rewriteHost                string
 }
 
 func parseFlags(args []string, out io.Writer) (options, error) {
@@ -47,7 +47,7 @@ func parseFlags(args []string, out io.Writer) (options, error) {
 	fs.StringVar(&o.upstream, "upstream", "", "address of the real server (required)")
 	fs.StringVar(&o.kind, "kind", "connect", "protocol of -upstream: connect (ConnectServer) or game (GameServer)")
 	fs.StringVar(&o.dataDir, "data", "data", "server data root (apps/server/data)")
-	fs.StringVar(&o.gsData, "gs-data", "", "GameServer DATA folder with \"GameServerInfo - Common.dat\" (default <data>/4.GameServer/DATA)")
+	fs.StringVar(&o.gsConfig, "gs-config", filepath.Join("config", "gameservers", "4.GameServer.json"), "GameServer instance file (CustomerName / ServerSerial)")
 	fs.StringVar(&o.hackDir, "server-keys", "", "folder with the server's Enc2.dat/Dec1.dat (default <data>/Data/Hack)")
 	fs.StringVar(&o.clientKeys, "client-keys", filepath.Join("..", "client", "assets", "Data"), "folder with the client's Enc1.dat/Dec2.dat")
 	fs.StringVar(&o.logPath, "log", "-", "packet log file (- = stdout)")
@@ -66,9 +66,6 @@ func parseFlags(args []string, out io.Writer) (options, error) {
 	if len(o.rewriteHost) > 15 {
 		return o, fmt.Errorf("-rewrite-host %q does not fit the 16-byte address field", o.rewriteHost)
 	}
-	if o.gsData == "" {
-		o.gsData = filepath.Join(o.dataDir, "4.GameServer", "DATA")
-	}
 	if o.hackDir == "" {
 		o.hackDir = filepath.Join(o.dataDir, "Data", "Hack")
 	}
@@ -81,7 +78,7 @@ func run(ctx context.Context, args []string, stdout io.Writer, ready chan<- stri
 	if err != nil {
 		return err
 	}
-	keys, err := capture.LoadKeys(o.gsData, o.hackDir, o.clientKeys)
+	keys, err := capture.LoadKeys(o.gsConfig, o.hackDir, o.clientKeys)
 	if err != nil {
 		return err
 	}

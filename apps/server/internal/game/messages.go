@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -17,7 +18,7 @@ type messageTable [3]map[int]string
 func loadMessages(dataDir string) (messageTable, error) {
 	var t messageTable
 	for i, lang := range langDirs {
-		lines, err := mutext.LoadFile(filepath.Join(dataDir, "Lang", lang, "Message.txt"))
+		lines, err := jsonconf.LoadLines(filepath.Join(dataDir, "Lang", lang, "Message.json"))
 		if err != nil {
 			return t, err
 		}

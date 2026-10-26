@@ -1,13 +1,13 @@
 package gamedata
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/mutext"
 )
 
 // WizardTeam custom events of Data/Custom/Event (loaders called from
@@ -25,28 +25,31 @@ type EventSection struct {
 	Rows  [][]string
 }
 
-// LoadEventScript reads a WizardTeam script file.
+// LoadEventScript reads a WizardTeam script file (converted with
+// mutext.TokenizeScript).
 func LoadEventScript(path string) ([]EventSection, error) {
-	data, err := os.ReadFile(path)
+	lines, err := jsonconf.LoadLines(path)
 	if err != nil {
 		return nil, err
 	}
+	secs, err := parseEventScript(lines)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	return secs, nil
+}
+
+// parseEventScript groups script lines into numbered sections closed by
+// "end".
+func parseEventScript(lines []mutext.Line) ([]EventSection, error) {
 	var out []EventSection
 	var cur *EventSection
-	sc := bufio.NewScanner(bytes.NewReader(data))
-	sc.Buffer(make([]byte, 0, 64*1024), 1<<20)
-	for no := 1; sc.Scan(); no++ {
-		toks, err := scriptTokens(sc.Text())
-		if err != nil {
-			return nil, fmt.Errorf("%s line %d: %w", path, no, err)
-		}
-		if len(toks) == 0 {
-			continue
-		}
+	for _, l := range lines {
+		toks := l.Tokens
 		if cur == nil {
 			n, err := strconv.Atoi(toks[0])
 			if err != nil || len(toks) != 1 {
-				return nil, fmt.Errorf("%s line %d: expected section number, got %q", path, no, toks)
+				return nil, fmt.Errorf("line %d: expected section number, got %q", l.No, toks)
 			}
 			out = append(out, EventSection{Index: n})
 			cur = &out[len(out)-1]
@@ -58,43 +61,10 @@ func LoadEventScript(path string) ([]EventSection, error) {
 		}
 		cur.Rows = append(cur.Rows, toks)
 	}
-	if err := sc.Err(); err != nil {
-		return nil, err
-	}
 	if cur != nil {
-		return nil, fmt.Errorf("%s: section %d without end", path, cur.Index)
+		return nil, fmt.Errorf("section %d without end", cur.Index)
 	}
 	return out, nil
-}
-
-// scriptTokens splits a line: blanks separate cells, quotes keep spaces,
-// ';' and "//" start a comment.
-func scriptTokens(s string) ([]string, error) {
-	var toks []string
-	for i := 0; i < len(s); {
-		c := s[i]
-		switch {
-		case c == ' ' || c == '\t' || c == '\r' || c == '\n':
-			i++
-		case c == ';' || (c == '/' && i+1 < len(s) && s[i+1] == '/'):
-			return toks, nil
-		case c == '"':
-			end := strings.IndexByte(s[i+1:], '"')
-			if end < 0 {
-				return nil, fmt.Errorf("unterminated string")
-			}
-			toks = append(toks, s[i+1:i+1+end])
-			i += end + 2
-		default:
-			j := i
-			for j < len(s) && s[j] != ' ' && s[j] != '\t' && s[j] != '\r' && s[j] != '"' && s[j] != ';' {
-				j++
-			}
-			toks = append(toks, s[i:j])
-			i = j
-		}
-	}
-	return toks, nil
 }
 
 // eventCells gives typed access to the cells of a section with the
@@ -239,12 +209,12 @@ func loadKillEvent(dataDir, name string) (*KillEvent, error) {
 
 // LoadDeathEvent reads Custom/Event/DeathEvent.txt (FUN_0045b890).
 func LoadDeathEvent(dataDir string) (*KillEvent, error) {
-	return loadKillEvent(dataDir, "DeathEvent.txt")
+	return loadKillEvent(dataDir, "DeathEvent.json")
 }
 
 // LoadTheftEvent reads Custom/Event/TheftEvent.txt (FUN_00505fa0).
 func LoadTheftEvent(dataDir string) (*KillEvent, error) {
-	return loadKillEvent(dataDir, "TheftEvent.txt")
+	return loadKillEvent(dataDir, "TheftEvent.json")
 }
 
 // FightEvent is DuelEvent.txt / PairEvent.txt: section 0 row 0 Active
@@ -275,12 +245,12 @@ func loadFightEvent(dataDir, name string, cols int) (*FightEvent, error) {
 
 // LoadDuelEvent reads Custom/Event/DuelEvent.txt (FUN_0045d1f0).
 func LoadDuelEvent(dataDir string) (*FightEvent, error) {
-	return loadFightEvent(dataDir, "DuelEvent.txt", 5)
+	return loadFightEvent(dataDir, "DuelEvent.json", 5)
 }
 
 // LoadPairEvent reads Custom/Event/PairEvent.txt (FUN_004cebf0).
 func LoadPairEvent(dataDir string) (*FightEvent, error) {
-	return loadFightEvent(dataDir, "PairEvent.txt", 4)
+	return loadFightEvent(dataDir, "PairEvent.json", 4)
 }
 
 // SobreEvent is SobreEvent.txt (FUN_00502c70): section 0 row 0 Active
@@ -298,7 +268,7 @@ type SobreEvent struct {
 
 // LoadSobreEvent reads Custom/Event/SobreEvent.txt.
 func LoadSobreEvent(dataDir string) (*SobreEvent, error) {
-	c, err := loadEventCells(dataDir, "SobreEvent.txt")
+	c, err := loadEventCells(dataDir, "SobreEvent.json")
 	if err != nil {
 		return nil, err
 	}
@@ -321,7 +291,7 @@ type RoletaEvent struct {
 
 // LoadRoletaEvent reads Custom/Event/RoletaEvent.txt.
 func LoadRoletaEvent(dataDir string) (*RoletaEvent, error) {
-	c, err := loadEventCells(dataDir, "RoletaEvent.txt")
+	c, err := loadEventCells(dataDir, "RoletaEvent.json")
 	if err != nil {
 		return nil, err
 	}
@@ -341,7 +311,7 @@ type RaffleEvent struct {
 
 // LoadRaffleEvent reads Custom/Event/RaffleEvent.txt.
 func LoadRaffleEvent(dataDir string) (*RaffleEvent, error) {
-	c, err := loadEventCells(dataDir, "RaffleEvent.txt")
+	c, err := loadEventCells(dataDir, "RaffleEvent.json")
 	if err != nil {
 		return nil, err
 	}

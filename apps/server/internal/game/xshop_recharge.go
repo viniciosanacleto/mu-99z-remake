@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/ini"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/jsonconf"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
@@ -76,7 +77,7 @@ func (w *World) rechargePath() string {
 	if c.xshopPath == "" {
 		return ""
 	}
-	return filepath.Join(filepath.Dir(c.xshopPath), "CustomXShopRecharge.txt")
+	return filepath.Join(filepath.Dir(c.xshopPath), "CustomXShopRecharge.json")
 }
 
 // fieldText returns the NUL-terminated text of a fixed field.
@@ -108,29 +109,38 @@ func (w *World) xshopRecharge(o *Object, p []byte) {
 	}
 }
 
+// rechargeImageDir holds the recharge images: <AssetDir>/Custom, the
+// folder of the original CustomXShopRecharge.txt.
+func (w *World) rechargeImageDir() string { return filepath.Join(w.assetDir, "Custom") }
+
 // rechargeBlock reads [Recarga] Ativo, Titular, ChavePix, CopiaECola,
-// ImagemURL and ImagemBMP (a bare file name is taken from the directory of
-// the file), converts the image (FUN_00401bf0) and validates the result
-// (FUN_00401140): an invalid block is sent with Ativo 0.
+// ImagemURL and ImagemBMP (a bare file name is taken from
+// rechargeImageDir), converts the image (FUN_00401bf0) and validates the
+// result (FUN_00401140): an invalid block is sent with Ativo 0. The texts
+// go to the client in Windows-1252.
 func (w *World) rechargeBlock(path string) *[rechargeSize]byte {
 	d := new([rechargeSize]byte)
-	f, err := ini.Load(path)
+	f, err := jsonconf.LoadINI(path)
 	if err != nil {
 		f = ini.Parse(nil)
+	}
+	text := func(key string, size int) string {
+		v := jsonconf.ToWindows1252(f.String("Recarga", key, "", 0))
+		return v[:min(len(v), size-1)]
 	}
 	if f.Int("Recarga", "Ativo", 0) == 1 {
 		d[rcActive] = 1
 	}
-	copy(d[rcHolder:], f.String("Recarga", "Titular", "", 0x60))
-	copy(d[rcKey:], f.String("Recarga", "ChavePix", "", 0x80))
-	copy(d[rcCopy:], f.String("Recarga", "CopiaECola", "", 0x200))
-	url := f.String("Recarga", "ImagemURL", "", 0x100)
+	copy(d[rcHolder:], text("Titular", 0x60))
+	copy(d[rcKey:], text("ChavePix", 0x80))
+	copy(d[rcCopy:], text("CopiaECola", 0x200))
+	url := text("ImagemURL", 0x100)
 	copy(d[rcURL:], url)
-	img := f.String("Recarga", "ImagemBMP", "", 0x104)
+	img := text("ImagemBMP", 0x104)
 	loaded := false
 	if img != "" {
 		if !strings.ContainsAny(img, `\/`) {
-			img = filepath.Join(filepath.Dir(path), img)
+			img = filepath.Join(w.rechargeImageDir(), img)
 		}
 		if loaded = loadRechargeImage(img, d); !loaded {
 			w.log.Warn("[CustomXShop][RECHARGE] Cache local invalido/ausente", "file", img)
@@ -380,7 +390,7 @@ func (w *World) xshopRechargeUpload(o *Object, p []byte) {
 }
 
 // rechargeSave is FUN_00405350: the matrix goes to a new "pix*.tmp.bmp"
-// next to the file (when it has a side) and the [Recarga] file is
+// in rechargeImageDir (when it has a side) and the [Recarga] settings are
 // rewritten through a temporary file. Old images are not removed.
 func (w *World) rechargeSave(d *[rechargeSize]byte) bool {
 	c := w.cw2()
@@ -390,9 +400,12 @@ func (w *World) rechargeSave(d *[rechargeSize]byte) bool {
 	}
 	c.saving = true
 	defer func() { c.saving = false }()
-	dir := filepath.Dir(path)
+	dir := w.rechargeImageDir()
 	bmpName := ""
 	if binary.LittleEndian.Uint16(d[rcQRSize:]) != 0 {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return false
+		}
 		f, err := os.CreateTemp(dir, "pix*.tmp")
 		if err != nil {
 			return false
@@ -411,31 +424,24 @@ func (w *World) rechargeSave(d *[rechargeSize]byte) bool {
 		}
 		bmpName = tmp + ".bmp"
 	}
-	fail := func(tmp string) bool {
-		os.Remove(tmp)
-		if bmpName != "" {
-			os.Remove(bmpName)
-		}
-		return false
-	}
-	f, err := os.CreateTemp(dir, "cfg*.tmp")
-	if err != nil {
-		return fail("")
-	}
-	tmp := f.Name()
 	imgBase := ""
 	if bmpName != "" {
 		imgBase = filepath.Base(bmpName)
 	}
-	_, err = fmt.Fprintf(f, "; Configurado pelo GM no X Shop. Credito manual.\r\n[Recarga]\r\nAtivo=%d\r\n"+
-		"Titular=%s\r\nChavePix=%s\r\nCopiaECola=%s\r\nImagemURL=%s\r\nImagemBMP=%s\r\nValor=%s\r\n",
-		d[rcActive], fieldText(d[rcHolder:rcHolder+0x60]), fieldText(d[rcKey:rcKey+0x80]), fieldText(d[rcCopy:rcCopy+0x200]),
-		fieldText(d[rcURL:rcURL+0x100]), imgBase, fieldText(d[rcValue:rcValue+0x10]))
-	if cerr := f.Close(); err == nil {
-		err = cerr
-	}
-	if err != nil || os.Rename(tmp, path) != nil {
-		return fail(tmp)
+	s := &jsonconf.Settings{}
+	text := func(b []byte) string { return jsonconf.FromWindows1252(fieldText(b)) }
+	s.Set("Recarga", "Ativo", fmt.Sprint(d[rcActive]))
+	s.Set("Recarga", "Titular", text(d[rcHolder:rcHolder+0x60]))
+	s.Set("Recarga", "ChavePix", text(d[rcKey:rcKey+0x80]))
+	s.Set("Recarga", "CopiaECola", text(d[rcCopy:rcCopy+0x200]))
+	s.Set("Recarga", "ImagemURL", text(d[rcURL:rcURL+0x100]))
+	s.Set("Recarga", "ImagemBMP", imgBase)
+	s.Set("Recarga", "Valor", text(d[rcValue:rcValue+0x10]))
+	if err := jsonconf.WriteSettings(path, s); err != nil {
+		if bmpName != "" {
+			os.Remove(bmpName)
+		}
+		return false
 	}
 	return true
 }
