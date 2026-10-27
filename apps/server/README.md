@@ -1,30 +1,30 @@
 # MU Server (Go)
 
-Serviço único que substitui os processos do emulador original 97D/99z: ConnectServer, JoinServer, DataServer, GameServer e GameServerCS (Castle Siege). O protocolo do cliente original foi mantido, então o `Main.exe` original conecta sem mudanças. Os dados ficam em PostgreSQL.
+A single service that replaces the processes of the original 97D/99z emulator: ConnectServer, JoinServer, DataServer, GameServer and GameServerCS (Castle Siege). The original client protocol is kept, so the original `Main.exe` connects without changes. Data is stored in PostgreSQL.
 
-As especificações de engenharia reversa estão em [`docs/server-plan/`](../../docs/server-plan/). O progresso e o próximo passo estão em [`13-progresso.md`](../../docs/server-plan/13-progresso.md).
+The reverse-engineering specs are in [`docs/server-plan/`](../../docs/server-plan/) (in Portuguese). Progress and the next step are tracked in [`13-progresso.md`](../../docs/server-plan/13-progresso.md).
 
-## Requisitos
+## Requirements
 
-- Go 1.27.2 ou mais novo (versão do `go.mod`).
-- PostgreSQL 13 ou mais novo, com a extensão `citext` (vem no pacote padrão). Opcional: sem banco o servidor usa um store em memória.
-- O cliente original (`Cliente/` do pacote original), para jogar.
+- Go 1.27.2 or newer (the `go.mod` version).
+- PostgreSQL 13 or newer, with the `citext` extension (part of the standard package). Optional: without a database the server uses an in-memory store.
+- The original client (`Cliente/` from the original package), to play.
 
-Todos os comandos abaixo rodam a partir de `apps/server`.
+Every command below runs from `apps/server`.
 
-## Subir rápido (sem banco)
+## Quick start (no database)
 
 ```sh
 go run ./cmd/muserver -blacklist none -public-ip 127.0.0.1
 ```
 
-Sem `-db`, tudo fica em memória e some ao parar o processo. Como o `account create` roda em outro processo, ele não enxerga esse store: no modo em memória só dá para testar a conexão e a lista de servidores. Para criar conta e jogar, use o PostgreSQL.
+Without `-db`, everything stays in memory and is lost when the process stops. Since `account create` runs in another process, it can't see that store: in memory mode you can only test the connection and the server list. To create an account and play, use PostgreSQL.
 
-## Passo a passo com PostgreSQL
+## Step by step with PostgreSQL
 
-### 1. Subir o banco
+### 1. Start the database
 
-Qualquer PostgreSQL serve. Com Docker:
+Any PostgreSQL works. With Docker:
 
 ```sh
 docker run -d --name mu-postgres \
@@ -32,174 +32,201 @@ docker run -d --name mu-postgres \
   -p 55432:5432 postgres:17
 ```
 
-URL de conexão desse exemplo:
+Connection URL for this example:
 
 ```sh
 export MU_DATABASE_URL='postgres://mu:mu@localhost:55432/mu?sslmode=disable'
 ```
 
-O esquema é criado e atualizado sozinho na primeira conexão. As migrações ficam embutidas no binário (`internal/store/migrations/*.sql`, aplicadas em ordem). O controle das já aplicadas fica na tabela `schema_migrations`. Não há passo manual.
+The schema is created and updated automatically on the first connection. The migrations are embedded in the binary (`internal/store/migrations/*.sql`, applied in order) and the applied ones are tracked in the `schema_migrations` table. There is no manual step.
 
-### 2. Criar uma conta
+### 2. Create an account
 
 ```sh
-go run ./cmd/muserver account create <login> <senha>
+go run ./cmd/muserver account create <login> <password>
 ```
 
-O login tem de 1 a 10 caracteres e não diferencia maiúsculas. A senha é gravada com argon2id. Os personagens são criados pelo próprio cliente, na tela de seleção.
+The login has 1 to 10 characters and is case-insensitive. The password is stored with argon2id. Characters are created by the client itself, on the character selection screen.
 
-### 3. Liberar o 127.0.0.1
+### 3. Allow 127.0.0.1
 
-A `BlackList` de `[ConnectServer]` em `config/server.toml` (o `BlackList.txt` original) bloqueia `127.0.0.1`. Para testar na mesma máquina, passe `-blacklist none` (lista vazia) ou tire o endereço do arquivo.
+The `BlackList` in `[ConnectServer]` of `config/server.toml` (the original `BlackList.txt`) blocks `127.0.0.1`. To test on the same machine, pass `-blacklist none` (empty list) or remove the address from the file.
 
-### 4. Subir o servidor
+### 4. Start the server
 
 ```sh
 go run ./cmd/muserver -blacklist none -public-ip 127.0.0.1
 ```
 
-`-db` usa `MU_DATABASE_URL` por padrão. Ao subir, o log mostra:
+`-db` defaults to `MU_DATABASE_URL`. On startup the log shows:
 
-| Módulo | Porta | Origem |
+| Module | Port | Source |
 |---|---|---|
 | ConnectServer | 44405 | `config/server.toml`, `[ConnectServer] ConnectServerPortTCP` |
-| GameServer "Principal" (código 0) | 55900 | `config/gameserver/gameserver.toml`, `[Common] ServerPort` |
-| GameServer "Castle Siege" (código 19, `ServerType = 1`) | 55919 | `config/gameserver/gameserver-cs.toml`, `[Common] ServerPort` |
+| GameServer "Principal" (code 0) | 55900 | `config/gameserver/gameserver.toml`, `[Common] ServerPort` |
+| GameServer "Castle Siege" (code 19, `ServerType = 1`) | 55919 | `config/gameserver/gameserver-cs.toml`, `[Common] ServerPort` |
 
-`Ctrl+C` encerra o processo, desconectando todos os jogadores; a desconexão dispara a gravação dos personagens.
+`Ctrl+C` stops the process and disconnects every player; the disconnect saves the characters.
 
-### 5. Conectar o cliente
+### 5. Connect the client
 
-Aponte o cliente original para o IP da máquina na porta 44405. O ConnectServer entrega a lista de servidores, e o cliente conecta no GameServer escolhido usando o IP da `ServerList` de `config/server.toml`. Esse IP é `192.168.1.1` nos arquivos originais, e `-public-ip` o substitui.
+Point the original client at the machine's IP on port 44405. The ConnectServer sends the server list, and the client connects to the chosen GameServer using the IP from the `ServerList` in `config/server.toml`. That IP is `192.168.1.1` in the original files, and `-public-ip` replaces it.
 
-O `Main.dll` lê o IP do ConnectServer do `License.wzt`, não do `MainInfo.ini`. Para trocar: edite `IpAddress` em `PATCH CLIENTE/MainInfo.ini`, rode o `GetMainInfo.exe` nessa pasta (ele lê também `PATCH CLIENTE/Data/Custom*.txt`) e copie `PATCH CLIENTE/Path/License.wzt` para a pasta do cliente. Use o IP da máquina na rede (ex.: `192.168.18.5`), não `127.0.0.1`: com `127.0.0.1` no `License.wzt` o cliente não chega a abrir socket e a lista de servidores não aparece (observado em 2026-10-24). Passe o mesmo IP em `-public-ip`.
+`Main.dll` reads the ConnectServer IP from `License.wzt`, not from `MainInfo.ini`. To change it: edit `IpAddress` in `PATCH CLIENTE/MainInfo.ini`, run `GetMainInfo.exe` in that folder (it also reads `PATCH CLIENTE/Data/Custom*.txt`) and copy `PATCH CLIENTE/Path/License.wzt` to the client folder. Use the machine's network IP (e.g. `192.168.18.5`), not `127.0.0.1`: with `127.0.0.1` in `License.wzt` the client never opens a socket and the server list doesn't show up (observed on 2026-10-24). Pass the same IP in `-public-ip`.
 
-O login exige que versão e serial do cliente batam com `ServerVersion` (`1.00.00`) e `ServerSerial` de `[Common]` no arquivo da instância (`config/gameserver/*.toml`).
+Login requires the client version and serial to match `ServerVersion` (`1.00.00`) and `ServerSerial` in `[Common]` of the instance file (`config/gameserver/*.toml`).
 
-## Flags do `muserver`
+## Running with Docker
 
-| Flag | Padrão | Uso |
-|---|---|---|
-| `-config` | `config` | Pasta da configuração TOML (`server.toml`, `gameserver/`, `data/`) |
-| `-data` | `data` | Pasta dos arquivos binários (`Data/Terrain`, `Data/Script`, chaves de `Data/Hack`, imagens de `Data/Custom`) |
-| `-db` | `$MU_DATABASE_URL` | URL do PostgreSQL; vazio usa o store em memória |
-| `-instances` | `gameserver,gameserver-cs` | GameServers a subir: cada nome é um arquivo `<config>/gameserver/<nome>.toml` e vira uma instância no mesmo processo |
-| `-connect-addr` | `:44405` | Endereço do ConnectServer (sobrepõe a porta do `.ini`) |
-| `-bind` | todas as interfaces | Host de todos os listeners |
-| `-public-ip` | — | IP enviado ao cliente no lugar dos endereços da `ServerList` e da `MapServerInfo` |
-| `-blacklist` | — | IPs bloqueados no ConnectServer separados por vírgula, no lugar da `BlackList` de `server.toml`; `none` = nenhum |
-
-Variáveis de ambiente:
-
-- `MU_DATABASE_URL`: padrão de `-db` (e de `-to` no `migrate`).
-- `MU_DEBUG`: qualquer valor liga o log em nível debug.
-
-Subcomando administrativo: `muserver account create <login> <senha>` (usa o mesmo `-db`).
-
-## Configuração
-
-Toda a configuração fica em `config/`, em arquivos TOML (UTF-8) gerados a partir dos `.ini`, `.dat` e `.txt` do emulador original pelo `cmd/configconv`. As chaves e colunas mantêm os nomes originais e os comentários dos arquivos originais foram preservados. O formato e o mapeamento original → TOML estão em [`11-arquivos-de-configuracao.md`](../../docs/server-plan/11-arquivos-de-configuracao.md).
-
-| Arquivo | O que define |
-|---|---|
-| `config/server.toml` | `[ConnectServer]`: porta TCP, tempo ocioso, `MaxConnectionPerIP` (1 no original), `MaxPacketPerSecond`, `BlackList` e `ServerList` (código, nome, IP, porta, visível); `[JoinServer]`: `MaxConnectionPerIP` e `MaxConnectionPerHID` do login (0 = sem limite); `[DataServer]`: `BadSyntax` |
-| `config/gameserver/gameserver.toml` | Uma instância: as tabelas `[Common]` (nome, código, tipo, porta, versão/serial, taxas), `[Character]`, `[ChaosMix]`, `[Command]`, `[Custom]`, `[Event]`, `[Item]`, `[Skill]` (os 8 `GameServerInfo - *.dat` do original) |
-| `config/gameserver/gameserver-cs.toml` | O mesmo para a instância do Castle Siege |
-| `config/data/common.toml` | Arquivos da raiz de `Data/`: `MapManager`, `MapServerInfo` (que servidor atende cada mapa), `MapRateInfo`, `BlackList` do GameServer, `CommandManager`, `CommandRequirement`, `ConnectMember` |
-| `config/data/util.toml` | `GameMaster` (GMs), `Filter`, `DamageTable`, `ExperienceTable`, `PetDamageTable`, `ResetTable`, `ResetLimit` |
-| `config/data/custom.toml`, `custom-event.toml`, `xshop.toml` | Sistemas custom do emulador (Arena, Marriage, LuckyWheel, GHRS, Pick etc.), os eventos de `Custom/Event` e o XShop |
-| `config/data/event.toml`, `eventitembag.toml` | Eventos e seus drops |
-| `config/data/monster.toml`, `spawn.toml`, `item.toml`, `shop.toml`, `move.toml`, `quest.toml`, `skill.toml`, `character.toml`, `hack.toml` | Monstros e spawns, itens, lojas, gates/moves, quests, skills, classes, anti-hack |
-| `config/data/lang.toml` | Textos enviados ao jogador (`Message`, `Notice`) por idioma |
-| `data/Data/Terrain/*`, `data/Data/Script/**.lua`, `data/Data/Hack/{Enc2,Dec1}.dat`, `data/Data/Skill/SkillElect.hit` | Arquivos binários e scripts Lua (Lua 5.2), com os caminhos originais |
-
-Um nome de chave ou de coluna errado num TOML é erro na carga, com arquivo e linha. Itens são referenciados como `"cc,iii"` (categoria, índice) e `-1` é o `*` (qualquer) do original. As alterações valem no próximo início do processo. A exceção são os valores que o original relê a cada uso (`CreationGold`, `CustomXShopRecharge`) e os que o servidor grava: o reinício do Castle Siege em `[Event]` do arquivo da instância, os preços do XShop alterados por GM e a recarga enviada por GM (`config/data/xshop.toml`).
-
-### Reimportar dos arquivos originais
+The `docker-compose.yml` at the repository root runs the server and PostgreSQL 17 in containers. The commands in this section run from the repository root.
 
 ```sh
-go run ./cmd/configconv -from /caminho/para/MuServer -to config [-only server,gameserver,item,...]
+cp .env.example .env   # set MU_PUBLIC_IP to the machine's network IP
+docker compose up -d --build
+docker compose exec server muserver account create <login> <password>
+docker compose logs -f server
 ```
 
-`-from` aponta para uma pasta com o layout original (`1.ConnectServer`, `2.DataServer`, `3.JoinServer`, `4.GameServer/DATA`, `5.GameServerCS/DATA`, `Data`). A conversão aplica as regras do leitor original (seções, `*`, vírgula como separador de números, colunas que faltam etc.) e reescreve os arquivos de `config/`.
+- The image (`apps/server/Dockerfile`) builds a static `muserver` and runs it on `distroless/static` as a non-root user. `config/` and `data/` are copied into the image.
+- Ports 44405, 55900 and 55919 are published on the host. The client connects to the machine's IP, as in "Connect the client" above.
+- `.env`:
 
-## Banco de dados
+  | Variable | Use |
+  |---|---|
+  | `MU_PUBLIC_IP` | Required. Becomes `-public-ip`: the machine's network IP, the same as in `License.wzt` |
+  | `MU_BLACKLIST` | Becomes `-blacklist`. Empty keeps the `BlackList` of `config/server.toml` |
+  | `MU_INSTANCES` | Becomes `-instances` |
+  | `MU_DEBUG` | Any value enables debug logging |
+  | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Database credentials. The server's `MU_DATABASE_URL` is built from them |
+  | `POSTGRES_HOST_PORT` | Database port on the host (default 55432), for `cmd/migrate`, `cmd/mueditor` and `psql` |
 
-- O esquema mantém o layout em bytes das colunas binárias do MuOnline original (inventário de 1728 bytes, magic list de 180 etc.). O mapeamento tabela a tabela está em [`06-schema-postgresql.md`](../../docs/server-plan/06-schema-postgresql.md).
-- Principais tabelas: `accounts`, `characters`, `warehouses`, `character_options`, `guilds`/`guild_members`, `friend_*`, `pet_item_info`, `mu_castle_*`, `event_entry_count`, `reset_data`, `ranking_*`, `periodic_item`, `custom_*`, `daily_reward`.
-- Tarefas comuns por SQL:
+- Volumes: `mu-postgres` holds the database. `mu-config` and `mu-data` receive the image's `config/` and `data/` on the first start and keep what the server rewrites (XShop, Castle Siege reset, recharge images). After changing the configuration in the repository, recreate these two volumes to use it: `docker compose down && docker volume rm mu-remake_mu-config mu-remake_mu-data && docker compose up -d --build`. `docker compose down -v` also deletes the database.
+- The database on the host works with the other commands: `go run ./cmd/migrate -script dump.sql -to 'postgres://mu:mu@localhost:55432/mu?sslmode=disable'`.
+- With Docker Desktop (macOS/Windows), every connection reaches the container from the Docker gateway IP, not the client's IP. The ConnectServer `BlackList` and `MaxConnectionPerIP = 1` then apply to that single IP, so a second simultaneous client may be refused. On Linux the client's real IP is kept.
 
-  ```sql
-  -- créditos do XShop / LuckyWheel
-  UPDATE accounts SET credits = 1000 WHERE login = 'teste';
-  -- nível de conta (VIP) com validade
-  UPDATE accounts SET account_level = 1, level_expires_at = now() + interval '30 days' WHERE login = 'teste';
-  -- bloquear conta / personagem
-  UPDATE accounts SET block_code = 1 WHERE login = 'teste';
-  UPDATE characters SET ctl_code = ctl_code | 1 WHERE name = 'Fulano';  -- bit 0: personagem banido
-  ```
+## `muserver` flags
 
-  Faça essas alterações com o personagem offline. O jogador online é mantido em memória e gravado de volta ao sair.
+| Flag | Default | Use |
+|---|---|---|
+| `-config` | `config` | TOML configuration folder (`server.toml`, `gameserver/`, `data/`) |
+| `-data` | `data` | Binary files folder (`Data/Terrain`, `Data/Script`, `Data/Hack` keys, `Data/Custom` images) |
+| `-db` | `$MU_DATABASE_URL` | PostgreSQL URL; empty uses the in-memory store |
+| `-instances` | `gameserver,gameserver-cs` | GameServers to start: each name is a `<config>/gameserver/<name>.toml` file and becomes an instance in the same process |
+| `-connect-addr` | `:44405` | ConnectServer address (overrides the configured port) |
+| `-bind` | all interfaces | Host for every listener |
+| `-public-ip` | — | IP sent to the client instead of the `ServerList` and `MapServerInfo` addresses |
+| `-blacklist` | — | Comma-separated IPs the ConnectServer refuses, instead of the `BlackList` in `server.toml`; `none` = no IPs |
 
-### Importar um banco original (MuOnline)
+Environment variables:
 
-O `cmd/migrate` copia um banco MuOnline do SQL Server para o esquema PostgreSQL. Ele importa contas, personagens, baús, opções, amigos e cartas, guilds, pets, entradas de eventos, Golden Archer, resets, rankings, itens periódicos e dados custom. O PostgreSQL de destino precisa estar sem contas, e a importação roda numa única transação.
+- `MU_DATABASE_URL`: default for `-db` (and for `-to` in `migrate`).
+- `MU_DEBUG`: any value enables debug logging.
+
+Administrative subcommand: `muserver account create <login> <password>` (uses the same `-db`).
+
+## Configuration
+
+All configuration lives in `config/`, in TOML files (UTF-8) generated from the original emulator's `.ini`, `.dat` and `.txt` files by `cmd/configconv`. Keys and columns keep their original names, and the comments of the original files are preserved. The format and the original → TOML mapping are in [`11-arquivos-de-configuracao.md`](../../docs/server-plan/11-arquivos-de-configuracao.md).
+
+| File | What it defines |
+|---|---|
+| `config/server.toml` | `[ConnectServer]`: TCP port, idle timeout, `MaxConnectionPerIP` (1 in the original), `MaxPacketPerSecond`, `BlackList` and `ServerList` (code, name, IP, port, visible); `[JoinServer]`: login `MaxConnectionPerIP` and `MaxConnectionPerHID` (0 = no limit); `[DataServer]`: `BadSyntax` |
+| `config/gameserver/gameserver.toml` | One instance: the tables `[Common]` (name, code, type, port, version/serial, rates), `[Character]`, `[ChaosMix]`, `[Command]`, `[Custom]`, `[Event]`, `[Item]`, `[Skill]` (the original's 8 `GameServerInfo - *.dat` files) |
+| `config/gameserver/gameserver-cs.toml` | The same for the Castle Siege instance |
+| `config/data/common.toml` | Files at the root of `Data/`: `MapManager`, `MapServerInfo` (which server handles each map), `MapRateInfo`, the GameServer `BlackList`, `CommandManager`, `CommandRequirement`, `ConnectMember` |
+| `config/data/util.toml` | `GameMaster` (GMs), `Filter`, `DamageTable`, `ExperienceTable`, `PetDamageTable`, `ResetTable`, `ResetLimit` |
+| `config/data/custom.toml`, `custom-event.toml`, `xshop.toml` | The emulator's custom systems (Arena, Marriage, LuckyWheel, GHRS, Pick etc.), the `Custom/Event` events and the XShop |
+| `config/data/event.toml`, `eventitembag.toml` | Events and their drops |
+| `config/data/monster.toml`, `spawn.toml`, `item.toml`, `shop.toml`, `move.toml`, `quest.toml`, `skill.toml`, `character.toml`, `hack.toml` | Monsters and spawns, items, shops, gates/moves, quests, skills, classes, anti-hack |
+| `config/data/lang.toml` | Texts sent to the player (`Message`, `Notice`) per language |
+| `data/Data/Terrain/*`, `data/Data/Script/**.lua`, `data/Data/Hack/{Enc2,Dec1}.dat`, `data/Data/Skill/SkillElect.hit` | Binary files and Lua scripts (Lua 5.2), with their original paths |
+
+A wrong key or column name in a TOML file is a load error, reported with file and line. Items are referenced as `"cc,iii"` (category, index), and `-1` is the original's `*` (any). Changes take effect on the next process start. The exceptions are the values the original rereads on every use (`CreationGold`, `CustomXShopRecharge`) and the ones the server writes: the Castle Siege reset in `[Event]` of the instance file, XShop prices changed by a GM and recharges uploaded by a GM (`config/data/xshop.toml`).
+
+### Reimporting from the original files
 
 ```sh
-# direto de um SQL Server com o MuOnline restaurado
-go run ./cmd/migrate -from 'sqlserver://sa:senha@host:1433?database=MuOnline' -to "$MU_DATABASE_URL"
+go run ./cmd/configconv -from /path/to/MuServer -to config [-only server,gameserver,item,...]
+```
 
-# ou de um script SQL com INSERTs (UTF-16 ou UTF-8)
+`-from` points to a folder with the original layout (`1.ConnectServer`, `2.DataServer`, `3.JoinServer`, `4.GameServer/DATA`, `5.GameServerCS/DATA`, `Data`). The conversion applies the original reader's rules (sections, `*`, comma as number separator, missing columns etc.) and rewrites the files in `config/`.
+
+## Database
+
+- The schema keeps the byte layout of the original MuOnline binary columns (1728-byte inventory, 180-byte magic list etc.). The table-by-table mapping is in [`06-schema-postgresql.md`](../../docs/server-plan/06-schema-postgresql.md).
+- Main tables: `accounts`, `characters`, `warehouses`, `character_options`, `guilds`/`guild_members`, `friend_*`, `pet_item_info`, `mu_castle_*`, `event_entry_count`, `reset_data`, `ranking_*`, `periodic_item`, `custom_*`, `daily_reward`.
+- Common tasks in SQL:
+
+  ```sql
+  -- XShop / LuckyWheel credits
+  UPDATE accounts SET credits = 1000 WHERE login = 'teste';
+  -- account level (VIP) with expiry
+  UPDATE accounts SET account_level = 1, level_expires_at = now() + interval '30 days' WHERE login = 'teste';
+  -- block an account / character
+  UPDATE accounts SET block_code = 1 WHERE login = 'teste';
+  UPDATE characters SET ctl_code = ctl_code | 1 WHERE name = 'Fulano';  -- bit 0: character banned
+  ```
+
+  Make these changes with the character offline. An online player is kept in memory and written back on logout.
+
+### Importing an original database (MuOnline)
+
+`cmd/migrate` copies a MuOnline database from SQL Server into the PostgreSQL schema. It imports accounts, characters, warehouses, options, friends and letters, guilds, pets, event entries, Golden Archer, resets, rankings, periodic items and custom data. The target PostgreSQL must have no accounts, and the import runs in a single transaction.
+
+```sh
+# straight from a SQL Server with MuOnline restored
+go run ./cmd/migrate -from 'sqlserver://sa:password@host:1433?database=MuOnline' -to "$MU_DATABASE_URL"
+
+# or from a SQL script with INSERTs (UTF-16 or UTF-8)
 go run ./cmd/migrate -script dump.sql -to "$MU_DATABASE_URL"
 ```
 
-As senhas importadas ficam como `plain:` (o original usa `MD5Encryption = 0`). Elas passam para argon2id no primeiro login de cada conta. O `data/DB/MuOnline.sql` que vem com o pacote só traz o esquema e as procedures, sem dados de jogadores.
+Imported passwords are stored as `plain:` (the original uses `MD5Encryption = 0`). They move to argon2id on each account's first login. The `data/DB/MuOnline.sql` shipped with the package only has the schema and the procedures, with no player data.
 
-## Testes
+## Tests
 
 ```sh
 go vet ./... && gofmt -l .
 go test -p 2 ./...
 ```
 
-Os testes de store e de migração em PostgreSQL só rodam com um banco de teste:
+The PostgreSQL store and migration tests only run with a test database:
 
 ```sh
 MU_TEST_DATABASE_URL='postgres://mu:mu@localhost:55432/mu?sslmode=disable' go test -p 2 -count=1 ./...
 ```
 
-Para o código de rede, use `-race` num subconjunto (`go test -race -p 1 -run <Teste> ./internal/...`).
+For the network code, use `-race` on a subset (`go test -race -p 1 -run <Test> ./internal/...`).
 
-## Proxy de captura
+## Capture proxy
 
-`cmd/muproxy` fica entre o cliente original e um servidor (o original ou este) e grava os pacotes decodificados e as sessões golden. Uso em [`15-captura.md`](../../docs/server-plan/15-captura.md).
+`cmd/muproxy` sits between the original client and a server (the original one or this one) and records the decoded packets and golden sessions. Usage in [`15-captura.md`](../../docs/server-plan/15-captura.md).
 
-## Editor de personagens
+## Character editor
 
-`cmd/mueditor` é um editor web que muda atributos, zen e itens (inventário e baú 0) de personagens **offline** direto no PostgreSQL. Contas online ficam só leitura, porque o GameServer regrava o personagem no logout.
+`cmd/mueditor` is a web editor that changes stats, zen and items (inventory and warehouse 0) of **offline** characters directly in PostgreSQL. Online accounts are read-only, because the GameServer rewrites the character on logout.
 
 ```sh
-go run ./cmd/mueditor -db postgres://... [-config config] [-addr 127.0.0.1:8080] [-password segredo]
+go run ./cmd/mueditor -db postgres://... [-config config] [-addr 127.0.0.1:8080] [-password secret]
 ```
 
-`-db` e `-password` também podem vir de `MU_DATABASE_URL` e `MU_EDITOR_PASSWORD` (sem senha não há autenticação). O nível máximo vem do `ServerMaxLevel` da instância em `-instance` (padrão `gameserver`, o arquivo `config/gameserver/gameserver.toml`).
+`-db` and `-password` can also come from `MU_DATABASE_URL` and `MU_EDITOR_PASSWORD` (without a password there is no authentication). The maximum level comes from `ServerMaxLevel` of the instance in `-instance` (default `gameserver`, the file `config/gameserver/gameserver.toml`).
 
-## Estrutura
+## Layout
 
-| Pasta | Conteúdo |
+| Folder | Contents |
 |---|---|
-| `cmd/muserver` | O serviço e o subcomando `account create` |
-| `cmd/migrate` | Importação do MuOnline (SQL Server ou script) |
-| `cmd/muproxy` | Proxy de captura |
-| `cmd/configconv` | Conversão dos arquivos originais para a configuração TOML |
-| `config/` | A configuração (TOML) |
-| `data/` | Arquivos binários do original (terreno, Lua, chaves) e o `MuOnline.sql` |
-| `internal/connect` | ConnectServer (lista de servidores) |
-| `internal/auth` | JoinServer: login, sessões, senhas |
-| `internal/game` | GameServer: `World` (uma goroutine por instância) e todos os sistemas de jogo |
-| `internal/gamedata` | Leitores das tabelas de `config/data` e do terreno |
-| `internal/config` | Leitura de `server.toml` e das instâncias, codificador TOML (`tomlconf`) e os leitores dos formatos originais usados só pelo `configconv` (`legacy`, `mutext`, `ini`) |
-| `internal/store` | Persistência (memória e PostgreSQL) e migrações |
-| `internal/protocol` | Framing C1–C4, criptografia (SimpleModulus, XOR32, cifra de fluxo) |
-| `internal/migrate` | Leitura e conversão do banco original |
-| `data/` | Cópia dos dados do `MuServer/` original |
+| `cmd/muserver` | The service and the `account create` subcommand |
+| `cmd/migrate` | MuOnline import (SQL Server or script) |
+| `cmd/muproxy` | Capture proxy |
+| `cmd/configconv` | Conversion of the original files to the TOML configuration |
+| `config/` | The configuration (TOML) |
+| `data/` | Binary files from the original (terrain, Lua, keys) and `MuOnline.sql` |
+| `internal/connect` | ConnectServer (server list) |
+| `internal/auth` | JoinServer: login, sessions, passwords |
+| `internal/game` | GameServer: `World` (one goroutine per instance) and every game system |
+| `internal/gamedata` | Readers for the `config/data` tables and the terrain |
+| `internal/config` | Reading of `server.toml` and the instances, the TOML encoder (`tomlconf`) and the original-format readers used only by `configconv` (`legacy`, `mutext`, `ini`) |
+| `internal/store` | Persistence (memory and PostgreSQL) and migrations |
+| `internal/protocol` | C1–C4 framing, encryption (SimpleModulus, XOR32, stream cipher) |
+| `internal/migrate` | Reading and conversion of the original database |

@@ -2,6 +2,12 @@
 
 All changes to this project are recorded here, newest first.
 
+## 2026-10-27
+
+- Added Docker support: `apps/server/Dockerfile` (static `muserver` on distroless, non-root, with `config/` and `data/`), `apps/server/.dockerignore`, `docker-compose.yml` at the repository root (server plus PostgreSQL 17 with healthcheck and volumes for the database and the files the server rewrites) and `.env.example` (`MU_PUBLIC_IP`, `MU_BLACKLIST`, `MU_INSTANCES`, `MU_DEBUG`, database credentials and host port).
+- Added the "Running with Docker" section to `apps/server/README.md`.
+- Rewrote `apps/server/README.md` in English; dropped the duplicate `data/` row of the layout table.
+
 ## 2026-10-26
 
 - Neutralized server and emulator branding: the player-facing texts in `config/data/lang.toml` (message 990, Notice), `config/data/custom.toml` (4 quiz questions, an "OriX" move comment) and the window title and welcome Lua scripts in `data/Data/Script` now say "MU Online"; `[CustomXShopRecharge]` in `config/data/xshop.toml` is disabled with empty fields; removed `data/Data/Custom/pixFE31.tmp.bmp` (a real PIX QR code) and its entry in `internal/game/datacoverage_test.go`; the `data/DB/MuOnline.sql` seed accounts use `@example.com`; removed the WizardTeam/SSeMU banners from the remaining `data/` files. The changed TOML files were regenerated with `cmd/configconv`.

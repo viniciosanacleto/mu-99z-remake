@@ -1,0 +1,8 @@
+bin/
+*.test
+*.out
+*.log
+coverage.*
+README.md
+Dockerfile
+.dockerignore

@@ -1,0 +1,52 @@
+# Runs the server and PostgreSQL in containers. Usage in apps/server/README.md
+# ("Running with Docker"). Values come from .env (copy .env.example).
+
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mu}
+      POSTGRES_DB: ${POSTGRES_DB:-mu}
+    volumes:
+      - mu-postgres:/var/lib/postgresql/data
+    ports:
+      # Host access for cmd/migrate, cmd/mueditor and psql.
+      - "${POSTGRES_HOST_PORT:-55432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  server:
+    build: ./apps/server
+    image: mu-remake/muserver
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MU_DATABASE_URL: postgres://${POSTGRES_USER:-mu}:${POSTGRES_PASSWORD:-mu}@db:5432/${POSTGRES_DB:-mu}?sslmode=disable
+      MU_DEBUG: ${MU_DEBUG:-}
+    # MU_PUBLIC_IP is the address the client reaches the GameServers on (the
+    # host's LAN IP); an empty MU_BLACKLIST keeps the BlackList of server.toml.
+    command:
+      - -public-ip=${MU_PUBLIC_IP:?set MU_PUBLIC_IP in .env to the host LAN IP}
+      - -blacklist=${MU_BLACKLIST:-}
+      - -instances=${MU_INSTANCES:-gameserver,gameserver-cs}
+    ports:
+      - "44405:44405"
+      - "55900:55900"
+      - "55919:55919"
+    volumes:
+      # Filled from the image on first start; keeps the files the server rewrites.
+      # Remove them (docker compose down -v) to pick up a newer config from the image.
+      - mu-config:/srv/mu/config
+      - mu-data:/srv/mu/data
+
+volumes:
+  mu-postgres:
+  mu-config:
+  mu-data:

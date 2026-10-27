@@ -35,3 +35,4 @@ Thumbs.db
 
 # Configuração local do Claude Code
 .claude/settings.local.json
+mu-remake.code-workspace
