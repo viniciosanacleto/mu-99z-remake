@@ -141,7 +141,9 @@ Já refletidas em [02](02-protocolo-de-rede.md) e [03](03-connect-server.md):
 
 | Pacote | Conteúdo |
 |---|---|
-| `cmd/muserver` | `run()`: ConnectServer + uma instância de GameServer por arquivo em `-instances` (padrão `gameserver,gameserver-cs`, `config/gameserver/<nome>.toml`), Hub compartilhado; subcomando `account create` |
+| `cmd/muserver` | `run()`: ConnectServer + uma instância de GameServer por arquivo em `-instances` (padrão `gameserver,gameserver-cs`, `config/gameserver/<nome>.toml`), Hub compartilhado; subcomando `account create`; flags de teste de carga `-metrics-addr`, `-seed-load`, `-max-conn-per-ip`, `-max-users` |
+| `cmd/muload` | teste de carga: degraus de bots, amostragem (`/debug/load`, `ps`, `docker stats`), `samples.csv` e `summary.md` (doc [18](18-teste-de-carga.md)) |
+| `internal/loadbot` | cliente headless do protocolo (ConnectServer, login, entrada, D3/D7/00/0E) e o `Bot` do teste de carga |
 | `cmd/configconv` | converte os `.ini`/`.dat`/`.txt` originais para os TOML de `config/` |
 | `internal/protocol/frame` | `Next` (parser incremental), `Build`, `Head`, `Sub`, `Payload`, limites `MaxSizeConnect/Game` |
 | `internal/protocol/crypto` | `Xor32Encrypt/Decrypt`, `ModulusKeys` (`LoadKeyFile`, `Encrypt`, `Decrypt`), `Bux`, `StreamKeys`/`DeriveStreamKeys` |
@@ -178,6 +180,7 @@ Configuração em `apps/server/config/` (TOML gerado pelo `cmd/configconv` a par
 | 2026-10-24 | idem, após o limite de atributos do editor e o `F3 03` de 176 bytes (U-PROTO-09) | 21 pacotes, todos `ok` |
 | 2026-10-26 | `go vet ./... && gofmt -l . && go test -race -count=1 -timeout 30m ./...` após a configuração em TOML | Todos `ok` (`internal/game` 274 s) menos `internal/capture` e `cmd/muproxy`, que já falhavam antes: os testes leem `apps/client/assets/Data/Enc1.dat`, removido no commit `6ae0638`. Um dump de todos os loaders bate com os leitores de texto anteriores, exceto o nome do item 12,203, agora em Windows-1252 |
 | 2026-10-26 | `go vet ./... && gofmt -l . && go test -race -count=1 -timeout 30m ./...` após juntar a `main` (TOML) com a neutralização de nomes | Todos `ok` menos `internal/capture` e `cmd/muproxy`, que já falhavam (leem `apps/client/assets/Data/Enc1.dat`, removido no commit `6ae0638`) |
+| 2026-10-27 | idem, após o teste de carga (`cmd/muload`, `internal/loadbot`, flags do `muserver`) | Todos `ok` (`internal/game` 286 s; `cmd/muserver` inclui `TestLoadBots`, 3 bots reais contra o servidor em processo) menos `internal/capture` e `cmd/muproxy`, pelo mesmo `Enc1.dat` ausente |
 
 ## Bugs do original ainda reproduzidos (não corrigidos)
 
@@ -193,13 +196,15 @@ Comportamentos errados do binário original que o Go reproduz de propósito, à 
 | Prainha (GM) | Com vários sobreviventes, `0x24f0` fica marcado em quem estava na lista; o sucesso da inscrição cai no comando 131 | `customevent_sobre.go` | [10f](10f-gm-eventos-custom.md) |
 | Mata-Mata de Duplas | `/dupla` de GM (índice 133) é inalcançável com o `PairEvent.txt` original (a sintaxe do jogador também é `/dupla` e sempre encerra a linha); o segundo membro da dupla campeã ganha 13 pontos e patente 10; no W.O. por saída o segundo membro vai ao FIGHT | `customevent_pair.go` | [10f](10f-gm-eventos-custom.md) |
 | `/bcstart` `/dsstart` `/ccstart` | No minuto 59 a agenda pede minuto 60 e o evento forçado nunca dispara | `command_gm.go` | [10f](10f-gm-eventos-custom.md) índices 125–127 |
-| CustomArena / patente | Todo inscrito recebe o bag (não só o vencedor); arena com um só lutador termina sem 0x1F9; a morte só olha a primeira arena em luta; a patente de todos vai a cada jogador a cada segundo | `customarena.go`, `patente.go` | [10f](10f-gm-eventos-custom.md) |
+| CustomArena / patente | Todo inscrito recebe o bag (não só o vencedor); arena com um só lutador termina sem 0x1F9; a morte só olha a primeira arena em luta; a patente de todos vai a cada jogador a cada segundo e a cada entrada nova do viewport. **O teste de carga mostrou que isso derruba jogadores**: com ~50 na mesma área a fila de saída (1 024 pacotes) enche e a conexão cai (doc [18](18-teste-de-carga.md), U-LOAD-01) | `customarena.go`, `patente.go` | [10f](10f-gm-eventos-custom.md) |
 | SummonScroll / DailyReward | Grupo de uma linha sempre invoca (peso ignorado); a DailyReward guarda só o mês (linhas do mesmo mês do ano anterior contam) | `summonscroll.go`, `dailyreward.go` | [10f](10f-gm-eventos-custom.md) |
 | JewelBank | O teste do item no slot de mesmo número do tipo no depósito nunca recusa (não reproduzido, sem efeito) | `jewelbank.go` | [10e](10e-customs.md) U-JWL-05 |
 
 ## Próximo passo
 
-Blocos 1–13 concluídos. Resta:
+Blocos 1–13 concluídos, mais o teste de carga (2026-10-27, doc [18](18-teste-de-carga.md)). Resta:
+
+0. **Patente em área cheia (U-LOAD-01)**: decidir com o usuário se o `F3 E5` continua indo a todos os jogadores a cada segundo e a cada entrada do viewport. Com ~50 jogadores juntos ele derruba conexões. Depois, repetir o `cmd/muload` com 100 e 200 jogadores.
 
 1. **Bloco 14 — teste com o cliente original** (depende do usuário, Windows): subir `go run ./cmd/muserver -db ... -blacklist none`, apontar o `Main.exe` para o ConnectServer (ou para o `cmd/muproxy`, doc [15](15-captura.md)) e gravar sessões golden em `internal/capture/testdata/golden/`. Dúvidas abertas: serial C3 após troca de servidor de mapa e endereço do ConnectServer no `License.wzt`.
 2. **Migração real**: restaurar o `MuOnline.bak` num SQL Server e rodar `cmd/migrate -from sqlserver://...`.
