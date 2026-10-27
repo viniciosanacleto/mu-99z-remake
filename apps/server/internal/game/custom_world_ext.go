@@ -43,13 +43,13 @@ var (
 )
 
 // customViewEntry: an arena player is shown with PK level 6
-// (FUN_00443f00 in FUN_00515160), and the viewer gets the patente of every
-// playing player for each new entry (FUN_00452250 loop).
+// (FUN_00443f00 in FUN_00515160), and the viewer gets the patente of the
+// entry's player (the original sent every playing player's, patente.go).
 func (w *World) customViewEntry(viewer, t *Object, entry []byte) {
 	if w.arenaListed(t) {
 		entry[40] = entry[40]&0xF0 | 6
 	}
-	w.patenteAll(viewer)
+	w.patenteEntry(viewer, t)
 }
 
 // arenaOrCustomRespawn is FUN_004c53c0's choice: the arena respawn on the

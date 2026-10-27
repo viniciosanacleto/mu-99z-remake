@@ -499,11 +499,41 @@ func TestPatentePacket(t *testing.T) {
 	if b.patenteRank(o) != 2 {
 		t.Fatal("rank 2")
 	}
-	b.player(PlayerStart+1, "Other", 0, 131, 130)
+}
+
+// U-LOAD-01: the patente only goes out for the viewer and the players in
+// its viewport, one packet per new C2 12 entry.
+func TestPatenteViewportOnly(t *testing.T) {
+	b := newBareWorld(t)
+	o := b.player(PlayerStart, "Viewer", 0, 130, 130)
+	near := b.player(PlayerStart+1, "Near", 0, 131, 130)
+	far := b.player(PlayerStart+2, "Far", 0, 131, 131)
+	b.player(PlayerStart+3, "Gone", 0, 132, 130)
+	o.VP = [len(o.VP)]VPEntry{
+		{State: VPNew, Index: near.Index, Type: byte(TypePlayer)},
+		{State: VPVisible, Index: far.Index, Type: byte(TypePlayer)},
+		{State: VPRemove, Index: PlayerStart + 3, Type: byte(TypePlayer)},
+		{State: VPVisible, Index: 100, Type: byte(TypeMonster)},
+	}
 	b.drain(o)
-	b.patenteAll(o)
-	if n := countPackets(b.drain(o), 0xF3, 0xE5); n != 2 {
-		t.Fatalf("packets %d", n)
+	b.patenteViewport(o)
+	got := map[int]bool{}
+	for _, p := range b.drain(o) {
+		if find([][]byte{p}, 0xF3, 0xE5) != nil {
+			got[int(binary.LittleEndian.Uint32(p[4:]))] = true
+		}
+	}
+	if len(got) != 3 || !got[o.Index] || !got[near.Index] || !got[far.Index] {
+		t.Fatalf("patente sent for %v", got)
+	}
+
+	b.customViewEntry(o, near, make([]byte, 44))
+	pk := b.drain(o)
+	if n := countPackets(pk, 0xF3, 0xE5); n != 1 {
+		t.Fatalf("new entry: %d packets", n)
+	}
+	if p := find(pk, 0xF3, 0xE5); int(binary.LittleEndian.Uint32(p[4:])) != near.Index {
+		t.Fatalf("new entry patente % X", p)
 	}
 }
 

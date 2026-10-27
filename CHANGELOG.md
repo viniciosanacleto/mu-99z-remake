@@ -4,6 +4,7 @@ All changes to this project are recorded here, newest first.
 
 ## 2026-10-27
 
+- Fixed players being disconnected when about 50 are in the same area (U-LOAD-01). The patente packet (`C1 F3 E5`) went to each player for every online player, every second and again for each new viewport entry, which overflowed the 1024-packet send queue. It now covers only the player and its viewport (`internal/game/patente.go` `patenteViewport`), and a new `C2 12` entry sends only that player's patente (`patenteEntry`, `custom_world_ext.go`). Test: `TestPatenteViewportOnly`. Reran the load test up to 200 players with no disconnects; results in `docs/server-plan/18-teste-de-carga.md`, notes in `10f-gm-eventos-custom.md` and `13-progresso.md`.
 - Added a load test. `cmd/muload` runs steps of 1, 10, 50 and 100 fake players against a running server, samples its CPU and memory (`/debug/load`, `ps` or `docker stats`) and writes `samples.csv` and `summary.md`. `internal/loadbot` is the headless client: ConnectServer lookup, login, character select, walk, attack, chat and keepalive.
 - Added load test flags to `muserver` (`cmd/muserver/metrics.go`, `seed.go`, `main.go`):
   - `-metrics-addr` serves pprof and `/debug/load`.

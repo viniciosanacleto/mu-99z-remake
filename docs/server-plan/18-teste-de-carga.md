@@ -59,9 +59,34 @@ CPU em % de um núcleo (200 = dois núcleos). Com `-metrics` a CPU vem do `getru
 
 ## Resultados — 2026-10-27
 
+### Depois da correção da patente (U-LOAD-01)
+
+Mesmo ambiente e roteiro da primeira rodada (local, store em memória), com um degrau de 200 (`-max-users 300 -seed-load 200`):
+
+| Degrau | Online (média) | CPU média | CPU p95 | RSS média (MiB) | RSS máx | Heap média | Pacotes/s enviados | KiB/s enviados | Desconexões |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| ocioso | 0 | 13,3 | 14,3 | 365 | 375 | 341 | – | – | – |
+| 1 | 1 | 13,3 | 14,8 | 388 | 448 | 381 | 19 | 0,4 | 0 |
+| 10 | 10 | 14,9 | 15,7 | 492 | 861 | 478 | 285 | 6,0 | 0 |
+| 50 | 50 | 17,1 | 18,5 | 507 | 780 | 584 | 2 616 | 43,9 | 0 |
+| 100 | 100 | 21,9 | 24,3 | 490 | 997 | 597 | 9 073 | 132,6 | 0 |
+| 200 | 200 | 33,5 | 36,1 | 561 | 865 | 492 | 25 744 | 352,4 | 0 |
+
+Login: p50 de 50–63 ms e p95 até 88 ms em todos os degraus, sem falhas. Custo por jogador (regressão): 0,10 % de núcleo e ~1 MiB. Todos os 200 bots no mesmo campo, o pior caso de viewport.
+
+Com a correção, 200 jogadores juntos cabem em 1 vCPU (~35 % de um núcleo) e ~1 GB de RAM, e o pico de RSS vem dos logins (argon2). Sugestão revista:
+
+| Jogadores | vCPU | RAM |
+|---|---|---|
+| até 100 | 1 | 1,5 GB |
+| até 200 | 2 | 2 GB |
+| 200+ | 2+ | 2 GB + 64 MB por login simultâneo; limitar logins simultâneos ou baixar o custo do argon2 |
+
+### Antes da correção (primeira rodada)
+
 Ambiente: Apple M4 (10 núcleos, 16 GB), macOS, bots na mesma máquina. Duas instâncias (`gameserver` e `gameserver-cs`), rampa de 5 logins/s, 90 s de regime por degrau, 20 s de pausa. Local com store em memória; Docker com PostgreSQL 17 (Docker Desktop, VM com 10 CPUs e 8 GB).
 
-### Regime
+#### Regime
 
 | Degrau | Online (média) | CPU média | CPU p95 | RSS média (MiB) | RSS máx | Heap média | Pacotes/s enviados | KiB/s enviados |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -83,14 +108,14 @@ Docker (PostgreSQL), mesmo roteiro:
 
 Login: p50 de 52–66 ms e p95 até 102 ms em todos os degraus (no Docker, o degrau de 10 teve p50 de 264 ms, com o PostgreSQL recém-aberto); nenhuma falha de login.
 
-### Achados
+#### Achados
 
-1. **Patente derruba jogadores em área cheia.** O `C1 0C F3 E5` (`patente.go`) é enviado a cada jogador para todos os jogadores online a cada segundo e, de novo, para cada entrada nova do `C2 12`. É o comportamento do original (doc [10f](10f-gm-eventos-custom.md), seção "Patente", na lista de bugs reproduzidos do [13](13-progresso.md)). Quando 50 jogadores chegam juntos, um deles recebe 50 × 50 = 2 500 pacotes de uma vez, a fila de saída de 1 024 pacotes (`conn.go` `sendQueue`) enche e a conexão é fechada sem log. Medido: com 50 bots ficaram 40 online e com 100 ficaram 51 (local) ou 54 (Docker); todas as quedas ocorreram logo depois da entrada no mundo. O tráfego de patente cresce com N² (100 jogadores = 10 000 pacotes/s só de patente), e com o `CustomPatente.txt` ausente todos levam -1. **Até isso ser corrigido, ~50 jogadores na mesma área é o limite prático, independente de CPU e memória.**
+1. **Patente derruba jogadores em área cheia (corrigido, ver acima).** O `C1 0C F3 E5` (`patente.go`) é enviado a cada jogador para todos os jogadores online a cada segundo e, de novo, para cada entrada nova do `C2 12`. É o comportamento do original (doc [10f](10f-gm-eventos-custom.md), seção "Patente", na lista de bugs reproduzidos do [13](13-progresso.md)). Quando 50 jogadores chegam juntos, um deles recebe 50 × 50 = 2 500 pacotes de uma vez, a fila de saída de 1 024 pacotes (`conn.go` `sendQueue`) enche e a conexão é fechada sem log. Medido: com 50 bots ficaram 40 online e com 100 ficaram 51 (local) ou 54 (Docker); todas as quedas ocorreram logo depois da entrada no mundo. O tráfego de patente cresce com N² (100 jogadores = 10 000 pacotes/s só de patente), e com o `CustomPatente.txt` ausente todos levam -1. **Até isso ser corrigido, ~50 jogadores na mesma área é o limite prático, independente de CPU e memória.**
 2. **CPU não é o gargalo.** O processo ocioso usa 12–17 % de um núcleo (laços de 1 s das duas instâncias). Com ~50 jogadores em combate, chega a 20–30 % de um núcleo, cerca de 0,1 % de núcleo por jogador. Um vCPU aguenta 100 jogadores com folga; 2 vCPUs cobrem os picos de login.
 3. **A memória base é alta e o login tem pico.** Cada instância carrega as tabelas de dados: o heap ocioso já tem ~340 MiB. Cada login roda argon2id com 64 MiB (`internal/auth/password.go`). Com logins concorrentes, a RSS sobe para 700 MB–1 GB e o Go demora a devolver essa memória ao sistema. O custo de regime por jogador é pequeno (1–4 MiB pela regressão).
 4. **Rede:** ~1 KiB/s por jogador enviado com 100 jogadores juntos, quase tudo patente e viewport. Desprezível para qualquer link.
 
-### Dimensionamento sugerido (com o comportamento atual)
+#### Dimensionamento sugerido antes da correção
 
 | Jogadores | vCPU | RAM | Observação |
 |---|---|---|---|
@@ -104,6 +129,6 @@ Para rodar mais de uma instância de GameServer por processo, some ~350 MiB de b
 
 | Id | Pendência |
 |---|---|
-| U-LOAD-01 | Corrigir a patente (mandar só quando o `CustomPatente.txt` tiver linhas, ou só aos jogadores no viewport) depende do aval do usuário: é um bug do original reproduzido de propósito. Depois, repetir o teste com 100 e 200 jogadores |
+| U-LOAD-01 | **Resolvido em 2026-10-27**: a patente vai só para o próprio jogador e o seu viewport (`patente.go` `patenteViewport`), e cada entrada nova do `C2 12` manda só a patente daquele jogador (`patenteEntry`). Desvio consciente do original, registrado no doc [10f](10f-gm-eventos-custom.md) |
 | U-LOAD-02 | O original tinha um buffer secundário de 0x4000 bytes por conexão (`FUN_00504f00`). Não foi medido se o original também derrubava jogadores nessa situação |
 | U-LOAD-03 | Medir com os bots espalhados por vários mapas (hoje todos nascem no mesmo campo, o pior caso de viewport) e com o servidor e os bots em máquinas separadas |

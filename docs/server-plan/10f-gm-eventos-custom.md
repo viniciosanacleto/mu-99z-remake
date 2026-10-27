@@ -212,7 +212,8 @@ Os arquivos são lidos pelo leitor de script custom (`FUN_00409600` / `FUN_00451
 ### Patente (`C1 0C F3 E5`, `FUN_00452250`)
 
 - `[4]` índice do jogador (u32), `[8]` posição (i32): posição 1-based da patente do jogador na lista do `CustomPatente.txt` (leitor de script, seção 0, primeira célula de cada linha, até 50), -1 sem posição, para GM (Authority > 1) ou com o Castle Siege no estado 7.
-- Enviado a um jogador para **todos** os jogadores online: no fim de cada viewport add (`FUN_00514700`, todo segundo), para cada entrada nova do `C2 12` (`FUN_00515160`) e no `C2 12` próprio (`FUN_005167b0`). Reproduzido como no original.
+- Enviado a um jogador para **todos** os jogadores online: no fim de cada viewport add (`FUN_00514700`, todo segundo), para cada entrada nova do `C2 12` (`FUN_00515160`) e no `C2 12` próprio (`FUN_005167b0`).
+- **Corrigido (U-LOAD-01, 2026-10-27):** isso dá N pacotes por evento a cada jogador; com ~50 jogadores chegando juntos a fila de saída (1 024 pacotes) enche e o jogador cai (doc [18](18-teste-de-carga.md)). Aqui o fim do viewport add manda a patente do próprio jogador e dos jogadores do seu viewport, e cada entrada nova do `C2 12` (inclusive a própria) manda só a patente daquele jogador (`patente.go` `patenteViewport`/`patenteEntry`).
 - O arquivo não existe nesta instalação (o leitor devolve lista vazia e não acusa erro): todos os pacotes levam -1. A posição exibida depende das imagens do Main.dll.
 
 ### Janela de horários de eventos (`C2 F3 EF`, `FUN_00458a70`, **resolve U-CEVT-06**)
@@ -258,7 +259,7 @@ Os arquivos são lidos pelo leitor de script custom (`FUN_00409600` / `FUN_00451
 ## Desvios deliberados e quirks reproduzidos
 
 - Reproduzidos: Death cancelado mantém a tabela marcada; Theft permite inscrição dupla; Prainha com vários sobreviventes deixa `0x24f0` marcado em quem estava na lista; sucesso da inscrição na Prainha chega ao comando 131; `/dupla` de GM inalcançável; ForceStart no minuto 59 nunca dispara; segundo membro da dupla campeã ganha 13 pontos e patente 10; no W.O. por saída o segundo membro vai ao FIGHT.
-- Reproduzidos (bloco 12): a patente de todos os jogadores vai a cada jogador a cada segundo e a cada entrada nova do `C2 12`; todo inscrito da arena recebe o bag, não só o vencedor; arena com um só lutador termina sem 0x1F9; a morte na arena só olha a primeira arena em luta; peso do SummonScroll (grupo de uma linha sempre invoca); DailyReward guarda só o mês (linhas do mesmo mês do ano anterior contam); a janela mostra -1 para evento custom sem agenda; o `/move` para o mapa da arena por um gate que não é StartGate é recusado sem mensagem.
+- Reproduzidos (bloco 12): todo inscrito da arena recebe o bag, não só o vencedor; arena com um só lutador termina sem 0x1F9; a morte na arena só olha a primeira arena em luta; peso do SummonScroll (grupo de uma linha sempre invoca); DailyReward guarda só o mês (linhas do mesmo mês do ano anterior contam); a janela mostra -1 para evento custom sem agenda; o `/move` para o mapa da arena por um gate que não é StartGate é recusado sem mensagem.
 - Desvios: Death/Theft não bloqueiam o Raffle (no original a mesma thread dorme durante eles); Roleta vazia no estado 4 não trava (o original lê o vetor vazio); `rand()` é o gerador dos monstros.
 
 ## Pendências
