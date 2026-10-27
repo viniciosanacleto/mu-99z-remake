@@ -25,16 +25,12 @@ Rows = []
 
 # Filter.txt: words removed from chat
 [Filter]
-Words = ["fuck", "sex"]
+Words = ["fuck", "sex", "jp"]
 
 # GameMaster.txt: GM level per account and character
 [GameMaster]
 Rows = [
-  { Account = "teste2",    Name = "Admin",     GMLevel = 32 },
-  { Account = "allam",     Name = "AllanJPA",  GMLevel = 32 },
-  { Account = "lipee13",   Name = "BrizaGM",   GMLevel = 8 },
-  { Account = "motocross", Name = "JANELA",    GMLevel = 8 },
-  { Account = "suportegm", Name = "SuporteGM", GMLevel = 8 },
+  { Account = "teste",    Name = "Arthuuro",     GMLevel = 32 }
 ]
 
 # PetDamageTable.txt: DamageRate of 1000
