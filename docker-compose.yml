@@ -36,17 +36,10 @@ services:
       - -public-ip=${MU_PUBLIC_IP:?set MU_PUBLIC_IP in .env to the host LAN IP}
       - -blacklist=${MU_BLACKLIST:-}
       - -instances=${MU_INSTANCES:-gameserver,gameserver-cs}
-      # Load test (docs/server-plan/18-teste-de-carga.md); the defaults leave them off.
-      - -metrics-addr=${MU_METRICS_ADDR:-}
-      - -seed-load=${MU_SEED_LOAD:-0}
-      - -max-conn-per-ip=${MU_MAX_CONN_PER_IP:--1}
-      - -max-users=${MU_MAX_USERS:-0}
     ports:
       - "44405:44405"
       - "55900:55900"
       - "55919:55919"
-      # pprof and /debug/load, only listening when MU_METRICS_ADDR is set.
-      - "${MU_METRICS_HOST_PORT:-6060}:6060"
     volumes:
       # Filled from the image on first start; keeps the files the server rewrites.
       # Remove them (docker compose down -v) to pick up a newer config from the image.

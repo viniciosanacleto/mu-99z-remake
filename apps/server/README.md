@@ -97,7 +97,6 @@ docker compose logs -f server
   | `MU_BLACKLIST` | Becomes `-blacklist`. Empty keeps the `BlackList` of `config/server.toml` |
   | `MU_INSTANCES` | Becomes `-instances` |
   | `MU_DEBUG` | Any value enables debug logging |
-  | `MU_METRICS_ADDR`, `MU_METRICS_HOST_PORT`, `MU_SEED_LOAD`, `MU_MAX_CONN_PER_IP`, `MU_MAX_USERS` | Load test flags (`-metrics-addr` etc.), off when empty. See "Load test" |
   | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Database credentials. The server's `MU_DATABASE_URL` is built from them |
   | `POSTGRES_HOST_PORT` | Database port on the host (default 55432), for `cmd/migrate`, `cmd/mueditor` and `psql` |
 
@@ -198,6 +197,13 @@ go run ./cmd/muload -metrics http://127.0.0.1:6060/debug/load -pid $(pgrep muser
 ```
 
 It writes `samples.csv` and `summary.md` to `loadtest-<time>/`.
+
+With Docker, the load test has its own files, which the production deploy does not read: `docker-compose.loadtest.yml` (an overlay that turns on the load flags and publishes port 6060) and `.env.loadtest` (copy of `.env.loadtest.example`):
+
+```sh
+cp .env.loadtest.example .env.loadtest
+docker compose -p mu-loadtest -f docker-compose.yml -f docker-compose.loadtest.yml --env-file .env.loadtest up -d --build
+```
 
 ## Tests
 

@@ -1,0 +1,24 @@
+# Load test overlay (docs/server-plan/18-teste-de-carga.md). Never used by the
+# production deploy: it only applies when named with -f, together with its own
+# env file, in a separate compose project:
+#
+#   cp .env.loadtest.example .env.loadtest
+#   docker compose -p mu-loadtest -f docker-compose.yml -f docker-compose.loadtest.yml \
+#       --env-file .env.loadtest up -d --build
+#   docker compose -p mu-loadtest -f docker-compose.yml -f docker-compose.loadtest.yml \
+#       --env-file .env.loadtest down -v
+
+services:
+  server:
+    # Replaces the command of docker-compose.yml, so it repeats its flags.
+    command:
+      - -public-ip=${MU_PUBLIC_IP:-127.0.0.1}
+      - -blacklist=${MU_BLACKLIST:-none}
+      - -instances=${MU_INSTANCES:-gameserver,gameserver-cs}
+      - -metrics-addr=${MU_METRICS_ADDR:-:6060}
+      - -seed-load=${MU_SEED_LOAD:-100}
+      - -max-conn-per-ip=${MU_MAX_CONN_PER_IP:-0}
+      - -max-users=${MU_MAX_USERS:-0}
+    ports:
+      # pprof and /debug/load for cmd/muload (added to the ports of docker-compose.yml).
+      - "${MU_METRICS_HOST_PORT:-6060}:6060"

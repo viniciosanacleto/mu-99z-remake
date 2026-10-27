@@ -36,14 +36,14 @@ go run ./cmd/muload -metrics http://127.0.0.1:6060/debug/load -pid $(pgrep muser
     -steps 1,10,50,100 -steady 2m -cooldown 30s
 ```
 
-Docker (da raiz; o projeto `-p mu-loadtest` isola volumes e banco dos dados normais):
+Docker (da raiz). O teste usa arquivos próprios, que o deploy de produção não lê: `docker-compose.loadtest.yml` (sobreposição que liga as flags de carga e publica a porta 6060) e `.env.loadtest` (copiado de `.env.loadtest.example`). O projeto `-p mu-loadtest` isola volumes e banco dos dados normais:
 
 ```sh
-export MU_PUBLIC_IP=127.0.0.1 MU_BLACKLIST=none MU_METRICS_ADDR=:6060 MU_SEED_LOAD=100 \
-       MU_MAX_CONN_PER_IP=0 POSTGRES_HOST_PORT=55433
-docker compose -p mu-loadtest up -d --build
+cp .env.loadtest.example .env.loadtest
+LT="docker compose -p mu-loadtest -f docker-compose.yml -f docker-compose.loadtest.yml --env-file .env.loadtest"
+$LT up -d --build
 cd apps/server && go run ./cmd/muload -metrics http://127.0.0.1:6060/debug/load -docker mu-loadtest-server-1
-docker compose -p mu-loadtest down -v
+cd ../.. && $LT down -v
 ```
 
 Para medir num perfil de VPS, limite o container (`docker update --cpus 2 --memory 2g mu-loadtest-server-1`) antes de rodar o `muload`.
