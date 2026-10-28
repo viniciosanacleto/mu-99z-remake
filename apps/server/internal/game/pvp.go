@@ -638,7 +638,7 @@ func (w *World) pvpAllowed(a, t *Object) bool {
 	if !w.scriptCheckUserTarget(a, t) { // BridgeFunction_OnCheckUserTarget (FUN_004e7290, lua.go)
 		return false
 	}
-	if t.Move != nil && t.Move.Authority == 8 {
+	if gmFull(t) {
 		return false
 	}
 	if w.cfg.Int("Common", "PartyDisableKillBetweenMembers", 0) != 0 {

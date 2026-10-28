@@ -855,7 +855,7 @@ func (w *World) csMercenarySearch(o *Object) bool {
 			continue
 		}
 		t := w.objects[e.Index]
-		if csSide(t) == csSide(o) || !t.Alive || (t.Move != nil && (t.Move.Authority == 2 || t.Move.Authority == 8)) {
+		if csSide(t) == csSide(o) || !t.Alive || (t.Move != nil && t.Move.Authority == 2) || gmFull(t) {
 			continue
 		}
 		if hasEffectIndex(t, effInvisibility) || w.cellHas(t, gamedata.AttrSafeZone) {
@@ -1036,7 +1036,7 @@ func (w *World) csWeaponDamage(npc, t *Object) {
 	if npc.Map != t.Map || !t.Alive || t.Live != LiveNormal || t.Teleporting {
 		return
 	}
-	if t.IsPlayer() && (t.P.LogoutCountdown > 0 || t.P.Moving || (t.Move != nil && t.Move.Authority == 8)) {
+	if t.IsPlayer() && (t.P.LogoutCountdown > 0 || t.P.Moving || gmFull(t)) {
 		return
 	}
 	if t.Type == TypeMonster && t.Mon != nil && (t.Mon.Attribute == 6 || (t.Class >= 100 && t.Class <= 0x6E) ||

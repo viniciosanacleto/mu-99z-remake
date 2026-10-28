@@ -518,10 +518,10 @@ func (w *World) pshopItemAllowed(o *Object, it item.Item) bool {
 }
 
 // tradeBlockAllowed is FUN_00495140 (TradeItemBlock, TradeItemBlockExc,
-// TradeItemBlockSet; GMs with Authority 8 are exempt). The extra tests on
+// TradeItemBlockSet; GMs with Authority 8 (gmFull) are exempt). The extra tests on
 // CServerInfo+0x3a8/0x3ac/0x3b0 read keys this build does not load.
 func (w *World) tradeBlockAllowed(o *Object, it item.Item) bool {
-	if w.cfg.Int("Common", "TradeItemBlock", 0) == 0 || mv(o).Authority == 8 {
+	if w.cfg.Int("Common", "TradeItemBlock", 0) == 0 || gmFull(o) {
 		return true
 	}
 	if n := w.cfg.Int("Common", "TradeItemBlockExc", 0); n != 0 && isExcellent(it) && countExcellent(it.Excellent) >= n {

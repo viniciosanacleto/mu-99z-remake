@@ -361,7 +361,7 @@ var configLoaders = map[string][]covLoader{
 		ldg("LoadExperienceTable", "FUN_004ec4c0 -> FUN_0047be80", gamedata.LoadExperienceTable),
 		ldg("LoadPetDamageTable", "FUN_004ec4c0 -> FUN_004d61d0", gamedata.LoadPetDamageTable),
 		ld("game.loadPetDamageTable", "FUN_004d61d0", func(c *covEnv) error { return errOnly(loadPetDamageTable(c.cfg)) }),
-		ldMoveData, // Filter.txt, GameMaster.txt
+		ldMoveData, // Filter.txt
 		ldCmdWorld, // ResetTable.txt, ResetLimit.txt
 	},
 	// FUN_004026e0 (CustomXShop.txt) and FUN_00404a60 (CustomXShopRecharge.txt).

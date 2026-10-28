@@ -342,7 +342,7 @@ func (w *World) xshopRechargeUpload(o *Object, p []byte) {
 	if !playerReady(o) {
 		return
 	}
-	if mv(o).Authority != 8 {
+	if !gmFull(o) {
 		w.send(o, packetRechargeAck())
 		return
 	}

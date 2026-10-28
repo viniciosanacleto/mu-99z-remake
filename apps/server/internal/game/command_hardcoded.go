@@ -197,12 +197,12 @@ func packetSuperDrop(on bool) []byte {
 // their item and ownership restrictions.
 func (w *World) superDropOn() bool { return w.custom != nil && w.custom.superDrop }
 
-// commandSuperDrop is /superdrop: only Authority 4 or 8 (obj+0x250),
+// commandSuperDrop is /superdrop: only Authority 4 or gmFull (obj+0x250),
 // otherwise "/superdrop: comando exclusivo para Game Master."; toggles
 // the flag, sends F3 FA to every playing player (FUN_00434c30) and
 // "SuperDrop ATIVADO." / "SuperDrop DESATIVADO.".
 func (w *World) commandSuperDrop(o *Object, arg string) {
-	if a := mv(o).Authority; a != 4 && a != 8 {
+	if mv(o).Authority != 4 && !gmFull(o) {
 		w.customNotice(o, 1, 2, "/superdrop: comando exclusivo para Game Master.")
 		return
 	}

@@ -56,6 +56,8 @@ Rows = [
   { ItemIndex = "12,023", ItemLevel = 0, Durability = 0,  SkillSwitch = 0, LuckSwitch = 0, Aditional = 0, Excellent = 0, SetOption = 0, Comment = "Scroll of Critical Damage" },
   { ItemIndex = "12,024", ItemLevel = 0, Durability = 0,  SkillSwitch = 0, LuckSwitch = 0, Aditional = 0, Excellent = 0, SetOption = 0, Comment = "Scroll of Electric Spark" },
   { ItemIndex = "02,008", ItemLevel = 0, Durability = 54, SkillSwitch = 1, LuckSwitch = 1, Aditional = 0, Excellent = 0, SetOption = 0, Comment = "Battle Scepter" },
+  { ItemIndex = "13,004", ItemLevel = 0, Durability = 255, SkillSwitch = 1, LuckSwitch = 0, Aditional = 0, Excellent = 0, SetOption = 0, Comment = "Dark Horse" },
+  { ItemIndex = "13,005", ItemLevel = 0, Durability = 255, SkillSwitch = 0, LuckSwitch = 0, Aditional = 0, Excellent = 0, SetOption = 0, Comment = "Dark Raven" },
 ]
 
 [Shop."231 - Thompson Kenel"]
@@ -345,10 +347,10 @@ Rows = [
   { ItemIndex = "13,051", ItemLevel = 2, Durability = 255, SkillSwitch = 0, LuckSwitch = 0, Aditional = 0, Excellent = 0, SetOption = 0, Comment = "Scroll of Blood +2" },
   { ItemIndex = "13,051", ItemLevel = 3, Durability = 255, SkillSwitch = 0, LuckSwitch = 0, Aditional = 0, Excellent = 0, SetOption = 0, Comment = "Scroll of Blood +3" },
   { ItemIndex = "13,051", ItemLevel = 4, Durability = 255, SkillSwitch = 0, LuckSwitch = 0, Aditional = 0, Excellent = 0, SetOption = 0, Comment = "Scroll of Blood +4" },
-  { ItemIndex = "12,000", ItemLevel = 5, Durability = 255, SkillSwitch = 0, LuckSwitch = 0, Aditional = 0, Excellent = 0, SetOption = 0, Comment = "Scroll of Blood +5" },
-  { ItemIndex = "12,001", ItemLevel = 5, Durability = 255, SkillSwitch = 0, LuckSwitch = 0, Aditional = 0, Excellent = 0, SetOption = 0, Comment = "Scroll of Blood +5" },
-  { ItemIndex = "12,002", ItemLevel = 5, Durability = 255, SkillSwitch = 0, LuckSwitch = 0, Aditional = 0, Excellent = 0, SetOption = 0, Comment = "Scroll of Blood +5" },
-  { ItemIndex = "13,030", ItemLevel = 5, Durability = 255, SkillSwitch = 0, LuckSwitch = 0, Aditional = 0, Excellent = 0, SetOption = 0, Comment = "Scroll of Blood +5" },
+  { ItemIndex = "12,000", ItemLevel = 5, Durability = 255, SkillSwitch = 0, LuckSwitch = 0, Aditional = 0, Excellent = 0, SetOption = 0, Comment = "Wings of Elf +5" },
+  { ItemIndex = "12,001", ItemLevel = 5, Durability = 255, SkillSwitch = 0, LuckSwitch = 0, Aditional = 0, Excellent = 0, SetOption = 0, Comment = "Wings of Heaven +5" },
+  { ItemIndex = "12,002", ItemLevel = 5, Durability = 255, SkillSwitch = 0, LuckSwitch = 0, Aditional = 0, Excellent = 0, SetOption = 0, Comment = "Wings of Satan +5" },
+  { ItemIndex = "13,030", ItemLevel = 5, Durability = 255, SkillSwitch = 0, LuckSwitch = 0, Aditional = 0, Excellent = 0, SetOption = 0, Comment = "Cape of Lord +5" },
   { ItemIndex = "13,018", ItemLevel = 1, Durability = 1,   SkillSwitch = 0, LuckSwitch = 0, Aditional = 0, Excellent = 0, SetOption = 0, Comment = "Blood Castle +1" },
   { ItemIndex = "13,018", ItemLevel = 2, Durability = 1,   SkillSwitch = 0, LuckSwitch = 0, Aditional = 0, Excellent = 0, SetOption = 0, Comment = "Blood Castle +2" },
   { ItemIndex = "13,018", ItemLevel = 3, Durability = 1,   SkillSwitch = 0, LuckSwitch = 0, Aditional = 0, Excellent = 0, SetOption = 0, Comment = "Blood Castle +3" },

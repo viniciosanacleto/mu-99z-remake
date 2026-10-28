@@ -275,7 +275,7 @@ Os arquivos são lidos pelo leitor de script custom (`FUN_00409600` / `FUN_00451
 | U-GM-02 | `/make`, `/drop`, `/makeset`: JoH, opção 380, sockets e duração (`CPeriodicItem`) não têm efeito em itens 97D aqui |
 | U-GM-03 | O texto da data de expiração da resposta JS 05 (`AccountExpireDate` lido como string ODBC) é assumido `AAAA-MM-DD HH:MM:SS` |
 | U-GM-04 | `/setbuff` com tipo > 0 guarda `time(NULL) + duração` (validade absoluta); aqui a duração é contada em segundos nos dois casos |
-| U-GM-05 | `/hide` só esconde Authority 4 ou 8 (`obj+0x250`); a reconstrução guarda o nível do `GameMaster.txt`, então GMs de nível 32 não ficam ocultos |
+| ~~U-GM-05~~ | `/hide` só esconde Authority 4 ou 8 (`obj+0x250`), e o nível 32 do `GameMaster.txt` não passaria nesses testes. **Decisão de projeto (2026-10-27):** todo teste `== 8` do binário virou `gmFull` (nível ≥ 8, `monster_skill.go`): o 32 tem tudo do 8 (imunidade a PvP e ao Castle Siege, sem empurrão, `/hide`, `/superdrop`, trade sem bloqueio, pacotes de GM do xshop). O nível vem de `characters.gm_level` |
 | U-GM-06 | `/mob` grava `obj+0x294 = 0xFFFF`; o significado exato do valor para o regen não foi confirmado |
 | U-CEVT-01 | O leitor de script (`FUN_00451390`) foi reproduzido pelo formato dos arquivos (`;` e `//` como comentário); não foi decompilado por completo |
 | U-CEVT-02 | O byte `obj+0x450` testado pelas inscrições (mensagem 0x45A, "em duelo") é aproximado por "tem oponente de duelo" |

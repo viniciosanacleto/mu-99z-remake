@@ -32,7 +32,6 @@ func TestUtilGroup(t *testing.T) {
 	cfg := convertGroup(t, "util", map[string]string{
 		"Util/DamageTable.txt":    "0\n* * * * * * * 50\nend\n1\n7 1 400 * * 275 * * 80\nend\n2\n1 2 3\nend\n",
 		"Util/Filter.txt":         "\"fuck\"\n\"\"\nend\n",
-		"Util/GameMaster.txt":     "\"teste2\" \"Admin\" 32\n\"nolevel\" \"x\"\nend\n",
 		"Util/PetDamageTable.txt": "0 * * * * 1000 1 * *\n* * 900\nend\n",
 		"Util/ResetTable.txt":     "0 10 400 400 400 400 1 2 3 4 5 6 7 8\nend\n",
 		"Util/ResetLimit.txt":     "0 * 1 2 3 4 5 6 7 8 9 10 11 12\nend\n",
@@ -48,8 +47,8 @@ func TestUtilGroup(t *testing.T) {
 	if len(d.Monster) != 1 || d.Monster[0].DamageRate != 50 || len(d.Player) != 1 || d.Player[0].MonsterIndex != 275 || d.Player[0].DamageRate != 80 {
 		t.Fatalf("damage = %+v", d)
 	}
-	if len(f.Filter.Words) != 2 || len(f.GameMaster.Rows) != 1 || f.GameMaster.Rows[0].GMLevel != 32 {
-		t.Fatalf("filter / gm = %+v %+v", f.Filter, f.GameMaster)
+	if len(f.Filter.Words) != 2 {
+		t.Fatalf("filter = %+v", f.Filter)
 	}
 	if r := f.ResetTable.Rows; len(r) != 1 || r[0].Level != [4]int{400, 400, 400, 400} || r[0].Point != [4]int{5, 6, 7, 8} {
 		t.Fatalf("reset table = %+v", r)

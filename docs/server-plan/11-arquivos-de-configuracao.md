@@ -96,7 +96,7 @@ Valores divergentes entre `4.GameServer/DATA` e `5.GameServerCS/DATA` não foram
 | `Shop/*.txt`, `ShopManager.txt` | lojas | [09](09-itens-e-inventario.md) |
 | `Skill/*.txt` | skills | [08](08-combate-e-formulas.md) |
 | `Character/DefaultClassInfo.txt`, `DefaultClassFreebies.txt` | classes | [08](08-combate-e-formulas.md) |
-| `Util/ExperienceTable.txt`, `ResetTable.txt`, `ResetLimit.txt`, `DamageTable.txt`, `PetDamageTable.txt`, `Filter.txt`, `GameMaster.txt` | utilitários | [08](08-combate-e-formulas.md), [10](10-sistemas-de-jogo.md) |
+| `Util/ExperienceTable.txt`, `ResetTable.txt`, `ResetLimit.txt`, `DamageTable.txt`, `PetDamageTable.txt`, `Filter.txt` (o `GameMaster.txt` não é convertido: o nível de GM fica em `characters.gm_level`, importado por `cmd/migrate -gamemasters`) | utilitários | [08](08-combate-e-formulas.md), [10](10-sistemas-de-jogo.md) |
 | `Quest/*.txt` | quests | [10](10-sistemas-de-jogo.md) |
 | `Event/*.dat` | eventos | [10](10-sistemas-de-jogo.md) |
 | `Custom/**` | sistemas custom | [10](10-sistemas-de-jogo.md) |
