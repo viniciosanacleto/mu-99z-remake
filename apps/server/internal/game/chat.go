@@ -21,15 +21,9 @@ const (
 // moveData holds the tables of move.go, teleport.go, chat.go and
 // command.go, loaded at start-up.
 type moveData struct {
-	filter      []string // Util/Filter.txt (CFilter)
-	commands    map[string]command
-	moves       []moveEntry  // Move/Move.txt (CMove)
-	gameMasters []gameMaster // Util/GameMaster.txt
-}
-
-type gameMaster struct {
-	Account, Name string
-	Level         int
+	filter   []string // Util/Filter.txt (CFilter)
+	commands map[string]command
+	moves    []moveEntry // Move/Move.txt (CMove)
 }
 
 // Hooks for the chat routes owned by other modules.
@@ -66,9 +60,6 @@ func loadMoveData(w *World) error {
 			d.filter = append(d.filter, word)
 		}
 	}
-	for _, g := range f.GameMaster.Rows {
-		d.gameMasters = append(d.gameMasters, gameMaster{g.Account, g.Name, g.GMLevel})
-	}
 	if d.commands, err = loadCommands(w.configDir); err != nil {
 		return err
 	}
@@ -77,17 +68,13 @@ func loadMoveData(w *World) error {
 }
 
 // gmLevel is FUN_0047db10: the GameMaster.txt level of the account and
-// character (exact match on both), 0 otherwise.
+// character, 0 otherwise. The rewrite keeps it in characters.gm_level
+// (store.GMStore), loaded with the character.
 func (w *World) gmLevel(o *Object) int {
-	if w.moveData == nil || o.P == nil || o.P.Char == nil {
+	if o.P == nil || o.P.Char == nil {
 		return 0
 	}
-	for _, g := range w.moveData.gameMasters {
-		if g.Account == o.P.Account.Login && g.Name == o.P.Char.Name {
-			return g.Level
-		}
-	}
-	return 0
+	return o.P.Char.GMLevel
 }
 
 // filterText is CFilter (FUN_004601e0): every occurrence of a filtered

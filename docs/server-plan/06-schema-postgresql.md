@@ -153,6 +153,7 @@ CREATE TABLE characters (
   map smallint NOT NULL, pos_x smallint NOT NULL, pos_y smallint NOT NULL, dir smallint NOT NULL DEFAULT 0,
   pk_count integer NOT NULL DEFAULT 0, pk_level integer NOT NULL DEFAULT 3, pk_time integer NOT NULL DEFAULT 0,
   ctl_code smallint NOT NULL DEFAULT 0,
+  gm_level smallint NOT NULL DEFAULT 0,            -- nível de GM (Util/GameMaster.txt no original; migração 0019)
   inventory  bytea NOT NULL CHECK (length(inventory) = 1728),
   magic_list bytea NOT NULL CHECK (length(magic_list) = 180),
   effect_list bytea NOT NULL CHECK (length(effect_list) = 208),

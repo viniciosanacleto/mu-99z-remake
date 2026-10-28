@@ -105,7 +105,7 @@ func TestLuaWelcomeMessage(t *testing.T) {
 	b := newBareWorld(t)
 	o := b.player(PlayerStart, "Hero", 0, 130, 130)
 	gm := b.player(PlayerStart+1, "Admin", 0, 140, 140)
-	b.moveData.gameMasters = append(b.moveData.gameMasters, gameMaster{gm.P.Account.Login, "Admin", 8})
+	gm.P.Char.GMLevel = 8
 	gm.P.Account.Level = 2
 	gm.P.Account.LevelExpiresAt = time.Date(2026, 12, 31, 23, 0, 0, 0, time.Local)
 

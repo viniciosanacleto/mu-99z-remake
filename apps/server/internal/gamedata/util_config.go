@@ -36,7 +36,6 @@ type UtilConfig struct {
 	DamageTable     DamageTableFile     `comment:"DamageTable.txt: DamageRate in percent; the first matching row wins"`
 	ExperienceTable ExperienceTableFile `comment:"ExperienceTable.txt: the original reads one rate per row (the file header documents four, per account level)"`
 	Filter          FilterFile          `comment:"Filter.txt: words removed from chat"`
-	GameMaster      GameMasterFile      `comment:"GameMaster.txt: GM level per account and character"`
 	PetDamageTable  PetDamageTableFile  `comment:"PetDamageTable.txt: DamageRate of 1000"`
 	ResetLimit      ResetLimitFile      `comment:"ResetLimit.txt: resets allowed per day / week / month and account level"`
 	ResetTable      ResetTableFile      `comment:"ResetTable.txt: -1 uses the Command table value"`
@@ -71,16 +70,6 @@ type ExperienceTableRow struct {
 
 type FilterFile struct {
 	Words []string
-}
-
-type GameMasterFile struct {
-	Rows []GameMasterRow `toml:",inline"`
-}
-
-type GameMasterRow struct {
-	Account, Name string
-	GMLevel       int
-	Comment       string `toml:",omitempty"`
 }
 
 type PetDamageTableFile struct {

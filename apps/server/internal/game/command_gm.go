@@ -380,9 +380,9 @@ func (w *World) commandHide(o *Object, c command, arg string) {
 }
 
 // gmHidden is the invisibility test of FUN_00515160: effect 0x12 on an
-// object whose Authority (obj+0x250) is 4 or 8.
+// object whose Authority (obj+0x250) is 4 or gmFull.
 func gmHidden(o *Object) bool {
-	if o.Move == nil || (o.Move.Authority != 4 && o.Move.Authority != 8) {
+	if o.Move == nil || (o.Move.Authority != 4 && !gmFull(o)) {
 		return false
 	}
 	return hasEffectIndex(o, effGMHide)

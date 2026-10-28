@@ -552,7 +552,7 @@ func (w *World) xshopGMPrice(o *Object, p []byte) {
 	}
 	idx := int(p[4]) | int(p[5])<<8
 	price := uint32(p[8]) | uint32(p[9])<<8 | uint32(p[10])<<16 | uint32(p[11])<<24
-	if mv(o).Authority != 8 {
+	if !gmFull(o) {
 		w.send(o, packetXShopGMResult(1))
 		w.log.Info("[CustomXShop][GM-PRICE][DENIED]", "account", o.P.Account.Login, "name", o.P.Char.Name,
 			"item", idx, "price", price)
