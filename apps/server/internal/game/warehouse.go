@@ -120,11 +120,7 @@ func (w *World) closeWarehouse(o *Object) {
 	if warehouseSaveHook != nil {
 		warehouseSaveHook(w, o) // FUN_00518000 -> FUN_00476430(1)
 	}
-	wh := &store.Warehouse{AccountID: o.P.Account.ID, Number: st.WarehouseNumber,
-		Items: make([]byte, store.WarehouseSize), Money: st.WarehouseMoney, Password: st.WarehousePass}
-	for i, it := range st.Warehouse {
-		it.EncodeDB(wh.Items[i*store.ItemDBSize:])
-	}
+	wh := w.warehouseRecord(o)
 	w.async(func(ctx context.Context) func() {
 		if err := w.store.SaveWarehouse(ctx, wh); err != nil {
 			w.log.Error("save warehouse", "err", err)
@@ -138,6 +134,13 @@ func (w *World) closeWarehouse(o *Object) {
 	st.WarehouseMoney = 0
 	st.WarehouseLoaded = false
 	w.send(o, newPacket(frame.C1, 0x82, -1, 3))
+}
+
+// warehouseRecord is the DataServer 0x06 record of the open vault.
+func (w *World) warehouseRecord(o *Object) *store.Warehouse {
+	st := items(o)
+	return &store.Warehouse{AccountID: o.P.Account.ID, Number: st.WarehouseNumber,
+		Items: encodeItems(st.Warehouse[:], store.WarehouseSize), Money: st.WarehouseMoney, Password: st.WarehousePass}
 }
 
 // saveInventory is DataServer 0x31 (FUN_00476230): inventory only.

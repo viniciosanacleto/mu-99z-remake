@@ -130,7 +130,7 @@ func writeError(w http.ResponseWriter, log *slog.Logger, err error) {
 		status, msg = http.StatusNotFound, err.Error()
 	case errors.Is(err, ErrOnline):
 		status, msg = http.StatusConflict, err.Error()
-	case errors.Is(err, ErrNoSpace):
+	case errors.Is(err, ErrNoSpace), errors.Is(err, ErrBusy):
 		status, msg = http.StatusConflict, err.Error()
 	case errors.Is(err, ErrInvalid):
 		status, msg = http.StatusBadRequest, err.Error()

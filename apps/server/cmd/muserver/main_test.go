@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"net/http"
 	"testing"
 	"time"
 )
@@ -18,7 +19,7 @@ func TestRunServesConnectAndGame(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	go func() {
 		done <- run(ctx, []string{"-config", "../../config", "-data", "../../data", "-connect-addr", "127.0.0.1:0",
-			"-bind", "127.0.0.1", "-blacklist", "none", "-instances", "gameserver"}, log, ready)
+			"-bind", "127.0.0.1", "-blacklist", "none", "-instances", "gameserver", "-editor-addr", "127.0.0.1:0"}, log, ready)
 	}()
 
 	var rd Ready
@@ -52,6 +53,14 @@ func TestRunServesConnectAndGame(t *testing.T) {
 		t.Fatalf("join: %v", err)
 	}
 	g.Close()
+	resp, err := http.Get("http://" + rd.Editor + "/api/items")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("editor /api/items = %d", resp.StatusCode)
+	}
 
 	cancel()
 	if err := <-done; err != nil && err != context.Canceled {

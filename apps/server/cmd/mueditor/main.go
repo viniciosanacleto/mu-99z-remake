@@ -1,5 +1,7 @@
 // Command mueditor is the web character editor: it edits stats, zen and
 // inventory / vault items of offline characters directly in PostgreSQL.
+// To edit playing characters too, run the editor inside the muserver
+// (-editor-addr).
 //
 //	mueditor -db postgres://... [-config config] [-instance gameserver] [-addr 127.0.0.1:8080] [-password x]
 package main
@@ -8,19 +10,15 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/gsconfig"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/editor"
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
@@ -59,30 +57,6 @@ func parseFlags(args []string) (*config, error) {
 	return c, nil
 }
 
-// newEditor loads the item data and wires the editor over st.
-func newEditor(configDir, instance string, st editor.Store) (*editor.Editor, error) {
-	items, err := gamedata.LoadItems(configDir)
-	if err != nil {
-		return nil, err
-	}
-	opts, err := gamedata.LoadItemOptions(configDir)
-	if err != nil {
-		return nil, err
-	}
-	gcfg, err := gsconfig.Load(filepath.Join(configDir, "gameserver", instance+".toml"))
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", instance, err)
-	}
-	lim := editor.Limits{MaxLevel: gcfg.ServerMaxLevel, Exp: gamedata.NewExperience(
-		int32(gcfg.Int("Common", "ExperienceMultiplierConstA", 0)),
-		int32(gcfg.Int("Common", "ExperienceMultiplierConstB", 0)),
-		int32(gcfg.Int("Common", "PetExperienceMultiplierConstA", 0)))}
-	for al := range lim.MaxStat {
-		lim.MaxStat[al] = gcfg.ALInt("Common", "MaxStatPoint", al, 0)
-	}
-	return editor.New(st, editor.NewCatalog(items, opts), lim), nil
-}
-
 // run serves the editor until ctx is done; ready receives the address.
 func run(ctx context.Context, args []string, log *slog.Logger, ready chan<- string) error {
 	cfg, err := parseFlags(args)
@@ -94,7 +68,7 @@ func run(ctx context.Context, args []string, log *slog.Logger, ready chan<- stri
 		return err
 	}
 	defer st.Close()
-	ed, err := newEditor(cfg.configDir, cfg.instance, st)
+	ed, err := editor.Load(cfg.configDir, cfg.instance, st)
 	if err != nil {
 		return err
 	}
