@@ -46,9 +46,8 @@ type mmEvent struct {
 	a, b    mmFighter
 }
 
-func init() {
-	commandHandlers[132] = (*World).commandMataMataStart
-	delete(pendingCommands, 132)
+func registerCustomeventDuel(h *hooks) {
+	h.commandHandlers[132] = (*World).commandMataMataStart
 }
 
 func indexIn(list []int, o *Object) int {

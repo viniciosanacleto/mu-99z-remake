@@ -16,19 +16,19 @@ import (
 // FUN_004c24b0).
 const warehouseNPC = 0xf0
 
-func init() {
-	npcTalkHooks[warehouseNPC] = func(w *World, o, npc *Object) bool {
+func registerWarehouse(h *hooks) {
+	h.npcTalk[warehouseNPC] = func(w *World, o, npc *Object) bool {
 		w.openWarehouse(o)
 		return true
 	}
-	worldHandlers[0x81] = func(w *World, o *Object, p []byte) { w.handleWarehouseMoney(o, p) }
-	worldHandlers[0x82] = func(w *World, o *Object, p []byte) {
+	h.worldHandlers[0x81] = func(w *World, o *Object, p []byte) { w.handleWarehouseMoney(o, p) }
+	h.worldHandlers[0x82] = func(w *World, o *Object, p []byte) {
 		if playerReady(o) {
 			w.closeWarehouse(o)
 		}
 	}
-	worldHandlers[0x83] = func(w *World, o *Object, p []byte) { w.handleWarehousePassword(o, p) }
-	leaveWorldHooks = append(leaveWorldHooks, func(w *World, o *Object) {
+	h.worldHandlers[0x83] = func(w *World, o *Object, p []byte) { w.handleWarehousePassword(o, p) }
+	h.leaveWorld = append(h.leaveWorld, func(w *World, o *Object) {
 		if o.P != nil && o.P.Items != nil && o.P.Items.WarehouseLoaded {
 			w.closeWarehouse(o)
 		}
@@ -100,14 +100,10 @@ func (w *World) warehouseLoaded(o *Object, wh *store.Warehouse) {
 	w.send(o, packetWarehouseState(st.WarehouseLock, wareNumberLimit))
 	st.If = ifState{Use: true, State: 1, Type: ifWarehouse}
 	st.WarehouseLoaded = true
-	if warehouseLoadedHook != nil {
-		warehouseLoadedHook(w, o) // FUN_004758f0(1): pet info of the vault
+	if w.hooks.warehouseLoaded != nil {
+		w.hooks.warehouseLoaded(w, o) // FUN_004758f0(1): pet info of the vault
 	}
 }
-
-// warehouseLoadedHook / warehouseSaveHook are set by pet.go (DS 0x09 / 0x34
-// for the vault pets).
-var warehouseLoadedHook, warehouseSaveHook func(w *World, o *Object)
 
 // closeWarehouse is FUN_00517540 (82): save the inventory (DS 0x31) and
 // the vault, then clear it and send C1 03 82.
@@ -117,8 +113,8 @@ func (w *World) closeWarehouse(o *Object) {
 		return
 	}
 	w.saveInventory(o)
-	if warehouseSaveHook != nil {
-		warehouseSaveHook(w, o) // FUN_00518000 -> FUN_00476430(1)
+	if w.hooks.warehouseSave != nil {
+		w.hooks.warehouseSave(w, o) // FUN_00518000 -> FUN_00476430(1)
 	}
 	wh := &store.Warehouse{AccountID: o.P.Account.ID, Number: st.WarehouseNumber,
 		Items: make([]byte, store.WarehouseSize), Money: st.WarehouseMoney, Password: st.WarehousePass}

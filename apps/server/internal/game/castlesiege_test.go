@@ -292,7 +292,7 @@ func csGuildOf(t *testing.T, b *bareWorld, o *Object, name string) int {
 }
 
 func csSend(b *bareWorld, o *Object, head byte, body ...byte) {
-	worldHandlers[head](b.World, o, frame.Build(frame.C1, head, body...))
+	b.hooks.worldHandlers[head](b.World, o, frame.Build(frame.C1, head, body...))
 	b.pump()
 }
 
@@ -522,7 +522,7 @@ func TestCastleSiegeGatesAndLever(t *testing.T) {
 	c.occupied, c.owner = true, "Owners"
 	gate := b.objects[c.npcEntry(csClassGate, 1).Obj]
 	lever := b.objects[gate.CS.Link]
-	npcTalkHooks[csClassLever](b.World, m, lever)
+	b.hooks.npcTalk[csClassLever](b.World, m, lever)
 	if r := find(b.drain(m), 0xB2, 0x11); r == nil || r[4] != 1 || int(r[5])<<8|int(r[6]) != gate.Index {
 		t.Fatalf("B2 11 = % X", r)
 	}
@@ -545,7 +545,7 @@ func TestCastleSiegeGatesAndLever(t *testing.T) {
 	}
 	// A stranger may not use the lever.
 	x := b.player(PlayerStart+1, "Other", csMap, 101, 120)
-	npcTalkHooks[csClassLever](b.World, x, lever)
+	b.hooks.npcTalk[csClassLever](b.World, x, lever)
 	if r := find(b.drain(x), 0xB2, 0x11); r == nil || r[4] != 4 {
 		t.Fatalf("B2 11 stranger = % X", r)
 	}
@@ -583,7 +583,7 @@ func TestCastleSiegeBattle(t *testing.T) {
 	if !hasEffectIndex(def, 14) || !hasEffectIndex(att, 15) {
 		t.Fatal("side marks")
 	}
-	if b.csSyncState() != csStart || castleBattleHook == nil || !castleBattleHook(b.World) {
+	if b.csSyncState() != csStart || b.hooks.castleBattle == nil || !b.hooks.castleBattle(b.World) {
 		t.Fatal("battle not visible to the other modules")
 	}
 	// Battle NPCs and closed gates.
@@ -628,7 +628,7 @@ func TestCastleSiegeBattle(t *testing.T) {
 	}
 	place := func(o *Object, x, y int) { o.X, o.Y, o.TX, o.TY = x, y, x, y }
 	place(att, sw1.X, sw1.Y+1)
-	npcTalkHooks[csClassSwitch1](b.World, att, sw1)
+	b.hooks.npcTalk[csClassSwitch1](b.World, att, sw1)
 	if p := find(b.drain(att), 0x0D, -1); p == nil || c.switches[1] != -1 {
 		t.Fatalf("switch with statues up % X", p)
 	}
@@ -653,8 +653,8 @@ func TestCastleSiegeBattle(t *testing.T) {
 	}
 	a2 := b.player(PlayerStart+2, "Helper", csMap, sw2.X, sw2.Y+1)
 	member(a2)
-	npcTalkHooks[csClassSwitch1](b.World, att, sw1)
-	npcTalkHooks[csClassSwitch2](b.World, a2, sw2)
+	b.hooks.npcTalk[csClassSwitch1](b.World, att, sw1)
+	b.hooks.npcTalk[csClassSwitch2](b.World, a2, sw2)
 	if r := find(b.drain(att), 0xB2, 0x14); r == nil || r[8] != 1 {
 		t.Fatalf("B2 14 = % X", r)
 	}
@@ -673,7 +673,7 @@ func TestCastleSiegeBattle(t *testing.T) {
 	a3 := b.player(PlayerStart+3, "Holder", csMap, sw1.X, sw1.Y+1)
 	member(a3)
 	c.switches[1] = a3.Index
-	npcTalkHooks[csClassCrown](b.World, att, crown)
+	b.hooks.npcTalk[csClassCrown](b.World, att, crown)
 	if r := find(b.drain(att), 0xB2, 0x15); r == nil || r[4] != csCrownBegin || c.crownUser != att.Index {
 		t.Fatalf("B2 15 = % X", r)
 	}
@@ -791,11 +791,11 @@ func TestCastleSiegeTaxes(t *testing.T) {
 		t.Fatalf("B9 03 = % X", r)
 	}
 	// Senior: owner masters only.
-	npcTalkHooks[csClassSenior](b.World, x, x)
+	b.hooks.npcTalk[csClassSenior](b.World, x, x)
 	if p := find(b.drain(x), 0x0D, -1); p == nil {
 		t.Fatal("senior refused without notice")
 	}
-	npcTalkHooks[csClassSenior](b.World, m, m)
+	b.hooks.npcTalk[csClassSenior](b.World, m, m)
 	pk := b.drain(m)
 	if w := find(pk, 0x30, -1); w == nil || w[3] != 0x0C || find(pk, 0xB2, 0x1A) == nil {
 		t.Fatalf("senior window % X", w)
@@ -834,7 +834,7 @@ func TestCastleSiegeWeaponsAndStones(t *testing.T) {
 		t.Fatal("no attack slingshot")
 	}
 	att.X, att.Y = sling.X, sling.Y+1
-	npcTalkHooks[csClassSlingA](b.World, att, sling)
+	b.hooks.npcTalk[csClassSlingA](b.World, att, sling)
 	if r := find(b.drain(att), 0xB7, 0x00); r == nil || r[4] != 1 || r[5] != 1 {
 		t.Fatalf("B7 00 = % X", r)
 	}

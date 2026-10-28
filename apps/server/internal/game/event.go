@@ -9,15 +9,6 @@ import (
 // Pieces shared by the event managers (Devil Square, Blood Castle, Chaos
 // Castle, ...).
 
-var (
-	// deathHooks run at the end of the death branch of FUN_004cda80 (the
-	// map-specific calls: Blood Castle, Chaos Castle, Devil Square...).
-	deathHooks []func(w *World, killer, victim *Object)
-	// itemBagHook is CItemBagManager::DropItem (FUN_00491430): bag type,
-	// bag index, map and position; set by the drop module.
-	itemBagHook func(w *World, o *Object, bag, index, mp, x, y int) bool
-)
-
 // eventData holds the files shared by the events.
 type eventData struct {
 	entry  gamedata.EventEntryLevel
@@ -33,11 +24,6 @@ type eventData struct {
 	kalima *kalimaState
 }
 
-// eventEffectHook adds or removes an effect on an object (FUN_00478ae0 /
-// FUN_00478d30); set by the effect module. The Blood Castle gate and
-// statue use 0x3F and 0x40 while they must not be attacked.
-var eventEffectHook func(w *World, o *Object, effect int, add bool)
-
 func (w *World) ev() *eventData {
 	if w.eventData == nil {
 		w.eventData = &eventData{entry: gamedata.EventEntryLevel{}}
@@ -45,8 +31,8 @@ func (w *World) ev() *eventData {
 	return w.eventData
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerEvent(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		e := w.ev()
 		if w.configDir == "" {
 			return nil

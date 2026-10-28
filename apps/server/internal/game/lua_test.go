@@ -356,7 +356,7 @@ func TestLuaBridgeHooks(t *testing.T) {
 	if c.P.Char.PKCount != pk || o.PKLevel != 0 {
 		t.Fatal("OnCheckUserKiller 0 must skip the PK")
 	}
-	if !commandScriptHook(b.World, o, 42, "x y") {
+	if !b.hooks.commandScript(b.World, o, 42, "x y") {
 		t.Fatal("OnCommandManager 1 must take the command")
 	}
 	b.commandFinish(o, command{Index: 42})

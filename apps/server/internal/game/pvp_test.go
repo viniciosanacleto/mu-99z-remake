@@ -16,7 +16,7 @@ func pvpPair(t *testing.T, b *bareWorld, ca, ct int) (*Object, *Object) {
 	a.Class, v.Class = ca, ct
 	v.P.Char.Life, v.P.Char.MaxLife = 1000, 1000
 	b.see(a, v)
-	stubStats(t, func(o *Object) CombatStats {
+	stubStats(b, func(o *Object) CombatStats {
 		if o == a {
 			return CombatStats{DamageMinLeft: 100, DamageMaxLeft: 100, AttackSuccessRate: 1000}
 		}
@@ -122,9 +122,7 @@ func TestPlayerDeathPenaltyPKAndKillCount(t *testing.T) {
 	c.Experience = int64(floor) + 1000
 	v.P.NextExp = next
 	var killed bool
-	old := playerKillHook
-	playerKillHook = func(w *World, k, vic *Object) { killed = k == a && vic == v }
-	t.Cleanup(func() { playerKillHook = old })
+	b.hooks.playerKill = func(w *World, k, vic *Object) { killed = k == a && vic == v }
 	c.Life = 1
 	fixRand(t, 0)
 	b.attack(a, v, 0, false)

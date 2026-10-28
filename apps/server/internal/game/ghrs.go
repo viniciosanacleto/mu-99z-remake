@@ -36,8 +36,8 @@ import (
 // text is about connection time) use texts added to the data/ copy of
 // Message.txt (991 and 992).
 
-func init() {
-	tick1000Hooks = append(tick1000Hooks, (*World).ghrsSecond)
+func registerGhrs(h *hooks) {
+	h.tick1000 = append(h.tick1000, (*World).ghrsSecond)
 }
 
 // ghrsState is 0x8eb698..0x8eb6b4.

@@ -2,7 +2,6 @@ package game
 
 import (
 	"encoding/binary"
-	"sync"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
@@ -36,19 +35,13 @@ func (w *World) loadShops() error {
 		}
 		w.itemData.shops = append(w.itemData.shops, s)
 	}
-	// npcTalkHooks is package state shared by every instance: register the
-	// shop classes once, before any world loop runs.
-	shopHooksOnce.Do(func() {
-		for _, s := range w.itemData.shops {
-			if _, ok := npcTalkHooks[s.info.NPCClass]; !ok {
-				npcTalkHooks[s.info.NPCClass] = shopTalk
-			}
+	for _, s := range w.itemData.shops {
+		if _, ok := w.hooks.npcTalk[s.info.NPCClass]; !ok {
+			w.hooks.npcTalk[s.info.NPCClass] = shopTalk
 		}
-	})
+	}
 	return nil
 }
-
-var shopHooksOnce sync.Once
 
 // shopInsert is FUN_004f4e10: first free cell (rows 0..14, columns 0..7)
 // where the item fits; durability 0 means the maximum.
@@ -218,10 +211,10 @@ func packetRepairResult(money uint32) []byte {
 	return p
 }
 
-func init() {
-	worldHandlers[0x32] = func(w *World, o *Object, p []byte) { w.handleBuy(o, p) }
-	worldHandlers[0x33] = func(w *World, o *Object, p []byte) { w.handleSell(o, p) }
-	worldHandlers[0x34] = func(w *World, o *Object, p []byte) { w.handleRepair(o, p) }
+func registerShop(h *hooks) {
+	h.worldHandlers[0x32] = func(w *World, o *Object, p []byte) { w.handleBuy(o, p) }
+	h.worldHandlers[0x33] = func(w *World, o *Object, p []byte) { w.handleSell(o, p) }
+	h.worldHandlers[0x34] = func(w *World, o *Object, p []byte) { w.handleRepair(o, p) }
 }
 
 // playerReady is the common entry test of the item handlers: playing, no
@@ -383,8 +376,8 @@ func (w *World) handleRepair(o *Object, p []byte) {
 				w.send(o, packetRepairResult(uint32(o.P.Char.Money)))
 			}
 		}
-		if recalcHook != nil {
-			recalcHook(w, o)
+		if w.hooks.recalc != nil {
+			w.hooks.recalc(w, o)
 		}
 		return
 	}
@@ -395,8 +388,8 @@ func (w *World) handleRepair(o *Object, p []byte) {
 	}
 	if w.repairItem(o, slot) {
 		w.send(o, packetRepairResult(uint32(o.P.Char.Money)))
-		if recalcHook != nil {
-			recalcHook(w, o)
+		if w.hooks.recalc != nil {
+			w.hooks.recalc(w, o)
 		}
 	}
 }
@@ -409,8 +402,8 @@ func (w *World) closeNpcWindow(o *Object) {
 	}
 	switch st.If.Type {
 	case ifTrade:
-		if tradeCancelHook != nil {
-			tradeCancelHook(w, o)
+		if w.hooks.tradeCancel != nil {
+			w.hooks.tradeCancel(w, o)
 		}
 		st.If = ifState{}
 	case ifShop:
@@ -432,23 +425,15 @@ func (w *World) closeNpcWindow(o *Object) {
 	}
 }
 
-// tradeCancelHook is set by trade.go.
-var tradeCancelHook func(w *World, o *Object)
-
-func init() {
-	// 31 is dispatched by npc.go (FUN_004c3170) through npcCloseHook.
-	npcCloseHook = func(w *World, o *Object) { w.closeNpcWindow(o) }
+func registerNPCClose(h *hooks) {
+	// 31 is dispatched by npc.go (FUN_004c3170) through hooks.npcClose.
+	h.npcClose = func(w *World, o *Object) { w.closeNpcWindow(o) }
 }
 
-// spawnNPCHook creates an NPC of class at (mp, x, y, dir) and returns it
-// (monsters module). CShopManager spawns the shop NPCs itself
-// (FUN_004f55e0): they are not in Data/Monster/Spawn.
-var spawnNPCHook func(w *World, class, mp, x, y, dir int) *Object
-
-func init() {
-	tick1000Hooks = append(tick1000Hooks, func(w *World) {
+func registerShopSpawn(h *hooks) {
+	h.tick1000 = append(h.tick1000, func(w *World) {
 		d := w.itemData
-		if d == nil || d.shopsSpawned || spawnNPCHook == nil {
+		if d == nil || d.shopsSpawned || w.hooks.spawnNPC == nil {
 			return
 		}
 		d.shopsSpawned = true
@@ -456,7 +441,7 @@ func init() {
 			if s.info.NPCClass == 0x1ec || w.data.MapServer.ServerForMap(w.cfg.ServerCode, s.info.Map) != w.cfg.ServerCode {
 				continue
 			}
-			spawnNPCHook(w, s.info.NPCClass, s.info.Map, s.info.X, s.info.Y, s.info.Dir)
+			w.hooks.spawnNPC(w, s.info.NPCClass, s.info.Map, s.info.X, s.info.Y, s.info.Dir)
 		}
 	})
 }

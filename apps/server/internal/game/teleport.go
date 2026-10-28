@@ -34,7 +34,7 @@ func packetTeleport(gate int, mp, x, y, dir int) []byte {
 
 // packetCastleStateNotice is C1 05 B2 17 v (FUN_004c5220), sent after
 // every teleport; v is 1 only on map 30 during the Castle Siege battle
-// (state 7), which the castle module reports through castleBattleHook.
+// (state 7), which the castle module reports through hooks.castleBattle.
 func packetCastleStateNotice(v byte) []byte {
 	p := newPacket(frame.C1, 0xB2, 0x17, 5)
 	p[4] = v
@@ -60,23 +60,9 @@ func packetMagicUse(skill, index, target int, ok bool) []byte {
 	return p
 }
 
-// castleBattleHook reports the Castle Siege battle (FUN_004c5220,
-// DAT_010d8d94 == 7); the castle module sets it.
-var castleBattleHook func(w *World) bool
-
-// beforeGateMoveHooks run at the start of a player's gate move: the
-// original closes trade, personal shop, warehouse, duel and others there
-// (FUN_0045cfb0, FUN_0045f680, FUN_004d1580, FUN_004e5260, FUN_00503ee0,
-// FUN_005076f0; not identified one by one yet).
-var beforeGateMoveHooks []func(w *World, o *Object)
-
-// mapChangeHooks run when a gate move changes the map (FUN_00493680 +
-// FUN_004a3480, not identified yet).
-var mapChangeHooks []func(w *World, o *Object, from, to int)
-
 func (w *World) sendCastleState(o *Object) {
 	var v byte
-	if o.Map == 30 && castleBattleHook != nil && castleBattleHook(w) {
+	if o.Map == 30 && w.hooks.castleBattle != nil && w.hooks.castleBattle(w) {
 		v = 1
 	}
 	w.send(o, packetCastleStateNotice(v))
@@ -101,14 +87,14 @@ func (w *World) reshow(o *Object) {
 		// the next viewport cycle of their observers.
 		return
 	}
-	if mapEventStateHook != nil {
-		w.send(o, mapEventStateHook(w, o)) // FUN_0048a690 (invasion.go)
+	if w.hooks.mapEventState != nil {
+		w.send(o, w.hooks.mapEventState(w, o)) // FUN_0048a690 (invasion.go)
 	} else {
 		w.send(o, packetMapEventState())
 	}
 	w.showSelf(o)
-	if guildReshowHook != nil {
-		guildReshowHook(w, o)
+	if w.hooks.guildReshow != nil {
+		w.hooks.guildReshow(w, o)
 	}
 }
 
@@ -198,7 +184,7 @@ func (w *World) moveFailed(o *Object, gate int) {
 func (w *World) gateMove(o *Object, gate int) bool {
 	m := mv(o)
 	if o.IsPlayer() {
-		for _, h := range beforeGateMoveHooks {
+		for _, h := range w.hooks.beforeGateMove {
 			h(w, o)
 		}
 	}
@@ -218,7 +204,7 @@ func (w *World) gateMove(o *Object, gate int) bool {
 	// Gate 0x61 (97, the crown room) asks the castle module (FUN_0041e9b0 /
 	// FUN_0041ea30, castlesiege_hooks.go); obj+0x2468 blocking 30<->0 is
 	// still an open unknown.
-	if gate == 0x61 && o.IsPlayer() && (gate97Hook == nil || !gate97Hook(w, o)) {
+	if gate == 0x61 && o.IsPlayer() && (w.hooks.gate97 == nil || !w.hooks.gate97(w, o)) {
 		w.moveFailed(o, gate)
 		return false
 	}
@@ -241,7 +227,7 @@ func (w *World) gateMove(o *Object, gate int) bool {
 		}
 	}
 	if o.Map != g.Map {
-		for _, h := range mapChangeHooks {
+		for _, h := range w.hooks.mapChange {
 			h(w, o, o.Map, g.Map)
 		}
 	}
@@ -295,7 +281,7 @@ func (w *World) placeAt(o *Object, gate, mp, x, y, dir int) {
 	m.Regen = 1
 }
 
-// teleportTo implements teleportHook: a warp to (mp, x, y) handled like a
+// teleportTo implements hooks.teleport: a warp to (mp, x, y) handled like a
 // gate move to that place (server change included).
 func (w *World) teleportTo(o *Object, mp, x, y, dir int) {
 	if o.Map != mp && o.IsPlayer() {
@@ -383,8 +369,8 @@ func (w *World) magicTeleport(o *Object, x, y int) {
 	w.startMagicTeleport(o, x, y)
 	c.Mana -= mana
 	c.BP -= bp
-	if sendManaHook != nil {
-		sendManaHook(w, o)
+	if w.hooks.sendMana != nil {
+		w.hooks.sendMana(w, o)
 	}
 }
 
@@ -481,10 +467,10 @@ func (w *World) teleportViewportEnd() {
 	}
 }
 
-func init() {
-	worldHandlers[0x1C] = (*World).handleTeleport
-	f3Handlers[0x12] = (*World).handleRegenReady
-	tick1000Hooks = append(tick1000Hooks, (*World).teleportSecond)
-	viewportEndHooks = append(viewportEndHooks, (*World).teleportViewportEnd)
-	teleportHook = func(w *World, o *Object, mp, x, y, dir int) { w.teleportTo(o, mp, x, y, dir) }
+func registerTeleport(h *hooks) {
+	h.worldHandlers[0x1C] = (*World).handleTeleport
+	h.f3Handlers[0x12] = (*World).handleRegenReady
+	h.tick1000 = append(h.tick1000, (*World).teleportSecond)
+	h.viewportEnd = append(h.viewportEnd, (*World).teleportViewportEnd)
+	h.teleport = func(w *World, o *Object, mp, x, y, dir int) { w.teleportTo(o, mp, x, y, dir) }
 }

@@ -68,10 +68,10 @@ func TestPetKillExperienceAndInfo(t *testing.T) {
 	b := newBareWorld(t)
 	o := statsPlayer(b, PlayerStart, 4, 400)
 	o.P.Inventory[1] = item.Item{Index: idxDarkRaven, Durability: 255, PetLevel: 3, PetExp: 351}
-	if petExperienceHook == nil {
-		t.Fatal("petExperienceHook not set")
+	if b.hooks.petExperience == nil {
+		t.Fatal("hooks.petExperience not set")
 	}
-	petExperienceHook(b.World, o, 100)
+	b.hooks.petExperience(b.World, o, 100)
 	a9 := find(b.drain(o), 0xA9, -1)
 	if !bytes.Equal(a9, []byte{0xC1, 0x0C, 0xA9, 0, 0, 1, 3, 0, 0x69, 0x01, 0, 0}) {
 		t.Fatalf("A9 = % X", a9)
@@ -79,14 +79,14 @@ func TestPetKillExperienceAndInfo(t *testing.T) {
 	// A level up the owner cannot equip (raven +4 needs 245 leadership)
 	// is undone: level 3, experience just below level 4, flag 0.
 	o.P.Char.Leadership = 100
-	petExperienceHook(b.World, o, 6000)
+	b.hooks.petExperience(b.World, o, 6000)
 	a9 = find(b.drain(o), 0xA9, -1)
 	if a9 == nil || a9[4] != 0 || a9[6] != 3 || o.P.Inventory[1].PetExp != 895 {
 		t.Fatalf("A9 undone level up = % X", a9)
 	}
 	// With enough leadership the level up stays and is flagged 0xFE.
 	o.P.Char.Leadership = 300
-	petExperienceHook(b.World, o, 10)
+	b.hooks.petExperience(b.World, o, 10)
 	a9 = find(b.drain(o), 0xA9, -1)
 	if a9 == nil || a9[4] != 0xFE || a9[6] != 4 {
 		t.Fatalf("A9 level up = % X (req %+v)", a9, b.requirements(o.P.Inventory[1]))

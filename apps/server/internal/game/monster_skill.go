@@ -15,19 +15,6 @@ import (
 // FUN_004be5b0 and the elements FUN_004bc500..FUN_004bd4c0) and the traps
 // (FUN_004b5be0).
 
-var (
-	// monsterSkillAttackHook is CSkillManager::UseAttackSkill
-	// (FUN_004f8dd0) for a monster casting skill on t; the skills module
-	// sets it. Without it the skill is resolved as a plain CAttack with the
-	// skill number.
-	monsterSkillAttackHook func(w *World, o, t *Object, skill int) bool
-	// addEffectHook / removeEffectHook are the buff manager calls the
-	// monster skill elements use (FUN_00478ae0 add effect with duration in
-	// seconds, FUN_00478d30 remove); set by the buff module.
-	addEffectHook    func(w *World, o *Object, effect, value, seconds int) bool
-	removeEffectHook func(w *World, o *Object, effect int)
-)
-
 // monsterSkillList is the MagicList setMonster builds: slot 0 is the
 // AttackType (150 -> 50) and some classes get more skills; nothing when
 // AttackType is 0.
@@ -99,7 +86,7 @@ func (w *World) monsterMagic(o, t *Object, slot int) {
 	if skill < 0 || !t.Alive {
 		return
 	}
-	if monsterSkillAttackHook != nil && monsterSkillAttackHook(w, o, t, skill) {
+	if w.hooks.monsterSkillAttack != nil && w.hooks.monsterSkillAttack(w, o, t, skill) {
 		return
 	}
 	if w.cellHas(o, gamedata.AttrSafeZone) || w.cellHas(t, gamedata.AttrSafeZone) {
@@ -343,8 +330,8 @@ func loadMonsterSkills(configDir string) (*monsterSkillData, error) {
 	return d, nil
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerMonsterSkill(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		if w.configDir == "" {
 			return nil
 		}
@@ -502,8 +489,8 @@ func (w *World) applySkillElement(e *monsterSkillElement, o, t *Object) {
 		if w.hasEffect(t, 0x86) {
 			return
 		}
-		if addEffectHook != nil {
-			addEffectHook(w, t, 0x3D, 0, max(e.Time, 0))
+		if w.hooks.addEffect != nil {
+			w.hooks.addEffect(w, t, 0x3D, 0, max(e.Time, 0))
 		}
 	case 2: // FUN_004bc5d0: life, capped at MaxLife + AddLife, C1 26 FF
 		if t.P == nil || t.P.Char == nil {
@@ -514,8 +501,8 @@ func (w *World) applySkillElement(e *monsterSkillElement, o, t *Object) {
 		}
 		c := t.P.Char
 		c.Life = min(max(c.Life+float32(elementDelta(e, c.Life)), 0), float32(t.P.AddLife)+c.MaxLife)
-		if sendLifeHook != nil {
-			sendLifeHook(w, t)
+		if w.hooks.sendLife != nil {
+			w.hooks.sendLife(w, t)
 		}
 	case 3: // FUN_004bc770: mana, C1 27 FF
 		if t.P == nil || t.P.Char == nil {
@@ -523,8 +510,8 @@ func (w *World) applySkillElement(e *monsterSkillElement, o, t *Object) {
 		}
 		c := t.P.Char
 		c.Mana = min(max(c.Mana+float32(elementDelta(e, c.Mana)), 0), float32(t.P.AddMana)+c.MaxMana)
-		if sendManaHook != nil {
-			sendManaHook(w, t)
+		if w.hooks.sendMana != nil {
+			w.hooks.sendMana(w, t)
 		}
 	case 7: // FUN_004bcbe0: durability of a random armor slot (2..7)
 		if t.P == nil {
@@ -538,12 +525,12 @@ func (w *World) applySkillElement(e *monsterSkillElement, o, t *Object) {
 		it.Durability = float32(math.Max(float64(it.Durability+float32(elementDelta(e, it.Durability))), 0))
 		w.send(t, packetItemDurability(slot, truncDur(it.Durability), 0))
 	case 14: // FUN_004bd080: removes effect 28 / 27 from a player
-		if t.P != nil && removeEffectHook != nil && (e.Nullified == 0x1c || e.Nullified == 0x1b) {
-			removeEffectHook(w, t, e.Nullified)
+		if t.P != nil && w.hooks.removeEffect != nil && (e.Nullified == 0x1c || e.Nullified == 0x1b) {
+			w.hooks.removeEffect(w, t, e.Nullified)
 		}
 	case 16: // FUN_004bd0f0: magic immunity (effect 63) for Time seconds
-		if addEffectHook != nil {
-			addEffectHook(w, t, 0x3F, e.Nullified, max(e.Time, 0))
+		if w.hooks.addEffect != nil {
+			w.hooks.addEffect(w, t, 0x3F, e.Nullified, max(e.Time, 0))
 		}
 	default:
 		// 9 (push back FUN_005114f0), 4/5/6/8 and 15..21 are not

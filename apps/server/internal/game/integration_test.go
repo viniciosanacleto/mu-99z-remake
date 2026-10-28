@@ -27,7 +27,7 @@ func TestShopNPCsSpawnFromShopManager(t *testing.T) {
 		t.Fatalf("Potion Girl Amy not spawned: %+v", amy)
 	}
 	o := b.player(PlayerStart, "Buyer", 0, amy.X, amy.Y+2)
-	if h := npcTalkHooks[253]; h == nil || !h(b.World, o, amy) || find(b.drain(o), 0x31, -1) == nil {
+	if h := b.hooks.npcTalk[253]; h == nil || !h(b.World, o, amy) || find(b.drain(o), 0x31, -1) == nil {
 		t.Fatal("spawned shop NPC does not open the shop")
 	}
 	// Once only.
@@ -55,11 +55,9 @@ func (b *bareWorld) shopRow(class int) (r struct{ Dir int }) {
 
 func killWith(t *testing.T, b *bareWorld, p, m *Object) {
 	t.Helper()
-	old := combatStatsHook
-	combatStatsHook = func(w *World, o *Object) CombatStats {
+	b.hooks.combatStats = func(w *World, o *Object) CombatStats {
 		return CombatStats{DamageMinLeft: 40, DamageMaxLeft: 50, AttackSuccessRate: 1000}
 	}
-	t.Cleanup(func() { combatStatsHook = old })
 	m.Mon.Life = 1
 	b.handleAttack(p, frame.Build(frame.C1, 0xD7, byte(m.Index>>8), byte(m.Index), 0x78, 3))
 }
@@ -81,8 +79,8 @@ func TestKillInPartySharesExperience(t *testing.T) {
 	if find(b.drain(a), 0x9C, -1) == nil || find(b.drain(c), 0x9C, -1) == nil || c.P.Char.Experience <= before {
 		t.Fatal("party member got no experience: the kill did not use FUN_004c5ea0")
 	}
-	if !samePartyHook(b.World, a, c) || samePartyHook(b.World, a, b.player(PlayerStart+2, "Out", 0, a.X, a.Y+3)) {
-		t.Fatal("samePartyHook")
+	if !b.hooks.sameParty(b.World, a, c) || b.hooks.sameParty(b.World, a, b.player(PlayerStart+2, "Out", 0, a.X, a.Y+3)) {
+		t.Fatal("hooks.sameParty")
 	}
 }
 
@@ -115,11 +113,11 @@ func TestSummonKillGivesNoExperience(t *testing.T) {
 func TestMonsterSkillEffectHooksUseEffectSystem(t *testing.T) {
 	b := newBareWorld(t)
 	o := b.player(PlayerStart, "Target", 0, 130, 130)
-	if !addEffectHook(b.World, o, 0x3F, 0, 10) || !moveEffectHook(b.World, o, 0x3F) {
+	if !b.hooks.addEffect(b.World, o, 0x3F, 0, 10) || !b.hooks.moveEffect(b.World, o, 0x3F) {
 		t.Fatal("effect not applied")
 	}
-	removeEffectHook(b.World, o, 0x3F)
-	if moveEffectHook(b.World, o, 0x3F) {
+	b.hooks.removeEffect(b.World, o, 0x3F)
+	if b.hooks.moveEffect(b.World, o, 0x3F) {
 		t.Fatal("effect not removed")
 	}
 }
@@ -128,9 +126,7 @@ func TestSummonSkillsDispatchToSummonModule(t *testing.T) {
 	b := newBareWorld(t)
 	o := b.player(PlayerStart, "Elf", 0, 130, 130)
 	var got int
-	old := summonSkillHook
-	summonSkillHook = func(w *World, p *Object, skill int) bool { got = skill; return true }
-	t.Cleanup(func() { summonSkillHook = old })
+	b.hooks.summonSkill = func(w *World, p *Object, skill int) bool { got = skill; return true }
 	if !b.dispatchSkill(o, &skillRef{Num: 32}, -1, o.X, o.Y, 0, false) || got != 32 {
 		t.Fatalf("summon skill dispatched to %d", got)
 	}

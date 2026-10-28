@@ -11,12 +11,12 @@ import (
 // Use item 26 (FUN_00499a20): [3] source slot, [4] target slot, [5] use
 // type.
 
-func init() {
-	worldHandlers[0x26] = func(w *World, o *Object, p []byte) { w.handleUseItem(o, p) }
-	sendLifeHook = func(w *World, o *Object) {
+func registerItemuse(h *hooks) {
+	h.worldHandlers[0x26] = func(w *World, o *Object, p []byte) { w.handleUseItem(o, p) }
+	h.sendLife = func(w *World, o *Object) {
 		w.send(o, packetLife(0xFF, int(o.P.Char.Life)))
 	}
-	sendManaHook = func(w *World, o *Object) {
+	h.sendMana = func(w *World, o *Object) {
 		w.send(o, packetMana(int(o.P.Char.Mana), int(o.P.Char.BP)))
 	}
 }

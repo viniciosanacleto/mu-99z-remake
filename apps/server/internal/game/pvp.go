@@ -101,7 +101,7 @@ func (w *World) attackFull(a, t *Object, args attackArgs) bool {
 		}
 	}
 	// Castle gates, statues and canons only during the battle, by attackers.
-	if castleAttackHook != nil && !castleAttackHook(w, a, t) {
+	if w.hooks.castleAttack != nil && !w.hooks.castleAttack(w, a, t) {
 		return false
 	}
 	// Guild war / battle soccer rules of FUN_0040b110 (guild_soccer.go).
@@ -110,7 +110,7 @@ func (w *World) attackFull(a, t *Object, args attackArgs) bool {
 	}
 	// Custom events (Death, Theft, Sobre, Duel, Pair checks of
 	// FUN_0040b110; customevent.go).
-	if customEventAttackHook != nil && !customEventAttackHook(w, a, t) {
+	if w.hooks.customEventAttack != nil && !w.hooks.customEventAttack(w, a, t) {
 		return false
 	}
 	if owner := w.attackOwner(a); owner.Type == TypePlayer && !w.pvpAllowed(owner, t) {
@@ -259,8 +259,8 @@ func (w *World) attackFull(a, t *Object, args attackArgs) bool {
 				dmg = w.cfg.Int("Character", "ChaosCastleDamageRate", 100) * dmg / 100
 			default:
 				// CastleSiegeDamageRate1/2 on map 30 (castlesiege_battle.go).
-				if castleDamageRateHook != nil {
-					if r, ok := castleDamageRateHook(w, a, t); ok {
+				if w.hooks.castleDamageRate != nil {
+					if r, ok := w.hooks.castleDamageRate(w, a, t); ok {
 						dmg = r * dmg / 100
 					}
 				}
@@ -323,7 +323,7 @@ func (w *World) attackFull(a, t *Object, args attackArgs) bool {
 		if info, ok := w.data.Maps[a.Map]; ok && info.NonPK == 2 {
 			self = false
 		}
-		if guildWarHook != nil && guildWarHook(w, a, t) {
+		if w.hooks.guildWar != nil && w.hooks.guildWar(w, a, t) {
 			self = false
 		}
 		if self {
@@ -648,12 +648,12 @@ func (w *World) pvpAllowed(a, t *Object) bool {
 	}
 	// Guild war (FUN_004864b0, guild_war.go) allows the hit unless the
 	// map is NonPK.
-	if guildWarHook != nil && guildWarHook(w, a, t) && !w.mapNonPK(t.Map) {
+	if w.hooks.guildWar != nil && w.hooks.guildWar(w, a, t) && !w.mapNonPK(t.Map) {
 		return true
 	}
 	arena := w.cfg.Int("Custom", "CustomArenaMapNumber", -1)
 	if a.Map == arena && t.Map == arena && arena >= 0 {
-		return arenaFightHook != nil && arenaFightHook(w, a) // FUN_00443f50 (customarena.go)
+		return w.hooks.arenaFight != nil && w.hooks.arenaFight(w, a) // FUN_00443f50 (customarena.go)
 	}
 	ds := func(m int) bool { return m == 9 || m == 32 }
 	bc := func(m int) bool { return m >= 0xb && m <= 0x11 }
@@ -664,11 +664,11 @@ func (w *World) pvpAllowed(a, t *Object) bool {
 		return false
 	}
 	if a.Map > 0x11 && a.Map < 0x18 && t.Map > 0x11 && t.Map < 0x18 {
-		return chaosCastleStateHook != nil && chaosCastleStateHook(w, t.Map-18) == 4
+		return w.hooks.chaosCastleState != nil && w.hooks.chaosCastleState(w, t.Map-18) == 4
 	}
 	// Map 30 during the Castle Siege battle (castlesiege_battle.go).
-	if castlePvPHook != nil {
-		if ok, decided := castlePvPHook(w, a, t); decided {
+	if w.hooks.castlePvP != nil {
+		if ok, decided := w.hooks.castlePvP(w, a, t); decided {
 			return ok
 		}
 	}
@@ -689,7 +689,7 @@ func (w *World) mapNonPK(mp int) bool {
 
 // --- player death ----------------------------------------------------------------
 
-// objectDeathHook runs from lifeCheck (FUN_004cda80) when t dies, before
+// hooks.objectDeath runs from lifeCheck (FUN_004cda80) when t dies, before
 // the die packet.
 func (w *World) onObjectDeath(killer, t *Object) {
 	if killer.Type == TypePlayer && t.Type == TypePlayer {
@@ -699,14 +699,14 @@ func (w *World) onObjectDeath(killer, t *Object) {
 		}
 		w.send(killer, packetKillCount(st.KillCount))
 		// FUN_004868f0: the kill may count for a guild war.
-		if guildWarKillHook != nil {
-			guildWarKillHook(w, killer, t)
+		if w.hooks.guildWarKill != nil {
+			w.hooks.guildWarKill(w, killer, t)
 		}
 	}
 	if t.Type == TypePlayer {
 		w.playerDeath(killer, t)
-		if killer.Type == TypePlayer && !w.inDuelWith(killer, t) && playerKillHook != nil {
-			playerKillHook(w, killer, t)
+		if killer.Type == TypePlayer && !w.inDuelWith(killer, t) && w.hooks.playerKill != nil {
+			w.hooks.playerKill(w, killer, t)
 		}
 		w.duelKillEnd(killer, t)
 	}
@@ -840,6 +840,6 @@ func (w *World) packetCharRefresh(o *Object) []byte {
 	return p
 }
 
-func init() {
-	objectDeathHook = func(w *World, killer, t *Object) { w.onObjectDeath(killer, t) }
+func registerPvp(h *hooks) {
+	h.objectDeath = func(w *World, killer, t *Object) { w.onObjectDeath(killer, t) }
 }

@@ -14,7 +14,7 @@ func TestGMLevelFromCharacter(t *testing.T) {
 		t.Fatalf("plain player level %d", b.gmLevel(o))
 	}
 	o.P.Char.GMLevel = 32
-	for _, h := range enterWorldHooks {
+	for _, h := range b.hooks.enterWorld {
 		h(b.World, o)
 	}
 	b.wg.Wait()

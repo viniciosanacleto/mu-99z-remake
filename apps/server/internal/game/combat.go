@@ -169,7 +169,7 @@ func resets(o *Object) int {
 }
 
 // combatStats returns the CAttack inputs of an object: the MonsterList
-// values for monsters, combatStatsHook for players.
+// values for monsters, hooks.combatStats for players.
 func (w *World) combatStats(o *Object) CombatStats {
 	if m := o.Mon; m != nil {
 		return CombatStats{DamageMinRight: m.DamageMin, DamageMaxRight: m.DamageMax,
@@ -177,8 +177,8 @@ func (w *World) combatStats(o *Object) CombatStats {
 			Defense: m.Defense, MagicDefense: m.MagicDefense,
 			AttackSuccessRate: m.AttackRate, DefenseSuccessRate: m.DefenseRate, AttackSpeed: m.AttackSpeed}
 	}
-	if combatStatsHook != nil {
-		return combatStatsHook(w, o)
+	if w.hooks.combatStats != nil {
+		return w.hooks.combatStats(w, o)
 	}
 	return CombatStats{}
 }
@@ -363,10 +363,6 @@ func (w *World) lifeCheck(a, t *Object, dmg, effect, skill int) {
 	w.lifeCheckEx(a, t, dmg, effect, skill, false)
 }
 
-// objectDeathHook runs when t dies in lifeCheck, before the die packet
-// (pvp.go: FUN_0050e8a0 death penalty, PK, duel, effects).
-var objectDeathHook func(w *World, killer, t *Object)
-
 // lifeCheckEx is FUN_004cda80 with the damage packet flag (param_5).
 func (w *World) lifeCheckEx(a, t *Object, dmg, effect, skill int, flag bool) {
 	killer := a
@@ -382,8 +378,8 @@ func (w *World) lifeCheckEx(a, t *Object, dmg, effect, skill int, flag bool) {
 		return
 	}
 	// Death.
-	if objectDeathHook != nil {
-		objectDeathHook(w, killer, t)
+	if w.hooks.objectDeath != nil {
+		w.hooks.objectDeath(w, killer, t)
 	}
 	if t.Type == TypeMonster {
 		w.sendMsg(t, msgDie, killer.Index, 500, 0)
@@ -412,11 +408,11 @@ func (w *World) lifeCheckEx(a, t *Object, dmg, effect, skill int, flag bool) {
 	if t.Type == TypeMonster && killer.Type == TypePlayer && !noExpMonster(t) {
 		// FUN_004cda80: party distribution (FUN_004c5ea0) when the killer
 		// is in a party, otherwise FUN_004c5970.
-		if partyExperienceHook == nil || !partyExperienceHook(w, killer, t, dmg, false) {
+		if w.hooks.partyExperience == nil || !w.hooks.partyExperience(w, killer, t, dmg, false) {
 			w.monsterKillExperience(t, killer)
 		}
 	}
-	for _, h := range deathHooks {
+	for _, h := range w.hooks.death {
 		h(w, killer, t)
 	}
 }
@@ -530,11 +526,11 @@ func (w *World) monsterKillExperience(t, killer *Object) {
 		t.Mon.ExpGiven += exp
 		ch := p.P.Char
 		level := ch.Level
-		if petExperienceHook != nil {
-			petExperienceHook(w, p, exp) // FUN_004c69d0
+		if w.hooks.petExperience != nil {
+			w.hooks.petExperience(w, p, exp) // FUN_004c69d0
 		}
-		if gainExperienceHook != nil {
-			gainExperienceHook(w, p, exp)
+		if w.hooks.gainExperience != nil {
+			w.hooks.gainExperience(w, p, exp)
 		}
 		shown := uint32(exp)
 		if ch.Level != level {
@@ -609,7 +605,7 @@ func noDropMonster(class int) bool {
 }
 
 // monsterDrop is FUN_004b7290, implemented in drop.go (monsterItemDrop:
-// bags, quest items (questDropHook), ItemDrop/ItemMoneyDrop, set and
+// bags, quest items (hooks.questDrop), ItemDrop/ItemMoneyDrop, set and
 // excellent drops with their options, zen).
 func (w *World) monsterDrop(o *Object, killer int) {
 	w.monsterItemDrop(o, killer)
@@ -747,8 +743,8 @@ func (w *World) respawnPlayer(o *Object) {
 	c.BP = c.MaxBP + float32(o.P.AddBP)
 	gate := w.respawnGate(o.Map)
 	fixed, fx, fy, fmp := false, 0, 0, 0
-	if castleRespawnHook != nil { // map 30 (castlesiege_battle.go)
-		if g, m, x, y, ok := castleRespawnHook(w, o); ok {
+	if w.hooks.castleRespawn != nil { // map 30 (castlesiege_battle.go)
+		if g, m, x, y, ok := w.hooks.castleRespawn(w, o); ok {
 			if g >= 0 {
 				gate = g
 			} else {
@@ -768,8 +764,8 @@ func (w *World) respawnPlayer(o *Object) {
 	if sx, sy, ok := w.soccerRespawn(o); ok { // respawn type 2, battle soccer (guild_soccer.go)
 		mp, x, y = o.Map, sx, sy
 	}
-	if customRespawnHook != nil { // CustomRespawn.txt (FUN_00458770, custom_world.go)
-		if m, cx, cy, ok := customRespawnHook(w, o); ok {
+	if w.hooks.customRespawn != nil { // CustomRespawn.txt (FUN_00458770, custom_world.go)
+		if m, cx, cy, ok := w.hooks.customRespawn(w, o); ok {
 			mp, x, y = m, cx, cy
 		}
 	}
@@ -793,9 +789,9 @@ func (w *World) respawnPlayer(o *Object) {
 	w.showSelf(o)
 }
 
-func init() {
-	worldHandlers[0xD7] = (*World).handleAttack
-	leaveWorldHooks = append(leaveWorldHooks, func(w *World, o *Object) {
+func registerCombat(h *hooks) {
+	h.worldHandlers[0xD7] = (*World).handleAttack
+	h.leaveWorld = append(h.leaveWorld, func(w *World, o *Object) {
 		if w.mon != nil {
 			delete(w.mon.deaths, o.Index)
 		}

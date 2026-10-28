@@ -59,8 +59,8 @@ type devilSquare struct {
 	sq   [dsSquares]dsSquare
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerDevilsquare(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		ds := &devilSquare{data: &gamedata.DevilSquare{}}
 		for i := range ds.sq {
 			s := &ds.sq[i]
@@ -90,10 +90,10 @@ func init() {
 		}
 		return nil
 	})
-	tick1000Hooks = append(tick1000Hooks, (*World).dsTick)
-	worldHandlers[0x90] = (*World).handleDSEnter
-	eventTimeHandlers[1] = (*World).dsRemainTime
-	deathHooks = append(deathHooks, func(w *World, killer, victim *Object) {
+	h.tick1000 = append(h.tick1000, (*World).dsTick)
+	h.worldHandlers[0x90] = (*World).handleDSEnter
+	h.eventTimeHandlers[1] = (*World).dsRemainTime
+	h.death = append(h.death, func(w *World, killer, victim *Object) {
 		if victim.Map != 9 && victim.Map != 32 {
 			return
 		}
@@ -103,7 +103,7 @@ func init() {
 			w.dsMonsterKilled(victim)
 		}
 	})
-	npcTalkHooks[dsCharon] = func(w *World, o, npc *Object) bool { w.dsCharonTalk(o); return true }
+	h.npcTalk[dsCharon] = func(w *World, o, npc *Object) bool { w.dsCharonTalk(o); return true }
 }
 
 func (w *World) ds() *devilSquare { return w.ev().ds }
@@ -504,7 +504,7 @@ func (w *World) dsGiveExperience(s *dsSquare) {
 		}
 		o := w.objects[u.Index]
 		u.Exp = d.Experience[s.Index][u.Rank] * w.cfg.ALInt("Common", "AddEventExperienceRate", accountLevel(o), 0)
-		if moveEffectHook != nil && (moveEffectHook(w, o, 31) || moveEffectHook(w, o, 42)) {
+		if w.hooks.moveEffect != nil && (w.hooks.moveEffect(w, o, 31) || w.hooks.moveEffect(w, o, 42)) {
 			continue
 		}
 		if !w.levelUp(o, int64(u.Exp), w.cfg.Int("Common", "MaxLevelUpEvent", 0)) {
@@ -537,11 +537,11 @@ func (w *World) dsGiveMoney(s *dsSquare) {
 // = square, dropped at the user's position.
 func (w *World) dsGiveItemBags(s *dsSquare) {
 	for _, u := range s.Users {
-		if u.Index < 0 || u.Index >= MaxObjects || u.Rank >= 10 || itemBagHook == nil {
+		if u.Index < 0 || u.Index >= MaxObjects || u.Rank >= 10 || w.hooks.itemBag == nil {
 			continue
 		}
 		o := w.objects[u.Index]
-		itemBagHook(w, o, 1, s.Index, o.Map, o.X, o.Y)
+		w.hooks.itemBag(w, o, 1, s.Index, o.Map, o.X, o.Y)
 	}
 }
 
@@ -728,10 +728,6 @@ func (w *World) dsRemainTime(o *Object, p []byte) []byte {
 
 // --- 91 (event remaining time) ------------------------------------------
 
-// eventTimeHandlers are the branches of 91 by event type (1 Devil Square,
-// 2 Blood Castle, 4 Chaos Castle, 5 Illusion...): nil result = no reply.
-var eventTimeHandlers = map[byte]func(w *World, o *Object, p []byte) []byte{}
-
 // packetEventTime is C1 07 91 type minutes users extra.
 func packetEventTime(typ byte) []byte { return []byte{0xC1, 0x07, 0x91, typ, 0, 0, 0} }
 
@@ -740,7 +736,7 @@ func (w *World) handleEventTime(o *Object, p []byte) {
 	if len(p) < 4 || !questPlayerOK(o) {
 		return
 	}
-	h := eventTimeHandlers[p[3]]
+	h := w.hooks.eventTimeHandlers[p[3]]
 	if h == nil {
 		w.send(o, packetEventTime(p[3]))
 		return
@@ -750,6 +746,6 @@ func (w *World) handleEventTime(o *Object, p []byte) {
 	}
 }
 
-func init() {
-	worldHandlers[0x91] = (*World).handleEventTime
+func registerEventTimeHandler(h *hooks) {
+	h.worldHandlers[0x91] = (*World).handleEventTime
 }

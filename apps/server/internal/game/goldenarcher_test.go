@@ -21,7 +21,7 @@ func TestGoldenArcherFlow(t *testing.T) {
 	b := newBareWorld(t)
 	o := b.player(PlayerStart, "Archer", 0, 130, 130)
 	npc := fakeNPC(b, 101, gaNPC, 0, 131, 130)
-	if !npcTalkHooks[gaNPC](b.World, o, npc) {
+	if !b.hooks.npcTalk[gaNPC](b.World, o, npc) {
 		t.Fatal("talk not handled")
 	}
 	b.runAsync()

@@ -30,15 +30,12 @@ type windowRow struct {
 	Remain int
 }
 
-func init() {
-	worldHandlers[0x06] = func(w *World, o *Object, p []byte) { w.windowOpen(o) }
-	windowCloseHook = func(w *World, o *Object) { delete(w.wcx().window, o.Index) }
-	tick1000Hooks = append(tick1000Hooks, (*World).windowSecond)
-	leaveWorldHooks = append(leaveWorldHooks, func(w *World, o *Object) { delete(w.wcx().window, o.Index) })
+func registerWindowtime(h *hooks) {
+	h.worldHandlers[0x06] = func(w *World, o *Object, p []byte) { w.windowOpen(o) }
+	h.windowClose = func(w *World, o *Object) { delete(w.wcx().window, o.Index) }
+	h.tick1000 = append(h.tick1000, (*World).windowSecond)
+	h.leaveWorld = append(h.leaveWorld, func(w *World, o *Object) { delete(w.wcx().window, o.Index) })
 }
-
-// windowCloseHook runs in the DF position fix (move.go).
-var windowCloseHook func(w *World, o *Object)
 
 // windowOpen is FUN_004d7de0.
 func (w *World) windowOpen(o *Object) {

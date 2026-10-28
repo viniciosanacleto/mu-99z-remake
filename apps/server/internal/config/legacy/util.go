@@ -5,11 +5,6 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
-func init() {
-	register("hack", hackGroup)
-	register("util", utilGroup)
-}
-
 // hackGroup converts the Data/Hack tables.
 func hackGroup(dataDir string) ([]byte, error) {
 	var c gamedata.HackConfig

@@ -15,10 +15,10 @@ import (
 // client in C1 2C F3 F5. They are loaded when the character enters the
 // game (FUN_004cc730 -> DS 0xF7 05 -> FUN_0044ce20).
 
-func init() {
-	f3Handlers[0xF5] = (*World).jewelBankDeposit
-	f3Handlers[0xF6] = (*World).jewelBankWithdraw
-	enterWorldHooks = append(enterWorldHooks, func(w *World, o *Object) { w.jewelBankLoad(o) })
+func registerJewelbank(h *hooks) {
+	h.f3Handlers[0xF5] = (*World).jewelBankDeposit
+	h.f3Handlers[0xF6] = (*World).jewelBankWithdraw
+	h.enterWorld = append(h.enterWorld, func(w *World, o *Object) { w.jewelBankLoad(o) })
 }
 
 // jewelBankIndex is the jump table at 0x44c5e4 (FUN_0044c5a0): the jewel of

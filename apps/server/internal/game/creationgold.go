@@ -31,8 +31,8 @@ type creationClick struct {
 	slot int       // DAT_012badc0[index]
 }
 
-func init() {
-	faHandlers[0x12] = sized(5, func(w *World, o *Object, p []byte) { w.creationGold(o, int(p[4])) })
+func registerCreationgold(h *hooks) {
+	h.faHandlers[0x12] = sized(5, func(w *World, o *Object, p []byte) { w.creationGold(o, int(p[4])) })
 }
 
 func (w *World) creationClick(idx int) *creationClick {

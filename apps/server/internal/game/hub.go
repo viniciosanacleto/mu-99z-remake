@@ -121,4 +121,4 @@ func whisperRelay(w *World, from *Object, target string, msg []byte) bool {
 	return w.hub.PostToChar(target, func(tw *World, t *Object) { tw.deliverWhisper(t, name, text) })
 }
 
-func init() { globalWhisperHook = whisperRelay }
+func registerHub(h *hooks) { h.globalWhisper = whisperRelay }

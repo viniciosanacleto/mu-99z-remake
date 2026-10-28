@@ -393,6 +393,6 @@ func (w *World) handleCSHuntZone(o *Object, p []byte) {
 	w.send(o, packetCSHuntZone(1, p[4]))
 }
 
-func init() {
-	tick1000Hooks = append(tick1000Hooks, (*World).csFlushTax)
+func registerCastlesiegeTax(h *hooks) {
+	h.tick1000 = append(h.tick1000, (*World).csFlushTax)
 }

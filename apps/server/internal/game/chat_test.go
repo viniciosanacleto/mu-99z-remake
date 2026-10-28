@@ -133,19 +133,15 @@ func TestChatPrefixes(t *testing.T) {
 		t.Fatalf("global notice = % X", p)
 	}
 	// "~" goes to the party.
-	old := partyMembersHook
-	defer func() { partyMembersHook = old }()
-	partyMembersHook = func(*World, *Object) []int { return []int{PlayerStart, PlayerStart + 1} }
+	b.hooks.partyMembers = func(*World, *Object) []int { return []int{PlayerStart, PlayerStart + 1} }
 	b.drain(a)
 	b.handleChat(a, chatPacket(0x00, "Alpha", "~party"))
 	if p := find(b.drain(c), 0x00, -1); p == nil || string(cstr(p[13:])) != "~party" {
 		t.Fatalf("party chat = % X", p)
 	}
 	// "@" routes to the guild module.
-	oldG := guildChatHook
-	defer func() { guildChatHook = oldG }()
 	var kinds []int
-	guildChatHook = func(_ *World, _ *Object, kind int, msg []byte) { kinds = append(kinds, kind) }
+	b.hooks.guildChat = func(_ *World, _ *Object, kind int, msg []byte) { kinds = append(kinds, kind) }
 	b.handleChat(a, chatPacket(0x00, "Alpha", "@g"))
 	b.handleChat(a, chatPacket(0x00, "Alpha", "@@u"))
 	b.handleChat(a, chatPacket(0x00, "Alpha", "@>n'o"))
@@ -170,10 +166,8 @@ func TestWhisper(t *testing.T) {
 	if p := find(b.drain(a), 0x0D, -1); p == nil || noticeText(p) != b.messageFor(a, 270) {
 		t.Fatal("self whisper notice")
 	}
-	old := globalWhisperHook
-	defer func() { globalWhisperHook = old }()
 	var relayed string
-	globalWhisperHook = func(_ *World, _ *Object, target string, msg []byte) bool {
+	b.hooks.globalWhisper = func(_ *World, _ *Object, target string, msg []byte) bool {
 		relayed = target + ":" + string(msg)
 		return true
 	}

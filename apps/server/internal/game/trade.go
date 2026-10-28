@@ -40,18 +40,18 @@ func clearTradeBox(t *tradeState) {
 	}
 }
 
-func init() {
-	worldHandlers[0x36] = func(w *World, o *Object, p []byte) { w.handleTradeRequest(o, p) }
-	worldHandlers[0x37] = func(w *World, o *Object, p []byte) { w.handleTradeResponse(o, p) }
-	worldHandlers[0x3A] = func(w *World, o *Object, p []byte) { w.handleTradeMoney(o, p) }
-	worldHandlers[0x3C] = func(w *World, o *Object, p []byte) { w.handleTradeOK(o, p) }
-	worldHandlers[0x3D] = func(w *World, o *Object, p []byte) {
+func registerTrade(h *hooks) {
+	h.worldHandlers[0x36] = func(w *World, o *Object, p []byte) { w.handleTradeRequest(o, p) }
+	h.worldHandlers[0x37] = func(w *World, o *Object, p []byte) { w.handleTradeResponse(o, p) }
+	h.worldHandlers[0x3A] = func(w *World, o *Object, p []byte) { w.handleTradeMoney(o, p) }
+	h.worldHandlers[0x3C] = func(w *World, o *Object, p []byte) { w.handleTradeOK(o, p) }
+	h.worldHandlers[0x3D] = func(w *World, o *Object, p []byte) {
 		if playerReady(o) {
 			w.tradeCancelBoth(o)
 		}
 	}
-	tradeCancelHook = func(w *World, o *Object) { w.tradeCancelBoth(o) }
-	leaveWorldHooks = append(leaveWorldHooks, func(w *World, o *Object) {
+	h.tradeCancel = func(w *World, o *Object) { w.tradeCancelBoth(o) }
+	h.leaveWorld = append(h.leaveWorld, func(w *World, o *Object) {
 		if o.P == nil || o.P.Trade == nil || o.P.Trade.Partner < 0 {
 			return
 		}
@@ -149,12 +149,9 @@ func packetTradeResult(result byte) []byte {
 	return p
 }
 
-// guildNumberHook returns obj+0x308 (guild number) for the 37 packet.
-var guildNumberHook func(w *World, o *Object) uint32
-
 func guildNumber(w *World, o *Object) uint32 {
-	if guildNumberHook != nil {
-		return guildNumberHook(w, o)
+	if w.hooks.guildNumber != nil {
+		return w.hooks.guildNumber(w, o)
 	}
 	return 0
 }
@@ -174,7 +171,7 @@ func (w *World) handleTradeRequest(o *Object, p []byte) {
 	}
 	// Russian roulette shot, hide and seek win and the obj+0x24f0 refusal
 	// (FUN_004e4e70, FUN_0045fed0 and FUN_00507cf0; customevent.go).
-	if tradeRequestHook != nil && tradeRequestHook(w, o, t) {
+	if w.hooks.tradeRequest != nil && w.hooks.tradeRequest(w, o, t) {
 		return
 	}
 	if items(o).If.Use || items(t).If.Use {

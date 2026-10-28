@@ -12,11 +12,6 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
-func init() {
-	register("monster", monsterGroup)
-	register("spawn", spawnGroup)
-}
-
 // monsterGroup converts Data/Monster/*.txt and Data/Monster/Skill/*.txt.
 func monsterGroup(dataDir string) ([]byte, error) {
 	var c gamedata.MonsterConfig

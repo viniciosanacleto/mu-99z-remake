@@ -27,10 +27,10 @@ type offlineState struct {
 	Since  time.Time // obj+0x2100 (tick) and 0x22b4 (time64)
 }
 
-func init() {
-	hardCodedHandlers["/offline"] = func(w *World, o *Object, arg string) { w.helperOffline(o) }
-	commandHandlers[21] = func(w *World, o *Object, c command, arg string) { w.helperOffline(o) }
-	tick1000Hooks = append(tick1000Hooks, (*World).offlineSecond)
+func registerOffline(h *hooks) {
+	h.hardCodedHandlers["/offline"] = func(w *World, o *Object, arg string) { w.helperOffline(o) }
+	h.commandHandlers[21] = func(w *World, o *Object, c command, arg string) { w.helperOffline(o) }
+	h.tick1000 = append(h.tick1000, (*World).offlineSecond)
 }
 
 // isOffline reports whether o is kept in the world without a client (one

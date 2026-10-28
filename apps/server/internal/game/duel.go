@@ -154,7 +154,7 @@ func (w *World) handleDuelRequest(o *Object, p []byte) {
 		w.duelMessage(o, 0xa9)
 		return
 	}
-	if t.Trade() || o.Trade() {
+	if w.tradeOpen(t) || w.tradeOpen(o) {
 		w.duelMessage(o, 0xab)
 		return
 	}
@@ -164,14 +164,13 @@ func (w *World) handleDuelRequest(o *Object, p []byte) {
 	w.send(t, packetDuelAsk(o))
 }
 
-// Trade reports whether the player has a trade window open (the
-// original tests the trade slots obj+0x2c4.. for 0xaa).
-func (o *Object) Trade() bool {
-	return o.P != nil && o.P.Trade != nil && tradeOpenHook != nil && tradeOpenHook(o)
+// tradeOpen reports whether the player has a trade window open (the
+// original tests the trade slots obj+0x2c4.. for 0xaa). No module
+// registers hooks.tradeOpen yet, so it is always false (open unknown in
+// docs/server-plan/13-progresso.md).
+func (w *World) tradeOpen(o *Object) bool {
+	return o.P != nil && o.P.Trade != nil && w.hooks.tradeOpen != nil && w.hooks.tradeOpen(o)
 }
-
-// tradeOpenHook lets the trade module report an open trade.
-var tradeOpenHook func(o *Object) bool
 
 // handleDuelAnswer is AC (FUN_00477d60): [3] accept, [4..5] requester BE,
 // [6..15] requester name.
@@ -327,12 +326,12 @@ func (w *World) duelKill(killer, victim *Object) {
 	}
 }
 
-func init() {
-	worldHandlers[0xAA] = (*World).handleDuelRequest
-	worldHandlers[0xAB] = (*World).handleDuelCancel
-	worldHandlers[0xAC] = (*World).handleDuelAnswer
-	tick1000Hooks = append(tick1000Hooks, func(w *World) { w.duelSecond() })
-	leaveWorldHooks = append(leaveWorldHooks, func(w *World, o *Object) {
+func registerDuel(h *hooks) {
+	h.worldHandlers[0xAA] = (*World).handleDuelRequest
+	h.worldHandlers[0xAB] = (*World).handleDuelCancel
+	h.worldHandlers[0xAC] = (*World).handleDuelAnswer
+	h.tick1000 = append(h.tick1000, func(w *World) { w.duelSecond() })
+	h.leaveWorld = append(h.leaveWorld, func(w *World, o *Object) {
 		if o.Duel != nil {
 			w.duelCancel(o)
 			o.Duel = nil

@@ -74,8 +74,8 @@ func (w *World) viewportRemove(o *Object) {
 			*e = VPEntry{Index: -1}
 		}
 	}
-	if itemViewportHook != nil {
-		itemViewportHook(w, o, vpItemRemove) // FUN_00514470
+	if w.hooks.itemViewport != nil {
+		w.hooks.itemViewport(w, o, vpItemRemove) // FUN_00514470
 	}
 }
 
@@ -96,11 +96,11 @@ func (w *World) viewportAdd(o *Object) {
 			vpAdd(&o.VP, i, byte(t.Type))
 			vpAdd(&t.VP2, o.Index, byte(o.Type))
 		}
-		if viewportAddHook != nil { // patentes (patente.go)
-			viewportAddHook(w, o)
+		if w.hooks.viewportAdd != nil { // patentes (patente.go)
+			w.hooks.viewportAdd(w, o)
 		}
-		if itemViewportHook != nil {
-			itemViewportHook(w, o, vpItemAdd) // FUN_00514a00
+		if w.hooks.itemViewport != nil {
+			w.hooks.itemViewport(w, o, vpItemAdd) // FUN_00514a00
 		}
 		return
 	}
@@ -133,8 +133,8 @@ func (w *World) viewportSend(o *Object) {
 		if len(gone) > 0 {
 			w.send(o, packetDestroy(gone))
 		}
-		if itemViewportHook != nil {
-			itemViewportHook(w, o, vpItemDestroy) // FUN_00514e80
+		if w.hooks.itemViewport != nil {
+			w.hooks.itemViewport(w, o, vpItemDestroy) // FUN_00514e80
 		}
 	}
 	for i := range o.VP {
@@ -150,11 +150,11 @@ func (w *World) viewportSend(o *Object) {
 	if o.IsPlayer() {
 		w.sendNewPlayers(o)
 		w.sendNewMonsters(o)
-		if itemViewportHook != nil {
-			itemViewportHook(w, o, vpItemCreate) // FUN_00515b00
+		if w.hooks.itemViewport != nil {
+			w.hooks.itemViewport(w, o, vpItemCreate) // FUN_00515b00
 		}
-		if guildViewportHook != nil {
-			guildViewportHook(w, o) // FUN_005160a0 / FUN_005162f0
+		if w.hooks.guildViewport != nil {
+			w.hooks.guildViewport(w, o) // FUN_005160a0 / FUN_005162f0
 		}
 	}
 	for i := range o.VP {
@@ -182,8 +182,8 @@ func (w *World) sendNewPlayers(o *Object) {
 		}
 		b := make([]byte, 44)
 		viewportPlayerEntry(b, t, t.Live == LiveNew && !t.Teleporting)
-		if viewEntryHook != nil { // arena PK 6 and patentes (custom_world_ext.go)
-			viewEntryHook(w, o, t, b)
+		if w.hooks.viewEntry != nil { // arena PK 6 and patentes (custom_world_ext.go)
+			w.hooks.viewEntry(w, o, t, b)
 		}
 		entries = append(entries, b)
 	}
@@ -196,20 +196,18 @@ func (w *World) sendNewPlayers(o *Object) {
 
 // sendNewMonsters is FUN_00515510 (implemented with the monster module).
 func (w *World) sendNewMonsters(o *Object) {
-	if monsterViewportHook != nil {
-		monsterViewportHook(w, o)
+	if w.hooks.monsterViewport != nil {
+		w.hooks.monsterViewport(w, o)
 	}
 }
-
-var monsterViewportHook func(*World, *Object)
 
 // showSelf is FUN_005167b0: the player's own C2 12 entry, to itself and to
 // everyone who already sees it.
 func (w *World) showSelf(o *Object) {
 	b := make([]byte, 44)
 	viewportPlayerEntry(b, o, o.Live == LiveNew && !o.Teleporting)
-	if viewEntryHook != nil { // arena PK 6 and patentes (custom_world_ext.go)
-		viewEntryHook(w, o, o, b)
+	if w.hooks.viewEntry != nil { // arena PK 6 and patentes (custom_world_ext.go)
+		w.hooks.viewEntry(w, o, o, b)
 	}
 	p := packetViewportPlayers([][]byte{b})
 	w.send(o, p)

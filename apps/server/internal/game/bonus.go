@@ -31,8 +31,8 @@ type bonusManager struct {
 	bonuses []gamedata.Bonus
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerBonus(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		bm := &bonusManager{}
 		w.ev().bonus = bm
 		if w.configDir == "" {
@@ -57,7 +57,7 @@ func init() {
 		}
 		return nil
 	})
-	tick1000Hooks = append(tick1000Hooks, (*World).bonusTick)
+	h.tick1000 = append(h.tick1000, (*World).bonusTick)
 }
 
 func (w *World) bonusOn() bool { return w.cfg.Int("Event", "BonusManagerSwitch", 0) != 0 }

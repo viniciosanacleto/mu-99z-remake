@@ -716,12 +716,12 @@ func (w *World) csSendMap(p []byte) {
 	}
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerCastlesiege(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		if w.cfg.ServerType != 1 {
 			return nil
 		}
 		return w.csLoad()
 	})
-	tick100Hooks = append(tick100Hooks, (*World).csProcess)
+	h.tick100 = append(h.tick100, (*World).csProcess)
 }

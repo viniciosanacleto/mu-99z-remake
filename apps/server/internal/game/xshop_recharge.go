@@ -24,9 +24,9 @@ import (
 // and converts the PNG/JPG/GIF/BMP. This server never makes network
 // requests: the matrix stays empty and the skip is logged (U-XSHOP-03).
 
-func init() {
-	faHandlers[0x0E] = sized(0x04, (*World).xshopRecharge)
-	faHandlers[0x10] = sized(0xC6, (*World).xshopRechargeUpload)
+func registerXshopRecharge(h *hooks) {
+	h.faHandlers[0x0E] = sized(0x04, (*World).xshopRecharge)
+	h.faHandlers[0x10] = sized(0xC6, (*World).xshopRechargeUpload)
 }
 
 // Layout of the 0x23f3-byte recharge block sent by FA 0F and received by

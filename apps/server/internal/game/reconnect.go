@@ -170,12 +170,12 @@ func (w *World) rc() *reconnectWorld {
 	return w.rcn
 }
 
-func init() {
+func registerReconnect(h *hooks) {
 	// FUN_004e1350 runs from FUN_004c4b40 before the party, guild and the
 	// other leave steps, so the hook goes first.
-	leaveWorldHooks = append([]func(*World, *Object){(*World).reconnectSave}, leaveWorldHooks...)
-	enterWorldHooks = append(enterWorldHooks, (*World).reconnectRestore)
-	tick1000Hooks = append(tick1000Hooks, (*World).reconnectSecond)
+	h.leaveWorld = append([]func(*World, *Object){(*World).reconnectSave}, h.leaveWorld...)
+	h.enterWorld = append(h.enterWorld, (*World).reconnectRestore)
+	h.tick1000 = append(h.tick1000, (*World).reconnectSecond)
 }
 
 // reconnectWrite runs one DataServer ReconnectData request off the world

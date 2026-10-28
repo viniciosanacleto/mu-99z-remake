@@ -35,9 +35,9 @@ type pkSelfDefense struct {
 	init  bool
 }
 
-func init() {
-	playerKillHook = func(w *World, killer, victim *Object) { w.playerKill(killer, victim) }
-	tick1000Hooks = append(tick1000Hooks, func(w *World) { w.pkSecond() })
+func registerPk(h *hooks) {
+	h.playerKill = func(w *World, killer, victim *Object) { w.playerKill(killer, victim) }
+	h.tick1000 = append(h.tick1000, func(w *World) { w.pkSecond() })
 }
 
 // packetPKLevel is C1 07 F3 08 index(BE) level.
@@ -164,7 +164,7 @@ func (w *World) playerKill(killer, victim *Object) {
 	if killer.Map > 0x11 && killer.Map < 0x18 && victim.Map > 0x11 && victim.Map < 0x18 {
 		return // Chaos Castle
 	}
-	for _, h := range pkExemptHooks {
+	for _, h := range w.hooks.pkExempt {
 		if h(w, killer, victim) {
 			return
 		}

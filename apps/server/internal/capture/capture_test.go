@@ -25,8 +25,12 @@ func repo(parts ...string) string {
 
 func testKeys(t *testing.T) Keys {
 	t.Helper()
-	k, err := LoadKeys(repo("config", "gameserver", "gameserver.toml"), repo("data", "Data", "Hack"),
-		repo("..", "client", "assets", "Data"))
+	// The client's Enc1.dat/Dec2.dat are kept with the crypto tests.
+	k, err := LoadKeys(
+		repo("config", "gameserver", "gameserver.toml"),
+		repo("data", "Data", "Hack"),
+		repo("internal", "protocol", "crypto", "testdata"),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}

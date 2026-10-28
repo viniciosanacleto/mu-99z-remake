@@ -27,20 +27,10 @@ func (w *World) wcx() *worldCustomsExt {
 	return c.x
 }
 
-func init() {
-	viewEntryHook = (*World).customViewEntry
-	viewportAddHook = (*World).patenteViewport
+func registerCustomWorldExt(h *hooks) {
+	h.viewEntry = (*World).customViewEntry
+	h.viewportAdd = (*World).patenteViewport
 }
-
-// Hooks called from viewport.go.
-var (
-	// viewEntryHook runs for each C2 12 entry built for viewer
-	// (FUN_00515160) and for the own entry (FUN_005167b0).
-	viewEntryHook func(w *World, viewer, t *Object, entry []byte)
-	// viewportAddHook runs after the player part of the viewport add
-	// (FUN_00514700).
-	viewportAddHook func(w *World, o *Object)
-)
 
 // customViewEntry: an arena player is shown with PK level 6
 // (FUN_00443f00 in FUN_00515160), and the viewer gets the patente of the

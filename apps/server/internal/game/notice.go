@@ -72,11 +72,11 @@ func (w *World) noticeTick() {
 	}
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerNotice(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		var err error
 		w.notices, err = loadNotices(w.configDir, w.now())
 		return err
 	})
-	tick1000Hooks = append(tick1000Hooks, (*World).noticeTick)
+	h.tick1000 = append(h.tick1000, (*World).noticeTick)
 }

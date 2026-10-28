@@ -76,11 +76,8 @@ const (
 	vpItemCreate         // FUN_00515b00 (C2 20)
 )
 
-// itemViewportHook is called by the 1-second viewport cycle.
-var itemViewportHook func(w *World, o *Object, phase int)
-
-func init() {
-	itemViewportHook = func(w *World, o *Object, phase int) {
+func registerMapitem(h *hooks) {
+	h.itemViewport = func(w *World, o *Object, phase int) {
 		switch phase {
 		case vpItemRemove:
 			w.vpItemRemove(o)
@@ -95,11 +92,11 @@ func init() {
 			}
 		}
 	}
-	tick1000Hooks = append(tick1000Hooks, func(w *World) { w.mapItemProc() })
-	dropMapItemHook = func(w *World, mp, x, y int, it item.Item, owner int) bool {
+	h.tick1000 = append(h.tick1000, func(w *World) { w.mapItemProc() })
+	h.dropMapItem = func(w *World, mp, x, y int, it item.Item, owner int) bool {
 		return w.addMapItem(mp, x, y, it, owner) >= 0
 	}
-	dropMapMoneyHook = func(w *World, mp, x, y int, amount int, owner int) bool {
+	h.dropMapMoney = func(w *World, mp, x, y int, amount int, owner int) bool {
 		return w.addMapMoney(mp, x, y, int64(amount)) >= 0
 	}
 }
@@ -382,12 +379,8 @@ func (w *World) canLoot(o *Object, num int) (ok bool, msg bool) {
 	return true, false
 }
 
-// samePartyHook reports whether two players are in the same party (party
-// module; nil means never).
-var samePartyHook func(w *World, a, b *Object) bool
-
 func samePartyHookCall(w *World, a, b *Object) bool {
-	return samePartyHook != nil && samePartyHook(w, a, b)
+	return w.hooks.sameParty != nil && w.hooks.sameParty(w, a, b)
 }
 
 // itemFlagB1 is CItem+0xb1 (FUN_0048aed0): 14,23..14,26 and 14,65..14,68.
@@ -399,9 +392,9 @@ func itemFlagB1(index int) bool {
 	return false
 }
 
-func init() {
-	worldHandlers[0x22] = func(w *World, o *Object, p []byte) { w.handlePickup(o, p) }
-	worldHandlers[0x23] = func(w *World, o *Object, p []byte) { w.handleDrop(o, p) }
+func registerMapItemHandlers(h *hooks) {
+	h.worldHandlers[0x22] = func(w *World, o *Object, p []byte) { w.handlePickup(o, p) }
+	h.worldHandlers[0x23] = func(w *World, o *Object, p []byte) { w.handleDrop(o, p) }
 }
 
 // packetPickupResult is C3 10 22 result item[7] + 5 zero bytes
@@ -517,7 +510,7 @@ func (w *World) finishPickup(o *Object, mp, num int, it item.Item) {
 	if it.Flag1 {
 		w.send(o, packetPeriodicItem(0xFFFF, slot, it.Expire)) // FUN_004d3f00
 	}
-	for _, h := range itemPickedHooks {
+	for _, h := range w.hooks.itemPicked {
 		h(w, o, it)
 	}
 }
@@ -605,14 +598,7 @@ func (w *World) handleDrop(o *Object, p []byte) {
 	w.deleteInventory(o, slot)
 	w.send(o, packetDropResult(1, byte(slot)))
 	w.equipmentChanged(o, slot)
-	for _, h := range itemDroppedHooks {
+	for _, h := range w.hooks.itemDropped {
 		h(w, o, it, num) // Blood Castle weapon (FUN_004166b0)
 	}
 }
-
-// itemPickedHooks / itemDroppedHooks let the events follow special items
-// (FUN_00416750 / FUN_004166b0).
-var (
-	itemPickedHooks  []func(w *World, o *Object, it item.Item)
-	itemDroppedHooks []func(w *World, o *Object, it item.Item, mapItem int)
-)

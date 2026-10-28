@@ -26,11 +26,8 @@ type scheduleGroup struct {
 	data   gamedata.MonsterScheduleGroup
 }
 
-// npcScheduleHook is FUN_004bb8d0; true ends the NPC talk.
-var npcScheduleHook func(w *World, o, npc *Object) bool
-
-func init() {
-	npcScheduleHook = (*World).scheduleBlocksNpc
+func registerMonsterschedule(h *hooks) {
+	h.npcSchedule = (*World).scheduleBlocksNpc
 }
 
 // setMonsterSchedule stores the groups (group numbers outside 0..99 are

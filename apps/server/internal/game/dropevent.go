@@ -11,8 +11,8 @@ type dropEventManager struct {
 	items  []gamedata.DropEventItem
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerDropevent(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		de := &dropEventManager{}
 		w.ev().drop = de
 		if w.configDir == "" {
@@ -37,7 +37,7 @@ func init() {
 		}
 		return nil
 	})
-	tick1000Hooks = append(tick1000Hooks, func(w *World) {
+	h.tick1000 = append(h.tick1000, func(w *World) {
 		de := w.ev().drop
 		if de == nil || !w.dropEventOn() {
 			return

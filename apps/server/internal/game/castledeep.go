@@ -49,8 +49,8 @@ type castleDeep struct {
 	Group  int       // +0x1c (0 = none)
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerCastledeep(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		// FUN_00419060: state EMPTY with nothing scheduled until Init.
 		cd := &castleDeep{data: &gamedata.CastleDeep{}, State: cdEmpty, Tick: w.now()}
 		w.ev().deep = cd
@@ -64,8 +64,8 @@ func init() {
 		w.cdInit()
 		return nil
 	})
-	tick1000Hooks = append(tick1000Hooks, (*World).cdTick)
-	deathHooks = append(deathHooks, func(w *World, killer, victim *Object) {
+	h.tick1000 = append(h.tick1000, (*World).cdTick)
+	h.death = append(h.death, func(w *World, killer, victim *Object) {
 		if victim.Map == cdMap && victim.Type != TypePlayer {
 			w.cdMonsterDie(killer, victim)
 		}

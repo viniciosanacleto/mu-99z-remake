@@ -391,8 +391,8 @@ func (w *World) applyEffect(o *Object, s *effectSlot, sign int, recalc bool) {
 	case effDamageReflect:
 		opt.DamageReflect += v0
 	}
-	if recalc && o.Type == TypePlayer && recalcHook != nil {
-		recalcHook(w, o)
+	if recalc && o.Type == TypePlayer && w.hooks.recalc != nil {
+		w.hooks.recalc(w, o)
 	}
 }
 
@@ -483,27 +483,27 @@ func (w *World) handleCancelEffect(o *Object, p []byte) {
 	w.removeEffect(o, info.Effect)
 }
 
-func init() {
-	worldHandlers[0x1B] = (*World).handleCancelEffect
-	moveEffectHook = func(w *World, o *Object, e int) bool { return hasEffectIndex(o, e) }
+func registerEffect(h *hooks) {
+	h.worldHandlers[0x1B] = (*World).handleCancelEffect
+	h.moveEffect = func(w *World, o *Object, e int) bool { return hasEffectIndex(o, e) }
 	// Blood Castle gates/statues get 0x3F/0x40 (monster physical / magic
 	// immunity, FUN_0040b110 makes every hit miss).
-	eventEffectHook = func(w *World, o *Object, effect int, add bool) {
+	h.eventEffect = func(w *World, o *Object, effect int, add bool) {
 		if add {
 			w.addEffect(o, effect, 0, [4]int{}, true)
 		} else {
 			w.removeEffect(o, effect)
 		}
 	}
-	questEffectHook = func(w *World, o *Object, effect, value int) {
+	h.questEffect = func(w *World, o *Object, effect, value int) {
 		w.addEffect(o, effect, value, [4]int{}, true)
 	}
-	tick1000Hooks = append(tick1000Hooks, func(w *World) {
+	h.tick1000 = append(h.tick1000, func(w *World) {
 		for _, o := range w.objects {
 			if o.State == StatePlaying && o.Eff != nil {
 				w.effectSecond(o)
 			}
 		}
 	})
-	leaveWorldHooks = append(leaveWorldHooks, func(w *World, o *Object) { w.dropEffects(o) })
+	h.leaveWorld = append(h.leaveWorld, func(w *World, o *Object) { w.dropEffects(o) })
 }

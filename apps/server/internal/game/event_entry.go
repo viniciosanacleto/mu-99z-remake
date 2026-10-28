@@ -10,8 +10,8 @@ import (
 // (DataServer FUN_0040c4c0, WZ_GetEventEntryInfo, reset on a new day) and
 // written with every character save (FUN_0040e9c0, WZ_SetEventEntryInfo).
 
-func init() {
-	enterWorldHooks = append(enterWorldHooks, func(w *World, o *Object) {
+func registerEventEntry(h *hooks) {
+	h.enterWorld = append(h.enterWorld, func(w *World, o *Object) {
 		es, ok := w.store.(store.EventEntryStore)
 		if !ok || o.P == nil || o.P.Char == nil {
 			return
@@ -30,7 +30,7 @@ func init() {
 			}
 		})
 	})
-	characterSaveHooks = append(characterSaveHooks, func(w *World, o *Object, c *store.Character) {
+	h.characterSave = append(h.characterSave, func(w *World, o *Object, c *store.Character) {
 		es, ok := w.store.(store.EventEntryStore)
 		if !ok {
 			return

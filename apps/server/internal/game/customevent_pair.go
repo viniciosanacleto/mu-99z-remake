@@ -63,9 +63,8 @@ type pairEvent struct {
 	t       [2]pairTeam // the fighting teams (+0x360, +0x37c)
 }
 
-func init() {
-	commandHandlers[133] = (*World).commandPairStart
-	delete(pendingCommands, 133)
+func registerCustomeventPair(h *hooks) {
+	h.commandHandlers[133] = (*World).commandPairStart
 }
 
 func pairSyntax(w *World) string { return w.cev().pair.data.Syntax }
@@ -491,8 +490,8 @@ func (w *World) pairFinish(e *pairEvent) {
 		}
 	}
 	if b != nil {
-		if a != nil && itemBagHook != nil {
-			itemBagHook(w, b, 0x1C, 0, a.Map, a.X, a.Y)
+		if a != nil && w.hooks.itemBag != nil {
+			w.hooks.itemBag(w, b, 0x1C, 0, a.Map, a.X, a.Y)
 		}
 		w.eventRankingN(b, "TopDupla", 13)
 		if e.data.Patente {

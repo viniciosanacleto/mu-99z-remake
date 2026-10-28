@@ -95,9 +95,7 @@ func TestBloodCastleRun(t *testing.T) {
 		t.Fatalf("statue at %d,%d life %v", statue.X, statue.Y, statue.Mon.Life)
 	}
 	var dropped item.Item
-	old := dropMapItemHook
-	dropMapItemHook = func(w *World, mp, x, y int, it item.Item, owner int) bool { dropped = it; return true }
-	t.Cleanup(func() { dropMapItemHook = old })
+	b.hooks.dropMapItem = func(w *World, mp, x, y int, it item.Item, owner int) bool { dropped = it; return true }
 	statue.Mon.Hits[0] = damageEntry{Index: o.Index, Damage: 1, Time: b.now()}
 	b.bcMonsterKilled(statue)
 	(<-b.events)() // the DataServer serial

@@ -158,7 +158,7 @@ func (w *World) enterWorld(o *Object, ch *store.Character) {
 	for _, s := range classDefaultSkills(o.Class, ch.Quest) {
 		w.addSkill(o, s, 0)
 	}
-	for _, h := range characterLoadHooks { // saved effects (effect_save.go)
+	for _, h := range w.hooks.characterLoad { // saved effects (effect_save.go)
 		h(w, o)
 	}
 
@@ -183,14 +183,14 @@ func (w *World) enterWorld(o *Object, ch *store.Character) {
 	o.P.questSent = false // FUN_0050ae50 clears obj+0x5c0 on character load
 	w.sendQuestList(o)    // FUN_00473a10 -> FUN_004dde70
 	w.showSelf(o)
-	for _, h := range enterWorldHooks {
+	for _, h := range w.hooks.enterWorld {
 		h(w, o)
 	}
 	// The Main.dll character window takes level and experience only from
 	// F3 05 / F3 E0 (0x10271788, 0x102717bc/c0), never from F3 03.
 	w.send(o, w.packetCharRefresh(o))
-	if isNew && newCharacterHook != nil { // DefaultClassFreebies (freebies.go)
-		newCharacterHook(w, o)
+	if isNew && w.hooks.newCharacter != nil { // DefaultClassFreebies (freebies.go)
+		w.hooks.newCharacter(w, o)
 	}
 	w.log.Info("AddCharacterInfo", "index", o.Index, "name", ch.Name, "account", p.Account.Login)
 }
@@ -238,8 +238,8 @@ func (w *World) rebuildCharSet(o *Object) {
 	}
 	o.CharSet = charset.Build(in, w.data.Custom)
 	// FUN_004c6ba0 runs CalcCharacter (FUN_004c9790) every time.
-	if recalcHook != nil {
-		recalcHook(w, o)
+	if w.hooks.recalc != nil {
+		w.hooks.recalc(w, o)
 	}
 }
 
@@ -290,16 +290,12 @@ func (w *World) randomGatePosition(gate int) (int, int) {
 
 // leaveWorld removes a playing character from the map and viewports.
 func (w *World) leaveWorld(o *Object) {
-	for _, h := range leaveWorldHooks {
+	for _, h := range w.hooks.leaveWorld {
 		h(w, o)
 	}
 	w.occupy(o, false)
 	w.viewportClear(o)
 }
-
-// characterSaveHooks run when saveCharacter builds the DataServer 0x30
-// record (FUN_00475c30 also sends the pet save 0x34); they may adjust it.
-var characterSaveHooks []func(w *World, o *Object, c *store.Character)
 
 // saveCharacter writes the character (DataServer 0x30, FUN_00475c30).
 func (w *World) saveCharacter(o *Object, done func(error)) {
@@ -318,7 +314,7 @@ func (w *World) saveCharacter(o *Object, done func(error)) {
 	c.MagicList = encodeMagicList(p.Skills)
 	c.Quest = bytes.Clone(p.Char.Quest)
 	c.EffectList = bytes.Clone(p.Char.EffectList)
-	for _, h := range characterSaveHooks {
+	for _, h := range w.hooks.characterSave {
 		h(w, o, &c)
 	}
 	w.async(func(ctx context.Context) func() {

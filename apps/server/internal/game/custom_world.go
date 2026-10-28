@@ -24,25 +24,14 @@ type worldCustoms struct {
 	x        *worldCustomsExt // the other customs (custom_world_ext.go)
 }
 
-func init() {
-	startHooks = append(startHooks, loadWorldCustoms)
-	tick1000Hooks = append(tick1000Hooks, (*World).customGateSecond)
-	customMoveHook = (*World).customMove
-	npcCommandHook = (*World).customNPCCommand
-	customRespawnHook = (*World).arenaOrCustomRespawn
-	deathHooks = append(deathHooks, (*World).customDeathMessage)
+func registerCustomWorld(h *hooks) {
+	h.start = append(h.start, loadWorldCustoms)
+	h.tick1000 = append(h.tick1000, (*World).customGateSecond)
+	h.customMove = (*World).customMove
+	h.npcCommand = (*World).customNPCCommand
+	h.customRespawn = (*World).arenaOrCustomRespawn
+	h.death = append(h.death, (*World).customDeathMessage)
 }
-
-// Hooks called from shared code.
-var (
-	// customMoveHook runs on every chat line after its log (chat.go).
-	customMoveHook func(w *World, o *Object, msg string)
-	// npcCommandHook runs after the NpcTalk lines; true ends the talk
-	// (npc.go).
-	npcCommandHook func(w *World, o, npc *Object) bool
-	// customRespawnHook overrides the respawn place (combat.go).
-	customRespawnHook func(w *World, o *Object) (mp, x, y int, ok bool)
-)
 
 func (w *World) wcs() *worldCustoms {
 	c := w.cev()

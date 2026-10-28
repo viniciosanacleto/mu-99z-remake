@@ -15,12 +15,6 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
-func init() {
-	register("custom", customGroup)
-	register("custom-event", customEventGroup)
-	register("xshop", xshopGroup)
-}
-
 // customGroup converts Data/Custom (without CustomXShop*, see xshopGroup).
 // Crywolf.dat, CustomDailyReward.txt and CustomMix.txt are not read by the
 // original and are left out.

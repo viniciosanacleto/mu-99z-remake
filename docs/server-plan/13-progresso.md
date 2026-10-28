@@ -159,7 +159,7 @@ Já refletidas em [02](02-protocolo-de-rede.md) e [03](03-connect-server.md):
 | `internal/store` | `Store` (memória e PostgreSQL), migrações, templates de classe, amigos/mail |
 | `internal/auth` | login/logout de contas, sessões, troca de servidor |
 | `internal/gamedata` | terreno e as tabelas de `config/data` (esquema TOML por grupo em `*_config.go`, cache do arquivo decodificado) |
-| `internal/game` | `World` (goroutine única por instância) e os módulos: login/personagens/entrada (`login.go`, `character.go`, `enterworld.go`), viewport, movimento/teleporte/chat/comandos (A), monstros/NPC/combate (B), itens/lojas/baú/trade (C), atributos/level/party/PK (D), amigos, avisos, HackPacketCheck, Hub |
+| `internal/game` | `World` (goroutine única por instância; `hooks.go`: tabela de hooks e de despacho de cada `World`, montada por `newHooks` com as funções `register<Arquivo>` em ordem fixa, sem `init()`) e os módulos: login/personagens/entrada (`login.go`, `character.go`, `enterworld.go`), viewport, movimento/teleporte/chat/comandos (A), monstros/NPC/combate (B), itens/lojas/baú/trade (C), atributos/level/party/PK (D), amigos, avisos, HackPacketCheck, Hub |
 | `internal/game/item`, `internal/game/charset` | codecs de item (16 bytes DB / 7 bytes wire) e CharSet de 18 bytes |
 
 Configuração em `apps/server/config/` (TOML gerado pelo `cmd/configconv` a partir dos originais) e binários em `apps/server/data/` com os caminhos originais (`Data/Terrain`, `Data/Script`, `Data/Hack/{Enc2,Dec1}.dat`, `Data/Skill/SkillElect.hit`, `Data/Common/Protect`, `DB/MuOnline.sql`). Chaves do cliente usadas só em teste: `internal/protocol/crypto/testdata/{Enc1,Dec2}.dat`.
@@ -182,6 +182,7 @@ Configuração em `apps/server/config/` (TOML gerado pelo `cmd/configconv` a par
 | 2026-10-26 | `go vet ./... && gofmt -l . && go test -race -count=1 -timeout 30m ./...` após juntar a `main` (TOML) com a neutralização de nomes | Todos `ok` menos `internal/capture` e `cmd/muproxy`, que já falhavam (leem `apps/client/assets/Data/Enc1.dat`, removido no commit `6ae0638`) |
 | 2026-10-27 | idem, após o teste de carga (`cmd/muload`, `internal/loadbot`, flags do `muserver`) | Todos `ok` (`internal/game` 286 s; `cmd/muserver` inclui `TestLoadBots`, 3 bots reais contra o servidor em processo) menos `internal/capture` e `cmd/muproxy`, pelo mesmo `Enc1.dat` ausente |
 | 2026-10-27 | idem, após a correção da patente (U-LOAD-01) | Todos `ok` (`internal/game` 283 s) menos `internal/capture` e `cmd/muproxy` (mesmo `Enc1.dat` ausente). `cmd/muload` com 1/10/50/100/200 jogadores: zero desconexões |
+| 2026-10-28 | `gofmt -l . && go vet ./... && go test -count=1 ./...`, mais `go test -race` em `internal/game`, `internal/connect`, `internal/capture`, `internal/auth`, `cmd/muserver` e `cmd/muproxy`, após a revisão de boas práticas Go | Todos `ok`, inclusive `internal/capture` e `cmd/muproxy`, que agora leem as chaves do cliente de `internal/protocol/crypto/testdata` (`internal/game` 64 s; 302 s com `-race`) |
 
 ## Bugs do original ainda reproduzidos (não corrigidos)
 
@@ -213,3 +214,12 @@ Blocos 1–13 concluídos, mais o teste de carga (2026-10-27, doc [18](18-teste-
 4. Bugs do original ainda reproduzidos: ver a seção acima; corrigir só com aval do usuário.
 5. **GMs no banco (2026-10-27, decisão do usuário):** o nível de GM saiu do `util.toml` e foi para `characters.gm_level` (migração `0019_gm_level.sql`, `store.GMStore`), lido com o personagem. Uma mudança vale no próximo login, sem reiniciar o servidor. O `SaveCharacter` não grava a coluna. Para promover: `muserver -db ... character gm <nome> <nível>` ou `UPDATE characters SET gm_level=...`. Para importar o `GameMaster.txt` original: `cmd/migrate -gamemasters <pasta MuServer> -to ...`. Os 5 GMs do util.toml antigo eram teste2/Admin 32, allam/AllanJPA 32, lipee13/BrizaGM 8, motocross/JANELA 8 e suportegm/SuporteGM 8. Além disso, os testes `Authority == 8` do binário viraram `gmFull` (nível ≥ 8), então o 32 tem todos os privilégios do 8 (U-GM-05 em [10f](10f-gm-eventos-custom.md)).
 6. Restos menores: ponte SQL do Lua para o PostgreSQL e 6 funções Lua, auto-party por senha (U-CUST-04), demais incógnitas listadas em cada doc.
+7. **Revisão de boas práticas Go (2026-10-28).** Os ~100 hooks globais de `internal/game`, preenchidos por ~50 `init()`, viraram a tabela `hooks` de cada `World` (`hooks.go`). Os testes trocam um hook só no próprio `World` (`b.hooks.dropMapItem = ...`), sem salvar e restaurar global. Corrigido ao longo da revisão:
+   - O desligamento (ctx cancelado) não salvava os personagens em jogo: os eventos de desconexão eram descartados e o `async` recebia um contexto já cancelado. Agora `shutdown` remove os jogadores e o `async` usa `context.WithoutCancel` com limite de 30 s (`TestServeShutdownSavesPlayingCharacters`).
+   - Um `Accept` com falha travava o `World.Serve` (`TestServeReturnsListenerError`). No `connect.Server.Serve`, a falha esperava os clientes abertos (`TestServeListenerFailureClosesClients`).
+   - Uma falha no meio da subida do `muserver` deixava os módulos já iniciados rodando com o store fechado (`TestRunStopsStartedModulesOnStartupFailure`).
+   - As lojas só registravam a fala dos NPCs no primeiro `World` (`sync.Once` global).
+   Continuam pendentes:
+   - **Incógnita:** o duelo deveria recusar quem está em trade (o original testa os slots de trade `obj+0x2c4..` contra `0xaa`), mas nenhum módulo registra `hooks.tradeOpen`, então `tradeOpen` é sempre falso, como já era antes. Falta confirmar no REA se equivale a `inTrade`.
+   - `monsterRand`/`chaosRand` ainda são globais trocados pelos testes (`fixRand`, `fixChaosRand`). Mover para o `World` exige passar o gerador às fórmulas puras (`attackDamage`, `hitCheck`, `chaosRollBag`...).
+   - `internal/game` tem cerca de 50 mil linhas num pacote só. Dividir por domínio é a próxima refatoração estrutural.

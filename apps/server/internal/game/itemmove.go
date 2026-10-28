@@ -17,8 +17,8 @@ const (
 	movePShop     = 4
 )
 
-func init() {
-	worldHandlers[0x24] = func(w *World, o *Object, p []byte) { w.handleItemMove(o, p) }
+func registerItemmove(h *hooks) {
+	h.worldHandlers[0x24] = func(w *World, o *Object, p []byte) { w.handleItemMove(o, p) }
 }
 
 // packetMoveResult is C3 0C 24 result targetSlot item[7] (result = the

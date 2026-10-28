@@ -203,22 +203,22 @@ func (w *World) petKillExp(o *Object, exp int64) {
 			} else if !w.petSubExp(it, exp) {
 				continue
 			}
-			if recalcHook != nil {
-				recalcHook(w, o)
+			if w.hooks.recalc != nil {
+				w.hooks.recalc(w, o)
 			}
 		}
 		w.send(o, packetPetInfo(pt.typ, inv, byte(pt.slot), it.PetLevel, it.PetExp))
 	}
 }
 
-func init() {
-	petExperienceHook = func(w *World, o *Object, exp int64) { w.petKillExp(o, exp) }
-	worldHandlers[0xA9] = func(w *World, o *Object, p []byte) { w.handlePetInfo(o, p) }
-	worldHandlers[0xA7] = func(w *World, o *Object, p []byte) { w.handlePetCommand(o, p) }
-	enterWorldHooks = append(enterWorldHooks, func(w *World, o *Object) { w.requestPetInfo(o, 0) })
-	warehouseLoadedHook = func(w *World, o *Object) { w.requestPetInfo(o, 1) }
-	warehouseSaveHook = func(w *World, o *Object) { w.savePetInfo(o, 1) }
-	characterSaveHooks = append(characterSaveHooks, func(w *World, o *Object, _ *store.Character) {
+func registerPet(h *hooks) {
+	h.petExperience = func(w *World, o *Object, exp int64) { w.petKillExp(o, exp) }
+	h.worldHandlers[0xA9] = func(w *World, o *Object, p []byte) { w.handlePetInfo(o, p) }
+	h.worldHandlers[0xA7] = func(w *World, o *Object, p []byte) { w.handlePetCommand(o, p) }
+	h.enterWorld = append(h.enterWorld, func(w *World, o *Object) { w.requestPetInfo(o, 0) })
+	h.warehouseLoaded = func(w *World, o *Object) { w.requestPetInfo(o, 1) }
+	h.warehouseSave = func(w *World, o *Object) { w.savePetInfo(o, 1) }
+	h.characterSave = append(h.characterSave, func(w *World, o *Object, _ *store.Character) {
 		w.savePetInfo(o, 0)
 	})
 }
@@ -324,8 +324,8 @@ func (w *World) requestPetInfo(o *Object, where int) {
 					recalc = true
 				}
 			}
-			if recalc && recalcHook != nil {
-				recalcHook(w, o)
+			if recalc && w.hooks.recalc != nil {
+				w.hooks.recalc(w, o)
 			}
 		}
 	})

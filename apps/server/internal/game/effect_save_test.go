@@ -61,8 +61,7 @@ func TestEffectListLoadAndLogoutSave(t *testing.T) {
 		t.Fatal("effects not dropped on leave")
 	}
 	var saved *store.Character
-	characterSaveHooks = append(characterSaveHooks, func(w *World, x *Object, c *store.Character) { saved = c })
-	defer func() { characterSaveHooks = characterSaveHooks[:len(characterSaveHooks)-1] }()
+	b.hooks.characterSave = append(b.hooks.characterSave, func(w *World, x *Object, c *store.Character) { saved = c })
 	b.saveCharacter(o, nil)
 	if saved == nil || !bytes.Equal(saved.EffectList[:13], []byte{effGreaterDefense, 0, 0, 0, 44, 0, 30, 0, 0, 0, 0, 0, 0}) {
 		t.Fatalf("saved = % X", saved.EffectList[:13])

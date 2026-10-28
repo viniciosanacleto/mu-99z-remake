@@ -8,8 +8,6 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
-func init() { register("character", characterGroup) }
-
 // characterGroup converts Data/Character/*.txt.
 func characterGroup(dataDir string) ([]byte, error) {
 	var c gamedata.CharacterConfig

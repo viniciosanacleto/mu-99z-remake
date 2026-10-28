@@ -3,7 +3,7 @@ package connect
 import (
 	"bytes"
 	"context"
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/servercfg"
+	"errors"
 	"io"
 	"log/slog"
 	"net"
@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/servercfg"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/serverlist"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -263,5 +264,46 @@ func TestServerDisconnects(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// breakingListener accepts the first connection and then fails.
+type breakingListener struct {
+	net.Listener
+	accepted bool
+}
+
+var errListenerBroken = errors.New("listener broken")
+
+func (l *breakingListener) Accept() (net.Conn, error) {
+	if l.accepted {
+		return nil, errListenerBroken
+	}
+	l.accepted = true
+	return l.Listener.Accept()
+}
+
+func TestServeListenerFailureClosesClients(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { ln.Close() })
+	srv := NewServer(Config{}, liveRegistry(), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	done := make(chan error, 1)
+	go func() { done <- srv.Serve(t.Context(), &breakingListener{Listener: ln}) }()
+
+	c, err := net.Dial("tcp", ln.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	select {
+	case err := <-done:
+		if !errors.Is(err, errListenerBroken) {
+			t.Fatalf("Serve = %v, want %v", err, errListenerBroken)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("Serve waited for an open client after the listener failed")
 	}
 }

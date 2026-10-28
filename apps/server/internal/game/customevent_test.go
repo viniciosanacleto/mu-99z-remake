@@ -145,7 +145,7 @@ func TestSobreEvent(t *testing.T) {
 	b.runCommand(a, "/prainhapvp")
 	hasText(t, b.drain(a), b.messageFor(a, 0x459))
 	b.runCommand(c, "/prainhapvp")
-	if b.inCustomEvent(c) != true || !commandEventBlockHook(b.World, c) {
+	if b.inCustomEvent(c) != true || !b.hooks.commandEventBlock(b.World, c) {
 		t.Fatal("event flag")
 	}
 	// Registered players cannot be attacked while waiting.

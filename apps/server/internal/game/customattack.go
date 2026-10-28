@@ -35,14 +35,14 @@ type attackState struct {
 	Target     int       // obj+0x20f4 (-1 none)
 }
 
-func init() {
-	hardCodedHandlers["/attack"] = (*World).commandAttackHardCoded
-	commandHandlers[52] = (*World).commandAttack
-	commandHandlers[53] = (*World).commandOffAttack
-	f3Handlers[0x0A] = (*World).handleAttackHelper
-	f3Handlers[0x0B] = (*World).handleAttackManual
-	worldHandlers[0x04] = func(w *World, o *Object, p []byte) { w.attackStop(o) }
-	tick100Hooks = append(tick100Hooks, (*World).attackTick)
+func registerCustomattack(h *hooks) {
+	h.hardCodedHandlers["/attack"] = (*World).commandAttackHardCoded
+	h.commandHandlers[52] = (*World).commandAttack
+	h.commandHandlers[53] = (*World).commandOffAttack
+	h.f3Handlers[0x0A] = (*World).handleAttackHelper
+	h.f3Handlers[0x0B] = (*World).handleAttackManual
+	h.worldHandlers[0x04] = func(w *World, o *Object, p []byte) { w.attackStop(o) }
+	h.tick100 = append(h.tick100, (*World).attackTick)
 }
 
 func attackOf(o *Object) *attackState { return &custom(o).Attack }
@@ -537,8 +537,8 @@ func (w *World) attackRepair(o *Object) {
 		}
 		if w.repairItem(o, s) {
 			w.send(o, packetRepairResult(uint32(o.P.Char.Money)))
-			if recalcHook != nil {
-				recalcHook(w, o)
+			if w.hooks.recalc != nil {
+				w.hooks.recalc(w, o)
 			}
 		}
 	}

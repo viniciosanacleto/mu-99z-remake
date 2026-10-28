@@ -45,8 +45,8 @@ func (w *World) daily() *dailyReward {
 	return x.daily
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerDailyreward(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		w.wcx().daily = nil
 		if w.configDir == "" {
 			return nil
@@ -55,10 +55,10 @@ func init() {
 		w.daily().rows = rows
 		return err
 	})
-	enterWorldHooks = append(enterWorldHooks, (*World).dailyLoad)
-	leaveWorldHooks = append(leaveWorldHooks, func(w *World, o *Object) { delete(w.daily().players, o.Index) })
-	tick1000Hooks = append(tick1000Hooks, (*World).dailySecond)
-	fbHandlers[0x02] = func(w *World, o *Object, p []byte) { w.handleDailyReward(o, p) }
+	h.enterWorld = append(h.enterWorld, (*World).dailyLoad)
+	h.leaveWorld = append(h.leaveWorld, func(w *World, o *Object) { delete(w.daily().players, o.Index) })
+	h.tick1000 = append(h.tick1000, (*World).dailySecond)
+	h.fbHandlers[0x02] = func(w *World, o *Object, p []byte) { w.handleDailyReward(o, p) }
 }
 
 // daysInMonth is the [4] of FB 17: February 28/29 by year%4, otherwise

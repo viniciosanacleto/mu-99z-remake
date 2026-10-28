@@ -385,15 +385,15 @@ func TestCreationGold(t *testing.T) {
 		b.store.(*store.Memory).AddGold(context.Background(), o.P.Account.Login, 0)
 	}
 	req := []byte{0xC1, 0x05, 0xFA, 0x12, 12}
-	faHandlers[0x12](b.World, o, req)
+	b.hooks.faHandlers[0x12](b.World, o, req)
 	hasText(t, b.drain(o), "Clique novamente com o botao direito para usar a Creation e receber +20 Gold.")
 	b.advance(50 * time.Millisecond)
-	faHandlers[0x12](b.World, o, req) // too fast: ignored
+	b.hooks.faHandlers[0x12](b.World, o, req) // too fast: ignored
 	if len(b.drain(o)) != 0 || o.P.Inventory[12].IsEmpty() {
 		t.Fatal("fast click used")
 	}
 	b.advance(100 * time.Millisecond)
-	faHandlers[0x12](b.World, o, req)
+	b.hooks.faHandlers[0x12](b.World, o, req)
 	b.runAsync()
 	pk := b.drain(o)
 	hasText(t, pk, "Voce recebeu +20 Gold de bonus usando a Creation!")
@@ -405,9 +405,9 @@ func TestCreationGold(t *testing.T) {
 	}
 	// A late second click arms again.
 	o.P.Inventory[12] = jewel
-	faHandlers[0x12](b.World, o, req)
+	b.hooks.faHandlers[0x12](b.World, o, req)
 	b.advance(2 * time.Second)
-	faHandlers[0x12](b.World, o, req)
+	b.hooks.faHandlers[0x12](b.World, o, req)
 	if o.P.Inventory[12].IsEmpty() {
 		t.Fatal("late click used")
 	}
@@ -557,7 +557,7 @@ func TestEventWindow(t *testing.T) {
 	}
 	b := newBareWorld(t)
 	o := b.player(PlayerStart, "Planner", 0, 130, 130)
-	worldHandlers[0x06](b.World, o, []byte{0xC1, 0x03, 0x06})
+	b.hooks.worldHandlers[0x06](b.World, o, []byte{0xC1, 0x03, 0x06})
 	b.windowSecond()
 	w := find(b.drain(o), 0xF3, 0xEF)
 	if w == nil || w[5] == 0 {

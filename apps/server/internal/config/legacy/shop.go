@@ -9,8 +9,6 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
-func init() { register("shop", shopGroup) }
-
 // shopGroup converts Data/ShopManager.txt and the Data/Shop/<ShopPath>.txt
 // files it names; the other files of Data/Shop are not read by the original.
 func shopGroup(dataDir string) ([]byte, error) {

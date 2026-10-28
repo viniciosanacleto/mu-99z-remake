@@ -6,8 +6,8 @@ import "github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 // that change game rules here. The others are parsed and checked by the
 // data coverage test (datacoverage_test.go) until their systems exist.
 
-func init() {
-	startHooks = append(startHooks, loadDataFiles)
+func registerDatafiles(h *hooks) {
+	h.start = append(h.start, loadDataFiles)
 }
 
 func loadDataFiles(w *World) error {

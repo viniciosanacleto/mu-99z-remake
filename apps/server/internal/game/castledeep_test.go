@@ -215,7 +215,7 @@ func TestCastleDeepKillNotice(t *testing.T) {
 	}
 	boss := spawn(295, cdAttribute)
 	boss.Mon.Hits[0] = damageEntry{Index: p.Index, Damage: 10, Time: b.now()}
-	for _, h := range deathHooks {
+	for _, h := range b.hooks.death {
 		h(b.World, p, boss)
 	}
 	want := b.messageFor(p, cdMsgKill, monsterName(boss), "Slayer")

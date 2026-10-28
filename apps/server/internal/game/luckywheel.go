@@ -30,13 +30,13 @@ import (
 // here the spin waits in a per-player queue checked every 100 ms
 // (U-LW-02).
 
-func init() {
-	fbHandlers[0x16] = (*World).wheelSpinRequest
-	enterWorldHooks = append(enterWorldHooks, func(w *World, o *Object) {
+func registerLuckywheel(h *hooks) {
+	h.fbHandlers[0x16] = (*World).wheelSpinRequest
+	h.enterWorld = append(h.enterWorld, func(w *World, o *Object) {
 		w.send(o, w.packetWheelList())
 		w.send(o, packetWheelCost(uint32(w.wheelCost())))
 	})
-	tick100Hooks = append(tick100Hooks, (*World).wheelTick)
+	h.tick100 = append(h.tick100, (*World).wheelTick)
 }
 
 // wheelPositions is the rand() % 12 of FUN_0044e570.

@@ -202,7 +202,7 @@ func TestMagicTeleport(t *testing.T) {
 func TestTeleportHook(t *testing.T) {
 	b := newBareWorld(t)
 	a := b.player(PlayerStart, "Alpha", 0, 130, 130)
-	teleportHook(b.World, a, 2, 200, 50, 4)
+	b.hooks.teleport(b.World, a, 2, 200, 50, 4)
 	if a.Map != 2 || a.X != 200 || a.Y != 50 || a.Dir != 4 || a.Move.Regen != 1 {
 		t.Fatalf("hook: map %d %d,%d", a.Map, a.X, a.Y)
 	}

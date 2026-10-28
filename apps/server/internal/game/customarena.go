@@ -88,22 +88,13 @@ func (w *World) arena() *customArena {
 
 func (a *customArena) rule(e *arenaEntry) *gamedata.CustomArenaRule { return &a.data.Rules[e.Index] }
 
-func init() {
-	startHooks = append(startHooks, loadCustomArena)
-	tick1000Hooks = append(tick1000Hooks, (*World).arenaSecond)
-	deathHooks = append(deathHooks, (*World).arenaDeath)
-	arenaMoveHook = (*World).arenaJoin
-	arenaFightHook = (*World).arenaFighting
+func registerCustomarena(h *hooks) {
+	h.start = append(h.start, loadCustomArena)
+	h.tick1000 = append(h.tick1000, (*World).arenaSecond)
+	h.death = append(h.death, (*World).arenaDeath)
+	h.arenaMove = (*World).arenaJoin
+	h.arenaFight = (*World).arenaFighting
 }
-
-// Hooks owned by this file and called from shared code.
-var (
-	// arenaMoveHook is the arena part of CMove::Move (command.go moveTo):
-	// false stops the move.
-	arenaMoveHook func(w *World, o *Object, gate int) bool
-	// arenaFightHook is FUN_00443f50 for the attacker (pvp.go, skill.go).
-	arenaFightHook func(w *World, a *Object) bool
-)
 
 // loadCustomArena is FUN_00442fd0 + FUN_00443040 and, at the end of the
 // start-up, FUN_00442f70.
@@ -301,8 +292,8 @@ func (w *World) arenaFinish(e *arenaEntry) {
 		if r.RewardBag != -1 {
 			bag = r.RewardBag
 		}
-		if itemBagHook != nil {
-			itemBagHook(w, o, bag, e.Index, o.Map, o.X, o.Y)
+		if w.hooks.itemBag != nil {
+			w.hooks.itemBag(w, o, bag, e.Index, o.Map, o.X, o.Y)
 		}
 		if o.P != nil {
 			w.customMsg(o, msgArenaRank, r.Name, u.Rank, u.Score)

@@ -4,6 +4,17 @@ All changes to this project are recorded here, newest first.
 
 ## 2026-10-28
 
+- Reworked `apps/server` against the Go skills (design patterns, concurrency, context, error handling, testing):
+  - `internal/game`: the ~100 package-level hook variables and dispatch tables (`startHooks`, `tick1000Hooks`, `worldHandlers`, `npcTalkHooks`, ...) filled by ~50 `init()` functions are now a per-`World` `hooks` table (`hooks.go`). `newHooks` builds it by calling the former `init` bodies, now `register<File>(h *hooks)`, in their old order. Tests stub hooks on their own `World` instead of swapping globals. Removed the dead `pendingCommands` map, the unused `errNoSession`, the empty placeholder `type ()` in `ext.go` and the shop `sync.Once`, which only registered shop NPC talks on the first `World`.
+  - `internal/config/legacy`: the 13 `init()`/`register` calls are now one ordered `dataGroups` table in `convert.go` (same output order; `TestOutputs`).
+  - Fixed: a clean shutdown did not save the characters in game. Disconnect events were dropped once the loop stopped, and async store work got a cancelled context. `World.shutdown` now removes every player itself, and `async` runs with `context.WithoutCancel` bounded by 30 s (`world.go`; `TestServeShutdownSavesPlayingCharacters`).
+  - Fixed: `World.Serve` hung forever when `Accept` failed while its context was alive (`TestServeReturnsListenerError`). It now cancels its own context, uses `context.AfterFunc` instead of a watcher goroutine and `WaitGroup.Go` for async work, and replaces the stored `ctx` used by `post` with a `stopped` channel. That also removes a data race between `Serve` and early `post` calls.
+  - Fixed: `connect.Server.Serve` waited for open clients after its listener failed (`TestServeListenerFailureClosesClients`). It also gets the same `AfterFunc`/`WaitGroup.Go` cleanup and a doc comment on `NewServer`.
+  - Fixed: a `muserver` start-up failure, such as a busy ConnectServer port, left the game servers already started running with the store closed. `run` now cancels and waits for them. Its wiring moved into `modules.start`/`startGameServer`/`startConnectServer`, with wrapped listen errors (`cmd/muserver/main.go`; `TestRunStopsStartedModulesOnStartupFailure`).
+  - `internal/auth`: password-rehash and logout store failures are now logged through the new `auth.Config.Log` instead of being discarded with `_ =` (`TestBestEffortStoreFailuresAreLogged`).
+  - `internal/capture`: the proxy uses `WaitGroup.Go` and logs per-route `Serve` errors.
+  - `internal/capture` and `cmd/muproxy` tests read the client keys from `internal/protocol/crypto/testdata`, not the deleted `apps/client` folder, so the whole suite passes again.
+  - Recorded the open `tradeOpen` unknown and the follow-ups (RNG globals, splitting `internal/game`) in `docs/server-plan/13-progresso.md`.
 - Copied 13 Go skills (`golang-code-style`, `golang-testing`, `golang-error-handling`, `golang-security`, `golang-design-patterns`, `golang-performance`, `golang-concurrency`, `golang-context`, `golang-naming`, `golang-database`, `golang-safety`, `golang-project-layout`, `golang-documentation`) into `.claude/skills/`, and added a "Go skills" section to `CLAUDE.md` saying when to load each one for Go work.
 
 ## 2026-10-27

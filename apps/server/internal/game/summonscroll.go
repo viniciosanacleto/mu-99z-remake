@@ -29,8 +29,8 @@ func (w *World) summon() *summonScroll {
 	return x.summon
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerSummonscroll(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		w.wcx().summon = nil
 		if w.configDir == "" {
 			return nil
@@ -39,13 +39,8 @@ func init() {
 		w.summon().data = d
 		return err
 	})
-	summonScrollHook = (*World).summonScrollDrop
+	h.summonScroll = (*World).summonScrollDrop
 }
-
-// summonScrollHook is the SummonScroll branch of the 23 handler
-// (drop.go): handled when the item is a scroll; ok when it was used
-// (removed from the inventory), otherwise the drop is refused.
-var summonScrollHook func(w *World, o *Object, it item.Item, x, y int) (handled, ok bool)
 
 // summonEventMap: Devil Square, Blood Castle and Chaos Castle refuse the
 // scroll.

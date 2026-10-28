@@ -269,7 +269,7 @@ func (w *World) ravenAttack(a, t *Object, send, splash bool) bool {
 	if w.cellHas(a, gamedata.AttrSafeZone) || w.cellHas(t, gamedata.AttrSafeZone) {
 		return false
 	}
-	if castleAttackHook != nil && !castleAttackHook(w, a, t) {
+	if w.hooks.castleAttack != nil && !w.hooks.castleAttack(w, a, t) {
 		return false
 	}
 	if wa := w.guildWarOf(guildNumberOf(a)); wa != nil && wa.active {
@@ -377,8 +377,8 @@ func (w *World) ravenHit(a, t *Object, ts CombatStats, to effectOptions, reduced
 			case a.Map > 0x11 && a.Map < 0x18 && t.Map > 0x11 && t.Map < 0x18:
 				dmg = w.cfg.Int("Character", "ChaosCastleDamageRate", 100) * dmg / 100
 			default:
-				if castleDamageRateHook != nil {
-					if r, ok := castleDamageRateHook(w, a, t); ok {
+				if w.hooks.castleDamageRate != nil {
+					if r, ok := w.hooks.castleDamageRate(w, a, t); ok {
 						dmg = r * dmg / 100
 					}
 				}
@@ -468,7 +468,7 @@ func (w *World) ravenSelfDefense(a, t *Object, effect int, duel bool) bool {
 	if w.atWar(a, t) {
 		return false
 	}
-	if a.Map == csMap && castleBattleHook != nil && castleBattleHook(w) && csSide(a) != 0 {
+	if a.Map == csMap && w.hooks.castleBattle != nil && w.hooks.castleBattle(w) && csSide(a) != 0 {
 		return false
 	}
 	arena := w.cfg.Int("Custom", "CustomArenaMapNumber", -1)
@@ -508,8 +508,8 @@ func (w *World) ravenDurability(o *Object, dmg int) {
 	}
 	it.Durability = d
 	ps.DurCount = 0
-	if w.ravenDurFactor(o) != before && recalcHook != nil {
-		recalcHook(w, o) // FUN_0048d990 -> CalcCharacter
+	if w.ravenDurFactor(o) != before && w.hooks.recalc != nil {
+		w.hooks.recalc(w, o) // FUN_0048d990 -> CalcCharacter
 	}
 	w.send(o, packetItemDurability(1, truncDur(it.Durability), 0))
 	w.send(o, packetPetInfo(0, 0, 1, it.PetLevel, it.PetExp))
@@ -561,8 +561,8 @@ func loadPetDamageTable(configDir string) ([]petDamageRow, error) {
 	return out, nil
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerPetRaven(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		if w.configDir == "" {
 			return nil
 		}
@@ -573,12 +573,12 @@ func init() {
 		w.q().petDamage = rows
 		return nil
 	})
-	tick100Hooks = append(tick100Hooks, func(w *World) {
+	h.tick100 = append(h.tick100, func(w *World) {
 		for i := PlayerStart; i < MaxObjects; i++ {
 			if o := w.objects[i]; o.State == StatePlaying && o.P != nil && o.P.Pet != nil {
 				w.ravenTick(o)
 			}
 		}
 	})
-	beforeGateMoveHooks = append(beforeGateMoveHooks, func(w *World, o *Object) { w.ravenReset(o) })
+	h.beforeGateMove = append(h.beforeGateMove, func(w *World, o *Object) { w.ravenReset(o) })
 }

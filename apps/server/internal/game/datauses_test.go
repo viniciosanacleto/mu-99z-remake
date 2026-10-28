@@ -76,9 +76,7 @@ func TestFreebies(t *testing.T) {
 func TestFreebiesOnlyForNewCharacters(t *testing.T) {
 	b := newBareWorld(t)
 	calls := 0
-	old := newCharacterHook
-	newCharacterHook = func(*World, *Object) { calls++ }
-	defer func() { newCharacterHook = old }()
+	b.hooks.newCharacter = func(*World, *Object) { calls++ }
 	for _, isNew := range []bool{true, false} {
 		o := b.player(PlayerStart, "Enter", 0, 130, 130)
 		ch := &store.Character{Name: "Enter", Class: 0x10, Level: 1, Map: 0, X: 130, Y: 130, IsNew: isNew}
@@ -323,11 +321,11 @@ func TestMonsterSchedule(t *testing.T) {
 
 func TestGameServerBlackList(t *testing.T) {
 	b := newBareWorld(t)
-	if !acceptFilterHook(b.World, "127.0.0.1") {
+	if !b.hooks.acceptFilter(b.World, "127.0.0.1") {
 		t.Fatal("empty list refused")
 	}
 	b.dus().blackIPs["10.0.0.7"] = true
-	if acceptFilterHook(b.World, "10.0.0.7") || !acceptFilterHook(b.World, "10.0.0.70") {
+	if b.hooks.acceptFilter(b.World, "10.0.0.7") || !b.hooks.acceptFilter(b.World, "10.0.0.70") {
 		t.Fatal("IP lookup")
 	}
 	hw := "ABCDEFGH-IJKLMNOP-QRSTUVWX-YZ012345-67890123"

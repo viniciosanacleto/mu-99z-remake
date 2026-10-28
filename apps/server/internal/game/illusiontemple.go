@@ -16,8 +16,8 @@ package game
 
 const itMsgNotStrong = 45 // 0x2d
 
-func init() {
-	eventTimeHandlers[5] = (*World).itRemainTime
+func registerIllusiontemple(h *hooks) {
+	h.eventTimeHandlers[5] = (*World).itRemainTime
 }
 
 // itRemainTime is the type 5 branch of 91.

@@ -15,11 +15,11 @@ import (
 // a level up triggers (obj+0x5dc).
 const levelUpSaveInterval = 60 * time.Second
 
-func init() {
-	gainExperienceHook = func(w *World, o *Object, exp int64) {
+func registerLevelup(h *hooks) {
+	h.gainExperience = func(w *World, o *Object, exp int64) {
 		w.levelUp(o, exp, w.cfg.Int("Common", "MaxLevelUp", 0))
 	}
-	partyExperienceHook = func(w *World, killer, monster *Object, damage int, flag bool) bool {
+	h.partyExperience = func(w *World, killer, monster *Object, damage int, flag bool) bool {
 		return w.partyExperience(killer, monster, damage, flag)
 	}
 }
@@ -271,8 +271,8 @@ func (w *World) partyExperience(killer, monster *Object, damage int, flag bool) 
 		if monster.Mon != nil {
 			monster.Mon.ExpGiven += int64(v / uint64(count))
 		}
-		if petExperienceHook != nil {
-			petExperienceHook(w, m, int64(int32(v/uint64(count)))) // FUN_004c69d0 (EBX = share)
+		if w.hooks.petExperience != nil {
+			w.hooks.petExperience(w, m, int64(int32(v/uint64(count)))) // FUN_004c69d0 (EBX = share)
 		}
 		leveled := w.levelUp(m, int64(v), w.cfg.Int("Common", "MaxLevelUp", 0))
 		shown := uint32(v)

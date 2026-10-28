@@ -18,9 +18,7 @@ func TestDropEventDrop(t *testing.T) {
 		{Event: 0, Index: 14*512 + 14, Option: [6]int{-1, -1, -1, -1, -1, -1}, Map: 0, Monster: -1, MinLevel: -1, MaxLevel: -1, AccountLevel: 0, Rate: 5000},
 	}}
 	var dropped item.Item
-	old := dropMapItemHook
-	dropMapItemHook = func(w *World, mp, x, y int, it item.Item, owner int) bool { dropped = it; return owner == p.Index }
-	t.Cleanup(func() { dropMapItemHook = old })
+	b.hooks.dropMapItem = func(w *World, mp, x, y int, it item.Item, owner int) bool { dropped = it; return owner == p.Index }
 	fixRand(t, 5000) // rate 5000 <= 5000: refused
 	if b.dropEventDrop(p, m) {
 		t.Fatal("dropped although the roll failed")

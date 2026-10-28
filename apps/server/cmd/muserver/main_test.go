@@ -6,8 +6,12 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/gsconfig"
 )
 
 func TestRunServesConnectAndGame(t *testing.T) {
@@ -90,4 +94,29 @@ func TestBlackListFlag(t *testing.T) {
 			t.Errorf("-blacklist %q: %d addresses, want %d", in, got, want)
 		}
 	}
+}
+
+// A start-up failure after some modules are serving stops them before run
+// returns (the store is closed right after).
+func TestRunStopsStartedModulesOnStartupFailure(t *testing.T) {
+	busy, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer busy.Close()
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	err = run(t.Context(), []string{"-config", "../../config", "-data", "../../data", "-connect-addr", busy.Addr().String(),
+		"-bind", "127.0.0.1", "-blacklist", "none", "-instances", "gameserver"}, log, nil)
+	if err == nil || !strings.Contains(err.Error(), "listening on") {
+		t.Fatalf("run = %v, want a listen error", err)
+	}
+	gcfg, err := gsconfig.Load("../../config/gameserver/gameserver.toml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ln, err := net.Listen("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(gcfg.ServerPort)))
+	if err != nil {
+		t.Fatalf("game server still listening after run returned: %v", err)
+	}
+	ln.Close()
 }

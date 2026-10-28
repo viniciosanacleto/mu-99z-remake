@@ -18,10 +18,6 @@ import (
 
 const effectRecordSize = 13
 
-// characterLoadHooks run in enterWorld after the inventory and skills are
-// decoded and before CharSet / CalcCharacter (FUN_004cc730 order).
-var characterLoadHooks []func(w *World, o *Object)
-
 // encodeEffectList is the FUN_0047a3d0 loop of FUN_00475c30.
 func encodeEffectList(o *Object) []byte {
 	b := make([]byte, store.EffectListSize)
@@ -70,9 +66,9 @@ func (w *World) loadEffectList(o *Object) {
 	c.EffectList = encodeEffectList(o)
 }
 
-func init() {
-	characterLoadHooks = append(characterLoadHooks, (*World).loadEffectList)
-	characterSaveHooks = append(characterSaveHooks, func(w *World, o *Object, c *store.Character) {
+func registerEffectSave(h *hooks) {
+	h.characterLoad = append(h.characterLoad, (*World).loadEffectList)
+	h.characterSave = append(h.characterSave, func(w *World, o *Object, c *store.Character) {
 		if o.Eff != nil {
 			c.EffectList = encodeEffectList(o)
 		}
@@ -80,9 +76,9 @@ func init() {
 	// The effects are dropped when the character leaves the map, before
 	// the final save: keep their records first (prepended, so it runs
 	// before effect.go's dropEffects).
-	leaveWorldHooks = append([]func(*World, *Object){func(w *World, o *Object) {
+	h.leaveWorld = append([]func(*World, *Object){func(w *World, o *Object) {
 		if o.P != nil && o.P.Char != nil && o.Eff != nil {
 			o.P.Char.EffectList = encodeEffectList(o)
 		}
-	}}, leaveWorldHooks...)
+	}}, h.leaveWorld...)
 }

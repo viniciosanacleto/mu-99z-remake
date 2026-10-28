@@ -95,16 +95,8 @@ func dirStep(d byte) (int, int) {
 	return 0, 0
 }
 
-// moveEffectHook reports whether o has effect index e active (the
-// obj+0x5fc effect list, FUN_00478ec0). The effects module sets it.
-var moveEffectHook func(w *World, o *Object, e int) bool
-
-// chaosCastleStateHook returns the state of Chaos Castle room 0..5
-// (DAT_010d6130 + room*0x748); the Chaos Castle module sets it.
-var chaosCastleStateHook func(w *World, room int) int
-
 func (w *World) hasEffect(o *Object, e int) bool {
-	return moveEffectHook != nil && moveEffectHook(w, o, e)
+	return w.hooks.moveEffect != nil && w.hooks.moveEffect(w, o, e)
 }
 
 // immobilized is FUN_0047a470 || FUN_0047a4e0: effects 61 (Stern), 72,
@@ -135,7 +127,7 @@ func (m *moveState) clearPath() {
 // to the town gate of its class and the packet is ignored. Chaos Castle
 // maps 18..23 in state 4 skip the check.
 func (w *World) stuckInWall(o *Object) bool {
-	if o.Map >= 18 && o.Map <= 23 && chaosCastleStateHook != nil && chaosCastleStateHook(w, o.Map-18) == 4 {
+	if o.Map >= 18 && o.Map <= 23 && w.hooks.chaosCastleState != nil && w.hooks.chaosCastleState(w, o.Map-18) == 4 {
 		return false
 	}
 	t := w.terrain(o.Map)
@@ -237,7 +229,7 @@ func (w *World) handleWalk(o *Object, pkt []byte) {
 }
 
 // walk builds the path and validates/applies it (the body of
-// FUN_004d8b80 after the preconditions); setPathHook uses it for every
+// FUN_004d8b80 after the preconditions); hooks.setPath uses it for every
 // object type.
 func (w *World) walk(o *Object, sx, sy int, dirs []byte) bool {
 	m := mv(o)
@@ -356,8 +348,8 @@ func (w *World) handlePosition(o *Object, pkt []byte) {
 	if o.Type == TypePlayer && w.stuckInWall(o) {
 		return
 	}
-	if windowCloseHook != nil { // obj+0x24a8 = 0 (windowtime.go)
-		windowCloseHook(w, o)
+	if w.hooks.windowClose != nil { // obj+0x24a8 = 0 (windowtime.go)
+		w.hooks.windowClose(w, o)
 	}
 	if o.Map >= 18 && o.Map <= 23 && w.now().Sub(m.CCPushTick) < time.Second {
 		return
@@ -473,19 +465,19 @@ func (w *World) moveTick() {
 	}
 }
 
-func init() {
-	worldHandlers[0xD3] = (*World).handleWalk
-	worldHandlers[0xDF] = (*World).handlePosition
-	worldHandlers[0x18] = (*World).handleAction
-	tick100Hooks = append(tick100Hooks, (*World).moveTick)
-	setPathHook = func(w *World, o *Object, sx, sy int, dirs []byte) { w.walk(o, sx, sy, dirs) }
-	enterWorldHooks = append(enterWorldHooks, func(w *World, o *Object) {
+func registerMove(h *hooks) {
+	h.worldHandlers[0xD3] = (*World).handleWalk
+	h.worldHandlers[0xDF] = (*World).handlePosition
+	h.worldHandlers[0x18] = (*World).handleAction
+	h.tick100 = append(h.tick100, (*World).moveTick)
+	h.setPath = func(w *World, o *Object, sx, sy int, dirs []byte) { w.walk(o, sx, sy, dirs) }
+	h.enterWorld = append(h.enterWorld, func(w *World, o *Object) {
 		o.Move = nil
 		m := mv(o)
 		m.OldX, m.OldY = o.X, o.Y
 		m.Authority = w.gmLevel(o)
 	})
-	leaveWorldHooks = append(leaveWorldHooks, func(w *World, o *Object) {
+	h.leaveWorld = append(h.leaveWorld, func(w *World, o *Object) {
 		if m := o.Move; m != nil {
 			w.setOccupancy(o, m.OldX, m.OldY, false)
 			m.clearPath()

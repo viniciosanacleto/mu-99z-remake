@@ -9,8 +9,6 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
-func init() { register("item", itemGroup) }
-
 // itemGroup converts Data/Item/*.txt into config/data/item.toml.
 func itemGroup(dataDir string) ([]byte, error) {
 	var c gamedata.ItemConfig

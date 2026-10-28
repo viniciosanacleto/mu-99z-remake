@@ -7,8 +7,6 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
-func init() { register("skill", skillGroup) }
-
 // skillGroup converts Data/Skill/*.txt.
 func skillGroup(dataDir string) ([]byte, error) {
 	var c gamedata.SkillConfig

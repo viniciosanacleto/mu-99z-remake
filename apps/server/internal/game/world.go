@@ -2,7 +2,6 @@ package game
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -112,10 +111,23 @@ type World struct {
 	petExpOnce sync.Once
 	csLocal    *castleSync // castlesiege_tax.go: castle sync of a World without hub
 
-	events chan func()
-	ctx    context.Context
-	wg     sync.WaitGroup
+	hooks *hooks // hooks.go: module hooks and dispatch tables
+
+	events  chan func()
+	stopped chan struct{} // closed when the world loop has returned
+	// serveCtx is the context of the running Serve call: the World is an
+	// actor whose lifetime is that call, and async derives the contexts of
+	// its store work from it. Nil until Serve runs (bare test worlds).
+	serveCtx context.Context
+	wg       sync.WaitGroup
 }
+
+// eventQueue bounds the events waiting for the world goroutine.
+const eventQueue = 4096
+
+// asyncTimeout bounds one piece of async store work. The work is not
+// cancelled with Serve's context, so the saves of a shutdown complete.
+const asyncTimeout = 30 * time.Second
 
 // New loads configuration-dependent data and builds an instance.
 func New(o Options) (*World, error) {
@@ -142,11 +154,24 @@ func New(o Options) (*World, error) {
 	if err != nil {
 		return nil, err
 	}
-	w := &World{cfg: cfg, data: data, store: o.Store, auth: o.Auth, reporter: o.Reporter,
-		log: o.Log.With("server", cfg.ServerName, "code", cfg.ServerCode), now: o.Now,
-		keys:   gscodec.Keys{Stream: stream, Encrypt: enc, Decrypt: dec},
-		events: make(chan func(), 4096), nextUser: PlayerStart, publicIP: o.PublicIP,
-		dataDir: o.DataDir, configDir: o.ConfigDir}
+	w := &World{
+		cfg:       cfg,
+		data:      data,
+		store:     o.Store,
+		auth:      o.Auth,
+		reporter:  o.Reporter,
+		log:       o.Log.With("server", cfg.ServerName, "code", cfg.ServerCode),
+		now:       o.Now,
+		keys:      gscodec.Keys{Stream: stream, Encrypt: enc, Decrypt: dec},
+		events:    make(chan func(), eventQueue),
+		stopped:   make(chan struct{}),
+		nextUser:  PlayerStart,
+		publicIP:  o.PublicIP,
+		dataDir:   o.DataDir,
+		configDir: o.ConfigDir,
+		badWords:  o.BadSyntax,
+		hooks:     newHooks(),
+	}
 	if w.terrains, err = gamedata.LoadTerrains(o.DataDir); err != nil {
 		return nil, err
 	}
@@ -159,7 +184,6 @@ func New(o Options) (*World, error) {
 	if w.connectMembers, err = loadConnectMembers(o.ConfigDir); err != nil {
 		return nil, err
 	}
-	w.badWords = o.BadSyntax
 	for i := range w.objects {
 		w.objects[i] = newObject(i)
 	}
@@ -168,7 +192,7 @@ func New(o Options) (*World, error) {
 		w.hub = NewHub()
 	}
 	w.hub.register(w)
-	for _, h := range startHooks {
+	for _, h := range w.hooks.start {
 		if err := h(w); err != nil {
 			return nil, err
 		}
@@ -203,34 +227,23 @@ func loadData(dir, cfgDir string, cfg *gsconfig.Config) (*Data, error) {
 	return d, nil
 }
 
-// Serve accepts clients on ln and runs the world until ctx is done.
+// Serve accepts clients on ln and runs the world until ctx is done or ln
+// fails. It returns once the world loop has stopped, every player was
+// removed (and saved) and the async work finished. A World serves once.
 func (w *World) Serve(ctx context.Context, ln net.Listener) error {
-	w.ctx = ctx
-	go func() {
-		<-ctx.Done()
-		ln.Close()
-	}()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	stopListener := context.AfterFunc(ctx, func() { ln.Close() })
+	defer stopListener()
 	if err := w.store.ResetSessions(ctx); err != nil {
-		return err
+		close(w.stopped)
+		return fmt.Errorf("resetting sessions: %w", err)
 	}
-	loopDone := make(chan struct{})
-	go func() {
-		defer close(loopDone)
-		w.loop(ctx)
-	}()
-	var err error
-	for {
-		nc, aerr := ln.Accept()
-		if aerr != nil {
-			if ctx.Err() == nil {
-				err = aerr
-			}
-			break
-		}
-		c := newConn(nc, w.keys)
-		w.post(func() { w.accept(c) })
-	}
-	<-loopDone
+	w.serveCtx = ctx
+	go w.loop(ctx)
+	err := w.acceptLoop(ctx, ln)
+	cancel() // a failed listener stops the world too
+	<-w.stopped
 	w.wg.Wait()
 	if w.reporter != nil {
 		w.reporter.MarkDown(w.cfg.ServerCode)
@@ -238,38 +251,53 @@ func (w *World) Serve(ctx context.Context, ln net.Listener) error {
 	return err
 }
 
-// post schedules f on the world goroutine.
-func (w *World) post(f func()) {
-	select {
-	case w.events <- f:
-	case <-w.ctxDone():
+// acceptLoop hands every accepted socket to the world goroutine until ln
+// fails. The error is nil when the failure comes from ctx being done.
+func (w *World) acceptLoop(ctx context.Context, ln net.Listener) error {
+	for {
+		nc, err := ln.Accept()
+		if err != nil {
+			if ctx.Err() != nil {
+				return nil
+			}
+			return fmt.Errorf("accepting: %w", err)
+		}
+		c := newConn(nc, w.keys)
+		w.post(func() { w.accept(c) })
 	}
 }
 
-func (w *World) ctxDone() <-chan struct{} {
-	if w.ctx == nil {
-		return nil
+// post schedules f on the world goroutine. It drops f once the world loop
+// has stopped.
+func (w *World) post(f func()) {
+	select {
+	case w.events <- f:
+	case <-w.stopped:
 	}
-	return w.ctx.Done()
 }
 
 // async runs work off the world goroutine (database calls, as the original
 // delegated them to the DataServer/JoinServer) and posts its continuation.
+// The work keeps running when Serve's context is cancelled (bounded by
+// asyncTimeout), so the saves of a shutdown reach the store.
 func (w *World) async(work func(ctx context.Context) func()) {
-	w.wg.Add(1)
-	go func() {
-		defer w.wg.Done()
-		ctx := w.ctx
-		if ctx == nil {
-			ctx = context.Background()
-		}
+	base := w.serveCtx
+	if base == nil {
+		base = context.Background() // a bare World driven by tests, without Serve
+	}
+	w.wg.Go(func() {
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(base), asyncTimeout)
+		defer cancel()
 		if cont := work(ctx); cont != nil {
 			w.post(cont)
 		}
-	}()
+	})
 }
 
+// loop is the world goroutine: it runs the posted events and the 100 ms
+// and 1 s ticks until ctx is done, then shuts the instance down.
 func (w *World) loop(ctx context.Context) {
+	defer close(w.stopped)
 	fast := time.NewTicker(100 * time.Millisecond)
 	slow := time.NewTicker(time.Second)
 	defer fast.Stop()
@@ -290,12 +318,18 @@ func (w *World) loop(ctx context.Context) {
 	}
 }
 
+// shutdown closes every client and removes (saves) its object. The
+// readers' disconnect events are not delivered once the loop returns, so
+// the players are removed here instead of in disconnected.
 func (w *World) shutdown() {
 	w.closing = true
 	for i := PlayerStart; i < MaxObjects; i++ {
-		if o := w.objects[i]; o.conn != nil {
-			w.closeClient(o, "server shutdown")
+		o := w.objects[i]
+		if o.conn == nil || w.offlineKick(o) { // offline modes (offline.go)
+			continue
 		}
+		w.closeClient(o, "server shutdown")
+		w.removePlayer(o)
 	}
 }
 
@@ -308,7 +342,7 @@ func (w *World) report() {
 // accept reproduces FUN_0050c260 (index allocation) and FUN_0050c3c0
 // (AddClient), then sends F1 00 (FUN_004db050).
 func (w *World) accept(c *conn) {
-	if acceptFilterHook != nil && !acceptFilterHook(w, c.ip) { // Data/BlackList.txt (blacklist.go)
+	if w.hooks.acceptFilter != nil && !w.hooks.acceptFilter(w, c.ip) { // Data/BlackList.txt (blacklist.go)
 		c.close()
 		return
 	}
@@ -437,9 +471,7 @@ func (w *World) KickAccount(account string) {
 	})
 }
 
-var errNoSession = errors.New("game: no session")
-
-// mustPlayer returns the object bound to c, or nil if the slot was reused.
+// objectOf returns the object bound to c, or nil if the slot was reused.
 func (w *World) objectOf(c *conn) *Object {
 	if c.index < 0 || c.index >= MaxObjects {
 		return nil

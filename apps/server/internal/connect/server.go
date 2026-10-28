@@ -50,30 +50,40 @@ type Server struct {
 	black   map[string]bool
 }
 
+// NewServer builds a ConnectServer front end that lists the servers of reg.
 func NewServer(cfg Config, reg *Registry, log *slog.Logger) *Server {
-	s := &Server{cfg: cfg, reg: reg, log: log, now: time.Now,
-		perIP: map[string]int{}, black: map[string]bool{}}
+	s := &Server{
+		cfg:   cfg,
+		reg:   reg,
+		log:   log,
+		now:   time.Now,
+		perIP: map[string]int{},
+		black: map[string]bool{},
+	}
 	for _, ip := range cfg.BlackList {
 		s.black[ip] = true
 	}
 	return s
 }
 
-// Serve accepts connections until ctx is cancelled or ln fails.
+// Serve accepts connections until ctx is cancelled or ln fails, then
+// closes the open connections and waits for their handlers.
 func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
-	go func() {
-		<-ctx.Done()
-		ln.Close()
-	}()
 	var wg sync.WaitGroup
 	defer wg.Wait()
+	// Deferred after wg.Wait, so it runs first: a failed listener closes the
+	// open clients too (handle closes its connection when ctx is done).
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	stopListener := context.AfterFunc(ctx, func() { ln.Close() })
+	defer stopListener()
 	for {
 		c, err := ln.Accept()
 		if err != nil {
 			if ctx.Err() != nil {
 				return nil
 			}
-			return err
+			return fmt.Errorf("accepting: %w", err)
 		}
 		ip := hostOf(c.RemoteAddr())
 		if reason := s.admit(ip); reason != "" {
@@ -81,12 +91,10 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 			c.Close()
 			continue
 		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			defer s.release(ip)
 			s.handle(ctx, c)
-		}()
+		})
 	}
 }
 

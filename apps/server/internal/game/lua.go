@@ -77,32 +77,32 @@ func (s *luaScripts) obj(index int) *luaObject {
 	return o
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerLua(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		w.loadScripts()
 		return nil
 	})
 	// BridgeFunction_OnTimerThread: timer 9 of FUN_0047d810, created by
 	// FUN_004e0120 with 1000 ms due time and period.
-	tick1000Hooks = append(tick1000Hooks, func(w *World) { w.scriptCall("OnTimerThread") })
+	h.tick1000 = append(h.tick1000, func(w *World) { w.scriptCall("OnTimerThread") })
 	// BridgeFunction_OnCharacterEntry: FUN_00473a10 after the character is
 	// placed in the world.
-	enterWorldHooks = append(enterWorldHooks, (*World).scriptCharacterEntry)
+	h.enterWorld = append(h.enterWorld, (*World).scriptCharacterEntry)
 	// BridgeFunction_OnCharacterClose: DelCharacterInfo FUN_004c4b40.
-	leaveWorldHooks = append(leaveWorldHooks, func(w *World, o *Object) {
+	h.leaveWorld = append(h.leaveWorld, func(w *World, o *Object) {
 		w.scriptCall("OnCharacterClose", o.Index)
 		delete(w.scripts().objs, o.Index)
 	})
 	// BridgeFunction_OnCommandManager (FUN_00435400 -> FUN_004e6ba0): a
 	// non-zero result means the script ran the command (FUN_00436c30).
-	commandScriptHook = func(w *World, o *Object, index int, arg string) bool {
+	h.commandScript = func(w *World, o *Object, index int, arg string) bool {
 		return w.scriptCallInt("OnCommandManager", 0, o.Index, index, arg) != 0
 	}
 	// FUN_004cda80: the victim keeps the killer's map and position
 	// (obj+0x1ae/0x1b0/0x1b2), then BridgeFunction_OnMonsterDie (monster
 	// victims) or BridgeFunction_OnUserDie (player victims) runs with
 	// (victim, killer).
-	deathHooks = append(deathHooks, (*World).scriptObjectDeath)
+	h.death = append(h.death, (*World).scriptObjectDeath)
 }
 
 // scriptCharacterEntry clears the per-character script fields (FUN_0050ae50

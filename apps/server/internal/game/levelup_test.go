@@ -83,13 +83,13 @@ func TestGainExperienceHookSavesAtMostEveryMinute(t *testing.T) {
 	b := newBareWorld(t)
 	o := statsPlayer(b, PlayerStart, 1, 1)
 	b.calcCharacter(o)
-	gainExperienceHook(b.World, o, 10)
+	b.hooks.gainExperience(b.World, o, 10)
 	first := b.statsOf(o).lastLevelSave
 	if first.IsZero() || o.P.Char.Level != 2 {
 		t.Fatalf("level %d save %v", o.P.Char.Level, first)
 	}
 	b.advance(30 * time.Second)
-	gainExperienceHook(b.World, o, 100)
+	b.hooks.gainExperience(b.World, o, 100)
 	if b.statsOf(o).lastLevelSave != first {
 		t.Fatal("saved twice within 60 s")
 	}
@@ -117,7 +117,7 @@ func TestPartyExperienceSplit(t *testing.T) {
 	b.drain(dw)
 	b.drain(dk)
 	dkExp := dk.P.Char.Experience
-	if !partyExperienceHook(b.World, dw, mon, 55, false) {
+	if !b.hooks.partyExperience(b.World, dw, mon, 55, false) {
 		t.Fatal("party hook")
 	}
 	// DW 10: 1458 + 38500 >= 1900 -> level 11 (MaxLevelUp 1), shown exp 0.
@@ -142,7 +142,7 @@ func TestPartyExperienceSplit(t *testing.T) {
 	b.expBounds(dk)
 	mon.Mon.Level = 15
 	b.drain(dw)
-	partyExperienceHook(b.World, dw, mon, 3, true)
+	b.hooks.partyExperience(b.World, dw, mon, 3, true)
 	p = find(b.drain(dw), 0x9C, -1)
 	// base (40*15)/3 = 200, average level 105 > 25: 25*200/105 = 47 -> 58;
 	// DW (100*58*160)/210/100 = 44 * 500 = 22000.
@@ -153,12 +153,12 @@ func TestPartyExperienceSplit(t *testing.T) {
 	// Out of range members get nothing; no party -> false.
 	dk.X += 20
 	before := dk.P.Char.Experience
-	partyExperienceHook(b.World, dw, mon, 3, false)
+	b.hooks.partyExperience(b.World, dw, mon, 3, false)
 	if dk.P.Char.Experience != before {
 		t.Fatal("distant member got exp")
 	}
 	solo := statsPlayer(b, PlayerStart+2, 0, 10)
-	if partyExperienceHook(b.World, solo, mon, 1, false) {
+	if b.hooks.partyExperience(b.World, solo, mon, 1, false) {
 		t.Fatal("solo player handled as party")
 	}
 }

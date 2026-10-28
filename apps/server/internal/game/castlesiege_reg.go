@@ -462,18 +462,18 @@ func (w *World) csResetPlayersSide() {
 func (w *World) csSideMark(o *Object) {
 	c := w.cs()
 	side := csSide(o)
-	if eventEffectHook == nil {
+	if w.hooks.eventEffect == nil {
 		return
 	}
 	if o.Map == csMap && (c.state == csStart || c.state == csEnd) && side != 0 {
 		if side >= 1 && side <= 4 {
-			eventEffectHook(w, o, 13+int(side), true)
+			w.hooks.eventEffect(w, o, 13+int(side), true)
 		}
 		return
 	}
 	for e := 14; e <= 17; e++ {
 		if hasEffectIndex(o, e) {
-			eventEffectHook(w, o, e, false)
+			w.hooks.eventEffect(w, o, e, false)
 		}
 	}
 }

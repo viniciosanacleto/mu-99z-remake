@@ -463,11 +463,11 @@ func (w *World) handleMailList(o *Object) {
 	})
 }
 
-func init() {
-	reg := func(head byte, h func(*World, *Object, []byte)) {
-		worldHandlers[head] = func(w *World, o *Object, p []byte) {
+func registerFriend(h *hooks) {
+	reg := func(head byte, handler func(*World, *Object, []byte)) {
+		h.worldHandlers[head] = func(w *World, o *Object, p []byte) {
 			if friendReady(o) {
-				h(w, o, p)
+				handler(w, o, p)
 			}
 		}
 	}
@@ -492,7 +492,7 @@ func init() {
 	})
 
 	// DataServer 0x70 / 0x71: online map and friend notifications.
-	enterWorldHooks = append(enterWorldHooks, func(w *World, o *Object) {
+	h.enterWorld = append(h.enterWorld, func(w *World, o *Object) {
 		name := charName(o)
 		w.hub.Enter(OnlineChar{Name: name, Account: o.P.Account.Login, ServerCode: w.cfg.ServerCode, Index: o.Index})
 		if w.friendStore() == nil {
@@ -504,7 +504,7 @@ func init() {
 			return nil
 		})
 	})
-	leaveWorldHooks = append(leaveWorldHooks, func(w *World, o *Object) {
+	h.leaveWorld = append(h.leaveWorld, func(w *World, o *Object) {
 		name := charName(o)
 		if !w.hub.Leave(name, w.cfg.ServerCode, o.Index) || w.friendStore() == nil {
 			return

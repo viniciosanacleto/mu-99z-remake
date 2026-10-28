@@ -388,12 +388,12 @@ func (w *World) soccerRespawn(o *Object) (int, int, bool) {
 	return 0x36 + rnd(16), 0x8D + rnd(39), true
 }
 
-func init() {
-	tick1000Hooks = append(tick1000Hooks, func(w *World) {
+func registerGuildSoccer(h *hooks) {
+	h.tick1000 = append(h.tick1000, func(w *World) {
 		w.soccerSecond()
 		w.soccerIntruders()
 	})
-	leaveWorldHooks = append(leaveWorldHooks, func(w *World, o *Object) {
+	h.leaveWorld = append(h.leaveWorld, func(w *World, o *Object) {
 		if w.rq != nil {
 			delete(w.soccer().respawn, o.Index)
 		}

@@ -104,7 +104,7 @@ func guildSetup(t *testing.T, b *bareWorld, m *Object, name string) int {
 	body := append([]byte{0}, []byte(name)...)
 	body = append(body, make([]byte, 8-len(name))...)
 	body = append(body, bytes.Repeat([]byte{0x44}, 32)...)
-	worldHandlers[0x55](b.World, m, frame.Build(frame.C1, 0x55, body...))
+	b.hooks.worldHandlers[0x55](b.World, m, frame.Build(frame.C1, 0x55, body...))
 	b.pump()
 	if r := find(b.drain(m), 0x56, -1); r == nil || r[3] != 1 {
 		t.Fatalf("create %s = % X", name, r)
@@ -126,13 +126,13 @@ func TestGuildCreateJoinListLeave(t *testing.T) {
 	if find(b.drain(m), 0x54, -1) == nil || items(m).If.Type != ifGuildCreate {
 		t.Fatal("no 54")
 	}
-	worldHandlers[0x54](w, m, []byte{0xC1, 4, 0x54, 1})
+	b.hooks.worldHandlers[0x54](w, m, []byte{0xC1, 4, 0x54, 1})
 	if find(b.drain(m), 0x55, -1) == nil {
 		t.Fatal("no 55 window")
 	}
 	// Bad names: syntax 5, length 2.
-	worldHandlers[0x55](w, m, frame.Build(frame.C1, 0x55, append([]byte{0, 'a', ' ', 'b', 0, 0, 0, 0, 0}, make([]byte, 32)...)...))
-	worldHandlers[0x55](w, m, frame.Build(frame.C1, 0x55, append([]byte{0, 'a', 'b', 0, 0, 0, 0, 0, 0}, make([]byte, 32)...)...))
+	b.hooks.worldHandlers[0x55](w, m, frame.Build(frame.C1, 0x55, append([]byte{0, 'a', ' ', 'b', 0, 0, 0, 0, 0}, make([]byte, 32)...)...))
+	b.hooks.worldHandlers[0x55](w, m, frame.Build(frame.C1, 0x55, append([]byte{0, 'a', 'b', 0, 0, 0, 0, 0, 0}, make([]byte, 32)...)...))
 	if out := b.drain(m); len(out) != 2 || out[0][3] != 5 || out[1][3] != 2 {
 		t.Fatalf("bad names = % X", out)
 	}
@@ -144,23 +144,23 @@ func TestGuildCreateJoinListLeave(t *testing.T) {
 		t.Fatal("observer did not get C2 65")
 	}
 	// Same name again -> 3.
-	worldHandlers[0x55](w, a, frame.Build(frame.C1, 0x55, append([]byte{0, 'L', 'i', 'o', 'n', 's', 0, 0, 0}, make([]byte, 32)...)...))
+	b.hooks.worldHandlers[0x55](w, a, frame.Build(frame.C1, 0x55, append([]byte{0, 'L', 'i', 'o', 'n', 's', 0, 0, 0}, make([]byte, 32)...)...))
 	b.pump()
 	if r := find(b.drain(a), 0x56, -1); r[3] != 3 {
 		t.Fatalf("duplicate = % X", r)
 	}
 
 	// Level 5 player asks to join -> 7.
-	worldHandlers[0x50](w, low, []byte{0xC1, 5, 0x50, byte(m.Index >> 8), byte(m.Index)})
+	b.hooks.worldHandlers[0x50](w, low, []byte{0xC1, 5, 0x50, byte(m.Index >> 8), byte(m.Index)})
 	if r := find(b.drain(low), 0x51, -1); r[3] != 7 {
 		t.Fatalf("low level = % X", r)
 	}
 	// Ann asks, the master gets 50 and accepts with 51.
-	worldHandlers[0x50](w, a, []byte{0xC1, 5, 0x50, byte(m.Index >> 8), byte(m.Index)})
+	b.hooks.worldHandlers[0x50](w, a, []byte{0xC1, 5, 0x50, byte(m.Index >> 8), byte(m.Index)})
 	if r := find(b.drain(m), 0x50, -1); r == nil || int(r[3])<<8|int(r[4]) != a.Index {
 		t.Fatalf("50 = % X", r)
 	}
-	worldHandlers[0x51](w, m, []byte{0xC1, 6, 0x51, 1, byte(a.Index >> 8), byte(a.Index)})
+	b.hooks.worldHandlers[0x51](w, m, []byte{0xC1, 6, 0x51, 1, byte(a.Index >> 8), byte(a.Index)})
 	b.pump()
 	out := b.drain(a)
 	if r := find(out, 0x51, -1); r == nil || r[3] != 1 || guildNumberOf(a) != n || guildOf(a).Status != 0 {
@@ -170,7 +170,7 @@ func TestGuildCreateJoinListLeave(t *testing.T) {
 		t.Fatal("interface not cleared")
 	}
 	// Member list.
-	worldHandlers[0x52](w, a, []byte{0xC1, 3, 0x52})
+	b.hooks.worldHandlers[0x52](w, a, []byte{0xC1, 3, 0x52})
 	l := find(b.drain(a), 0x52, -1)
 	if l == nil || l[5] != 2 || string(l[24:30]) != "Master" || l[24+11] != 0x80 || l[24+12] != 0x80 ||
 		string(l[37:40]) != "Ann" || l[37+12] != 0 {
@@ -179,7 +179,7 @@ func TestGuildCreateJoinListLeave(t *testing.T) {
 
 	// Ranks: assistant, a second assistant is refused, self is refused.
 	assign := func(st byte, who string) {
-		worldHandlers[0xE1](w, m, frame.Build(frame.C1, 0xE1, append([]byte{1, st}, name10(who)...)...))
+		b.hooks.worldHandlers[0xE1](w, m, frame.Build(frame.C1, 0xE1, append([]byte{1, st}, name10(who)...)...))
 		b.pump()
 	}
 	assign(0x40, "Ann")
@@ -215,7 +215,7 @@ func TestGuildCreateJoinListLeave(t *testing.T) {
 	// Ann leaves (53 with her own name).
 	b.advance(1e9)
 	leave := func(o *Object, who string) {
-		worldHandlers[0x53](w, o, frame.Build(frame.C1, 0x53, append(name10(who), make([]byte, 10)...)...))
+		b.hooks.worldHandlers[0x53](w, o, frame.Build(frame.C1, 0x53, append(name10(who), make([]byte, 10)...)...))
 		b.pump()
 	}
 	leave(a, "Master")
@@ -260,10 +260,10 @@ func TestGuildUnionAndRival(t *testing.T) {
 	b.see(m2, m3)
 
 	ask := func(from, to *Object, rel, req byte) {
-		worldHandlers[0xE5](w, from, []byte{0xC1, 7, 0xE5, rel, req, byte(to.Index >> 8), byte(to.Index)})
+		b.hooks.worldHandlers[0xE5](w, from, []byte{0xC1, 7, 0xE5, rel, req, byte(to.Index >> 8), byte(to.Index)})
 	}
 	answer := func(from, to *Object, rel, req, yes byte) {
-		worldHandlers[0xE6](w, from, []byte{0xC1, 8, 0xE6, rel, req, yes, byte(to.Index >> 8), byte(to.Index)})
+		b.hooks.worldHandlers[0xE6](w, from, []byte{0xC1, 8, 0xE6, rel, req, yes, byte(to.Index >> 8), byte(to.Index)})
 		b.pump()
 	}
 	// Beta asks to join Alpha's union; Alpha accepts.
@@ -289,7 +289,7 @@ func TestGuildUnionAndRival(t *testing.T) {
 		t.Fatalf("union entry = %+v", e)
 	}
 	// E9 lists both guilds.
-	worldHandlers[0xE9](w, m2, []byte{0xC1, 3, 0xE9})
+	b.hooks.worldHandlers[0xE9](w, m2, []byte{0xC1, 3, 0xE9})
 	if l := find(b.drain(m2), 0xE9, -1); l == nil || l[4] != 2 || l[5] != 1 || string(l[8+33:8+38]) != "Alpha" {
 		t.Fatalf("E9 = % X", l)
 	}
@@ -313,12 +313,12 @@ func TestGuildUnionAndRival(t *testing.T) {
 	// Rival kills give no PK.
 	killer := m3
 	before := killer.PKLevel
-	playerKillHook(w, killer, m2)
+	b.hooks.playerKill(w, killer, m2)
 	if killer.PKLevel != before {
 		t.Fatal("PK counted against a rival")
 	}
 	// Alpha kicks Beta from the union: the union is dissolved (2 guilds).
-	worldHandlers[0xEB](w, m1, frame.Build(frame.C1, 0xEB, append([]byte{1}, []byte("Beta\x00\x00\x00\x00")...)...))
+	b.hooks.worldHandlers[0xEB](w, m1, frame.Build(frame.C1, 0xEB, append([]byte{1}, []byte("Beta\x00\x00\x00\x00")...)...))
 	b.pump()
 	if r := find(b.drain(m1), 0xEB, -1); r == nil || r[4] != 1 {
 		t.Fatalf("EB = % X", r)
@@ -345,8 +345,8 @@ func TestGuildWar(t *testing.T) {
 	a2 := b.player(PlayerStart+2, "Bee", 0, 132, 130)
 	g1 := guildSetup(t, b, m1, "Alpha")
 	g2 := guildSetup(t, b, m2, "Beta")
-	worldHandlers[0x50](w, a2, []byte{0xC1, 5, 0x50, byte(m2.Index >> 8), byte(m2.Index)})
-	worldHandlers[0x51](w, m2, []byte{0xC1, 6, 0x51, 1, byte(a2.Index >> 8), byte(a2.Index)})
+	b.hooks.worldHandlers[0x50](w, a2, []byte{0xC1, 5, 0x50, byte(m2.Index >> 8), byte(m2.Index)})
+	b.hooks.worldHandlers[0x51](w, m2, []byte{0xC1, 6, 0x51, 1, byte(a2.Index >> 8), byte(a2.Index)})
 	b.pump()
 	b.drain(m1)
 	b.drain(m2)
@@ -366,7 +366,7 @@ func TestGuildWar(t *testing.T) {
 	if r := find(b.drain(m2), 0x61, -1); r == nil || string(r[3:8]) != "Alpha" {
 		t.Fatalf("61 = % X", r)
 	}
-	worldHandlers[0x61](w, m2, []byte{0xC1, 4, 0x61, 1})
+	b.hooks.worldHandlers[0x61](w, m2, []byte{0xC1, 4, 0x61, 1})
 	if r := find(b.drain(a2), 0x62, -1); r == nil || string(r[3:8]) != "Alpha" || r[12] != 0 {
 		t.Fatalf("62 to Beta = % X", r)
 	}
@@ -378,7 +378,7 @@ func TestGuildWar(t *testing.T) {
 	}
 	// A war kill gives no PK; killing the master scores KillScore2 (2).
 	before := m1.PKLevel
-	playerKillHook(w, m1, a2)
+	b.hooks.playerKill(w, m1, a2)
 	if m1.PKLevel != before {
 		t.Fatal("PK in war")
 	}
@@ -511,7 +511,7 @@ func TestGuildAcrossInstances(t *testing.T) {
 	if guildNumberOf(far) != n || find(b2.drain(far), 0x65, -1) == nil {
 		t.Fatal("remote member not set")
 	}
-	worldHandlers[0x52](b1.World, m, []byte{0xC1, 3, 0x52})
+	b1.hooks.worldHandlers[0x52](b1.World, m, []byte{0xC1, 3, 0x52})
 	l := find(b1.drain(m), 0x52, -1)
 	if l == nil || l[5] != 2 || string(l[37:40]) != "Far" || l[37+10] != 19 || l[37+11] != 0x80|19 {
 		t.Fatalf("52 = % X", l)
