@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/castlesiege"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/effect"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
@@ -12,30 +14,11 @@ import (
 // minimap, the PvP/PK rules of map 30, slingshots, life stones,
 // mercenaries and the statue regeneration.
 
-const (
-	csCrownTime   = 30000 // FUN_0041edc0: 29999 < accumulated + elapsed
-	csCrownMax    = 31000 // FUN_00422bf0 clamp
-	csMaxMercs    = 100   // FUN_004b2bd0: count < 0x65
-	csStoneGrowth = 60    // FUN_004a38d0: 12 s per level, 5 levels
-	csWeaponDelay = 10 * time.Second
-	csWeaponHit   = 100 * time.Millisecond
-	csMinimapMax  = 1000
-)
-
-// Crown access states of B2 1A (FUN_00422bf0).
-const (
-	csCrownBegin   = 0 // registration started
-	csCrownSuccess = 1
-	csCrownFail    = 2 // interrupted (time accumulated)
-	csCrownOther   = 3 // another player holds the crown
-	csCrownNoSwich = 4 // the switches are not held by the player's side
-)
-
 // csEnterStart is FUN_0041cc10.
 func (w *World) csEnterStart(setRemain bool) {
 	c := w.cs()
 	w.log.Info("[Castle Siege] SetState START")
-	if setRemain && !w.csSetRemainFromSchedule(csStart) {
+	if setRemain && !w.csSetRemainFromSchedule(castlesiege.StateStart) {
 		return
 	}
 	c.crownRoom, c.crownOpen = false, false
@@ -61,7 +44,7 @@ func (w *World) csEnterStart(setRemain bool) {
 		return
 	}
 	w.csDecideOwner()
-	w.csSetState(csEnd, true)
+	w.csSetState(castlesiege.StateEnd, true)
 	w.log.Info("[Castle Siege] SetState START - No Attack Guild")
 }
 
@@ -78,11 +61,11 @@ func (w *World) csStartProc() {
 		}
 		// B2 1E every 3 minutes, every minute in the last 3.
 		if now.Sub(c.leftTick) > 180*time.Second && c.remain > 180000 {
-			w.csSendMap(packetCSRemainTime(c.remain))
+			w.csSendMap(castlesiege.PacketRemainTime(c.remain))
 			c.leftTick = now
 		}
 		if c.remain <= 180000 && now.Sub(c.leftTick) > 60*time.Second {
-			w.csSendMap(packetCSRemainTime(c.remain))
+			w.csSendMap(castlesiege.PacketRemainTime(c.remain))
 			c.leftTick = now
 		}
 		if now.Sub(c.sideTick) > 5*time.Second {
@@ -125,7 +108,7 @@ func (w *World) csStartProc() {
 			return nil
 		})
 	}
-	w.csSetState(csEnd, true)
+	w.csSetState(castlesiege.StateEnd, true)
 }
 
 // csResetTaxInfo is FUN_00425ec0 / answer FUN_004247c0: a new owner
@@ -183,11 +166,11 @@ func (w *World) csMoveOutsiders() {
 	for i := PlayerStart; i < MaxObjects; i++ {
 		o := w.objects[i]
 		if o.State != StatePlaying || !o.IsPlayer() || o.P.LogoutCountdown > 0 || o.P.Moving ||
-			o.Map != csMap || csSide(o) == 1 {
+			o.Map != castlesiege.Map || csSide(o) == 1 {
 			continue
 		}
 		if x, y, ok := w.csRandomSidePos(int(csSide(o))); ok {
-			w.placeAt(o, -1, csMap, x, y, o.Dir)
+			w.placeAt(o, -1, castlesiege.Map, x, y, o.Dir)
 		}
 		csOf(o).Crown = 0
 	}
@@ -200,7 +183,7 @@ var csSideAreas = [3][4]int{{35, 17, 144, 48}, {74, 144, 115, 154}, {35, 17, 144
 // 0x04 / 0x08 attributes.
 func (w *World) csRandomSidePos(side int) (int, int, bool) {
 	a := csSideAreas[min(side, 2)]
-	t := w.terrain(csMap)
+	t := w.terrain(castlesiege.Map)
 	if t == nil {
 		return 0, 0, false
 	}
@@ -219,9 +202,9 @@ func (w *World) csRandomSidePos(side int) (int, int, bool) {
 // csSwitchSlot maps the switch classes to +0x88 / +0x8c (FUN_0041f3c0).
 func csSwitchSlot(class int) int {
 	switch class {
-	case csClassSwitch2:
+	case castlesiege.ClassSwitch2:
 		return 0
-	case csClassSwitch1:
+	case castlesiege.ClassSwitch1:
 		return 1
 	}
 	return -1
@@ -246,7 +229,7 @@ func (w *World) csSwitchesHeldBy(side byte) bool {
 func (w *World) csCrownTalk(o, crown *Object) {
 	c := w.cs()
 	cs := csOf(o)
-	if c.state != csStart || cs.Side < 2 || !cs.Involved || !w.csGuildMaster(o) {
+	if c.state != castlesiege.StateStart || cs.Side < 2 || !cs.Involved || !w.csGuildMaster(o) {
 		return
 	}
 	if abs(o.Y-crown.Y) >= 4 || abs(o.X-crown.X) >= 4 || !c.crownOpen {
@@ -254,17 +237,17 @@ func (w *World) csCrownTalk(o, crown *Object) {
 	}
 	if cur := w.csObj(c.crownUser); cur == nil {
 		if w.csSwitchesHeldBy(cs.Side) {
-			w.csCrownAccess(o, csCrownBegin)
+			w.csCrownAccess(o, castlesiege.CrownBegin)
 			c.crownUser = o.Index
 			c.crownX, c.crownY = o.X, o.Y
 			c.crownStart = w.now()
-			w.csSendMap(packetCSCrownGuild(0, csGuildName(o)))
+			w.csSendMap(castlesiege.PacketCrownGuild(0, csGuildName(o)))
 			return
 		}
-		w.csCrownAccess(o, csCrownNoSwich)
+		w.csCrownAccess(o, castlesiege.CrownNoSwich)
 		return
 	} else if cur.Index != o.Index {
-		w.csCrownAccess(o, csCrownOther)
+		w.csCrownAccess(o, castlesiege.CrownOther)
 	}
 }
 
@@ -274,20 +257,20 @@ func (w *World) csCrownAccess(o *Object, state byte) {
 	c := w.cs()
 	cs := csOf(o)
 	switch state {
-	case csCrownBegin:
-		if cs.Crown < 0 || cs.Crown > csCrownMax {
+	case castlesiege.CrownBegin:
+		if cs.Crown < 0 || cs.Crown > castlesiege.CrownMax {
 			cs.Crown = 0
 		}
-	case csCrownSuccess:
+	case castlesiege.CrownSuccess:
 		cs.Crown = 0
-	case csCrownFail:
+	case castlesiege.CrownFail:
 		cs.Crown += int(w.now().Sub(c.crownStart).Milliseconds())
 		cs.Crown -= w.cfg.Int("Event", "CastleSiegeLowerAccumulatedTimeValue", 0)
-		if cs.Crown < 0 || cs.Crown > csCrownMax {
+		if cs.Crown < 0 || cs.Crown > castlesiege.CrownMax {
 			cs.Crown = 0
 		}
 	}
-	w.send(o, packetCSCrownAccess(state, cs.Crown))
+	w.send(o, castlesiege.PacketCrownAccess(state, cs.Crown))
 }
 
 // csCrownCheck is FUN_0041edc0: the registering master keeps the crown
@@ -305,22 +288,22 @@ func (w *World) csCrownCheck() {
 	if side < 2 || csSide(s1) < 2 || csSide(s2) < 2 || !csOf(u).Involved || side != csSide(s1) || side != csSide(s2) {
 		return
 	}
-	if int(w.now().Sub(c.crownStart).Milliseconds())+csOf(u).Crown < csCrownTime {
+	if int(w.now().Sub(c.crownStart).Milliseconds())+csOf(u).Crown < castlesiege.CrownTime {
 		return
 	}
-	guild := csGuildName(u)
-	w.log.Info("[Castle Siege] Guild has taken possession of the castle.", "guild", guild)
-	w.csCrownAccess(u, csCrownSuccess)
+	guildName := csGuildName(u)
+	w.log.Info("[Castle Siege] Guild has taken possession of the castle.", "guild", guildName)
+	w.csCrownAccess(u, castlesiege.CrownSuccess)
 	w.csCrownState(2)
-	c.occupier = guild
+	c.occupier = guildName
 	w.csKillLifeStones() // FUN_0041da20
 	w.csSwapSides(side)  // FUN_0041eb90
-	w.csSendMap(packetCSCrownGuild(1, guild))
+	w.csSendMap(castlesiege.PacketCrownGuild(1, guildName))
 	c.crownStart, c.crownUser, c.crownX, c.crownY = time.Time{}, -1, 0, 0
 	c.switches = [2]int{-1, -1}
 	c.crownOpen = false
 	w.csMoveOutsiders()
-	w.csSendMap(packetCSRemainTime(c.remain))
+	w.csSendMap(castlesiege.PacketRemainTime(c.remain))
 	c.leftTick = w.now()
 }
 
@@ -329,13 +312,13 @@ func (w *World) csCrownCheck() {
 func (w *World) csCrownState(v byte) {
 	for i := 0; i < SummonStart; i++ {
 		o := w.objects[i]
-		if o.State != StatePlaying || o.Class != csClassCrown || o.Mon == nil {
+		if o.State != StatePlaying || o.Class != castlesiege.ClassCrown || o.Mon == nil {
 			continue
 		}
 		if w.hooks.eventEffect != nil {
 			w.hooks.eventEffect(w, o, csEffCrown, v == 0)
 		}
-		w.broadcast(o, packetCSCrownState(v))
+		w.broadcast(o, castlesiege.PacketCrownState(v))
 		return
 	}
 }
@@ -379,11 +362,11 @@ func (w *World) csCrownProc() {
 		return
 	}
 	cs := csOf(u)
-	if u.Map == csMap && cs.Side > 1 && cs.Involved && u.X == c.crownX && u.Y == c.crownY &&
+	if u.Map == castlesiege.Map && cs.Side > 1 && cs.Involved && u.X == c.crownX && u.Y == c.crownY &&
 		w.csSwitchesHeldBy(cs.Side) {
 		return
 	}
-	w.csCrownAccess(u, csCrownFail)
+	w.csCrownAccess(u, castlesiege.CrownFail)
 	c.crownX, c.crownY, c.crownUser, c.crownStart = 0, 0, -1, time.Time{}
 }
 
@@ -391,7 +374,7 @@ func (w *World) csCrownProc() {
 // cells holds the switch while the guardian statues are down.
 func (w *World) csSwitchTalk(o, sw *Object) {
 	c := w.cs()
-	if c.state != csStart || csSide(o) < 2 || abs(o.Y-sw.Y) >= 4 || abs(o.X-sw.X) >= 4 {
+	if c.state != castlesiege.StateStart || csSide(o) < 2 || abs(o.Y-sw.Y) >= 4 || abs(o.X-sw.X) >= 4 {
 		return
 	}
 	if w.csStatueAlive() {
@@ -404,12 +387,12 @@ func (w *World) csSwitchTalk(o, sw *Object) {
 	}
 	cur := w.csObj(c.switches[slot])
 	if cur == nil {
-		w.send(o, packetCSSwitchUser(sw.Index, -1, 1))
+		w.send(o, castlesiege.PacketSwitchUser(sw.Index, -1, 1))
 		c.switches[slot] = o.Index
 		return
 	}
 	if cur.Index != o.Index {
-		w.send(o, packetCSSwitchUser(sw.Index, cur.Index, 2))
+		w.send(o, castlesiege.PacketSwitchUser(sw.Index, cur.Index, 2))
 	}
 }
 
@@ -437,7 +420,7 @@ func (w *World) csSwitchProc(sw *Object) {
 	info := w.csSwitchInfo(sw, u)
 	w.send(u, info)
 	w.broadcast(sw, info)
-	if u.Map == csMap && csSide(u) > 1 {
+	if u.Map == castlesiege.Map && csSide(u) > 1 {
 		if abs(u.X-sw.X) <= 3 && abs(u.Y-sw.Y) <= 3 {
 			a, b := w.csObj(c.switches[0]), w.csObj(c.switches[1])
 			if a == nil || b == nil || csSide(a) != csSide(b) || c.crownOpen {
@@ -447,22 +430,22 @@ func (w *World) csSwitchProc(sw *Object) {
 			w.csCrownState(0)
 			return
 		}
-		w.send(u, packetCSSwitchUser(sw.Index, -1, 0))
+		w.send(u, castlesiege.PacketSwitchUser(sw.Index, -1, 0))
 		release()
 		return
 	}
-	w.send(u, packetCSSwitchUser(sw.Index, -1, 0))
+	w.send(u, castlesiege.PacketSwitchUser(sw.Index, -1, 0))
 	release()
 }
 
 // csSwitchInfo is FUN_004230e0: C1 1A B2 20 with the holder's side, guild
 // (the alliance master guild when in an alliance) and name.
 func (w *World) csSwitchInfo(sw, u *Object) []byte {
-	guild := csGuildName(u)
+	guildName := csGuildName(u)
 	if m := csUnionMaster(w, u); m != "" {
-		guild = m
+		guildName = m
 	}
-	return packetCSSwitchInfo(sw.Index, true, csSide(u), guild, u.P.Char.Name)
+	return castlesiege.PacketSwitchInfo(sw.Index, true, csSide(u), guildName, u.P.Char.Name)
 }
 
 // --- minimap ---------------------------------------------------------------
@@ -475,14 +458,14 @@ func (w *World) handleCSMinimap(o *Object, _ []byte) {
 	}
 	c := w.cs()
 	if csSide(o) == 0 || !w.csGuildMaster(o) {
-		w.send(o, packetCSMinimapResult(3))
+		w.send(o, castlesiege.PacketMinimapResult(3))
 		return
 	}
-	if c.state != csStart {
-		w.send(o, packetCSMinimapResult(2))
+	if c.state != castlesiege.StateStart {
+		w.send(o, castlesiege.PacketMinimapResult(2))
 		return
 	}
-	w.send(o, packetCSMinimapResult(1))
+	w.send(o, castlesiege.PacketMinimapResult(1))
 	for _, i := range c.minimap {
 		if i == o.Index {
 			return
@@ -509,13 +492,13 @@ func (w *World) handleCSMinimapClose(o *Object, _ []byte) {
 // bytes) to map 30 and to the players of the same side.
 func (w *World) handleCSCommand(o *Object, p []byte) {
 	if len(p) < 8 || !w.csEnabled() || !o.IsPlayer() || csSide(o) == 0 || !w.csGuildMaster(o) ||
-		w.cs().state != csStart {
+		w.cs().state != castlesiege.StateStart {
 		return
 	}
-	pk := packetCSCommand(p[4], p[5], p[6], p[7])
+	pk := castlesiege.PacketCommand(p[4], p[5], p[6], p[7])
 	for i := PlayerStart; i < MaxObjects; i++ {
 		t := w.objects[i]
-		if t.State == StatePlaying && t.IsPlayer() && (t.Map == csMap || csSide(t) == csSide(o)) {
+		if t.State == StatePlaying && t.IsPlayer() && (t.Map == castlesiege.Map || csSide(t) == csSide(o)) {
 			w.send(t, pk)
 		}
 	}
@@ -529,9 +512,9 @@ func (w *World) csSendMinimap() {
 	if !c.listLoaded || len(c.minimap) == 0 {
 		return
 	}
-	var npcs []csMinimapNPC
+	var npcs []castlesiege.MinimapNPC
 	for _, n := range c.npcs {
-		if n.Class != csClassGate && n.Class != csClassStatue {
+		if n.Class != castlesiege.ClassGate && n.Class != castlesiege.ClassStatue {
 			continue
 		}
 		t := w.csNPCObj(n)
@@ -539,10 +522,10 @@ func (w *World) csSendMinimap() {
 			continue
 		}
 		typ := byte(0)
-		if n.Class == csClassStatue {
+		if n.Class == castlesiege.ClassStatue {
 			typ = 1
 		}
-		npcs = append(npcs, csMinimapNPC{Type: typ, X: byte(t.X), Y: byte(t.Y)})
+		npcs = append(npcs, castlesiege.MinimapNPC{Type: typ, X: byte(t.X), Y: byte(t.Y)})
 	}
 	keep := c.minimap[:0]
 	for _, idx := range c.minimap {
@@ -553,14 +536,14 @@ func (w *World) csSendMinimap() {
 		keep = append(keep, idx)
 		side := csSide(m)
 		var cells [][2]byte
-		for i := PlayerStart; i < MaxObjects && len(cells) < csMinimapMax; i++ {
+		for i := PlayerStart; i < MaxObjects && len(cells) < castlesiege.MinimapMax; i++ {
 			t := w.objects[i]
-			if t.State == StatePlaying && t.IsPlayer() && t.Map == csMap && csSide(t) == side && side != 0 {
+			if t.State == StatePlaying && t.IsPlayer() && t.Map == castlesiege.Map && csSide(t) == side && side != 0 {
 				cells = append(cells, [2]byte{byte(t.X), byte(t.Y)})
 			}
 		}
-		w.send(m, packetCSMinimapPlayers(cells))
-		w.send(m, packetCSMinimapNPCs(npcs))
+		w.send(m, castlesiege.PacketMinimapPlayers(cells))
+		w.send(m, castlesiege.PacketMinimapNPCs(npcs))
 	}
 	c.minimap = keep
 }
@@ -569,17 +552,17 @@ func (w *World) csSendMinimap() {
 
 // csBattleOn is the "CCastleSiegeSync+4 == 7" test used by the other
 // modules (shared by every instance).
-func (w *World) csBattleOn() bool { return w.csSyncState() == csStart }
+func (w *World) csBattleOn() bool { return w.csSyncState() == castlesiege.StateStart }
 
 // csAttackAllowed is the start of FUN_0040b110: the gates, statues and
 // canon towers of map 30 only take hits during the battle from attackers.
 func (w *World) csAttackAllowed(a, t *Object) bool {
-	if t.Map != csMap || t.Type != TypeMonster ||
-		(t.Class != csClassGate && t.Class != csClassStatue && t.Class != csClassCanon) {
+	if t.Map != castlesiege.Map || t.Type != TypeMonster ||
+		(t.Class != castlesiege.ClassGate && t.Class != castlesiege.ClassStatue && t.Class != castlesiege.ClassCanon) {
 		return true
 	}
 	c := w.cs()
-	if c == nil || c.state != csStart {
+	if c == nil || c.state != castlesiege.StateStart {
 		return false
 	}
 	return csSide(w.attackOwner(a)) >= 2
@@ -589,7 +572,7 @@ func (w *World) csAttackAllowed(a, t *Object) bool {
 // with sides may fight unless both are on the same side and
 // CastleSiegeDamageRate2 is 0.
 func (w *World) csPvP(a, t *Object) (allowed, decided bool) {
-	if a.Map != csMap || t.Map != csMap || !w.csBattleOn() || csSide(a) == 0 || csSide(t) == 0 {
+	if a.Map != castlesiege.Map || t.Map != castlesiege.Map || !w.csBattleOn() || csSide(a) == 0 || csSide(t) == 0 {
 		return false, false
 	}
 	if w.cfg.Int("Character", "CastleSiegeDamageRate2", 0) == 0 && csSide(a) == csSide(t) {
@@ -603,7 +586,7 @@ func (w *World) csPvP(a, t *Object) (allowed, decided bool) {
 // side.
 func (w *World) csDamageRate(a, t *Object) (int, bool) {
 	c := w.cs()
-	if c == nil || c.state != csStart || a.Map != csMap || t.Map != csMap {
+	if c == nil || c.state != castlesiege.StateStart || a.Map != castlesiege.Map || t.Map != castlesiege.Map {
 		return 0, false
 	}
 	if csSide(a) == 0 || csSide(t) == 0 || csSide(a) != csSide(t) {
@@ -616,7 +599,7 @@ func (w *World) csDamageRate(a, t *Object) (int, bool) {
 // side during the battle, for kills by the owner's alliance inside the
 // castle (Y > 0x71) and for victims with PK level above 5.
 func (w *World) csPKExempt(killer, victim *Object) bool {
-	if killer.Map != csMap {
+	if killer.Map != castlesiege.Map {
 		return false
 	}
 	if w.csBattleOn() && csSide(killer) != 0 {
@@ -632,11 +615,11 @@ func (w *World) csPKExempt(killer, victim *Object) bool {
 // grown life stone, otherwise gate 101 (inside the castle) for defenders
 // and gate 100 (the attackers' field) for the others.
 func (w *World) csRespawn(o *Object) (gate, mp, x, y int, ok bool) {
-	if o.Map != csMap || w.cs() == nil {
+	if o.Map != castlesiege.Map || w.cs() == nil {
 		return 0, 0, 0, 0, false
 	}
 	if s := w.csGuildStone(o); s != nil && s.CS.StoneSec > 59 {
-		return -1, csMap, s.X, s.Y, true
+		return -1, castlesiege.Map, s.X, s.Y, true
 	}
 	if csSide(o) == 1 {
 		return 101, 0, 0, 0, true
@@ -648,7 +631,7 @@ func (w *World) csRespawn(o *Object) (gate, mp, x, y int, ok bool) {
 // (150..200 x 175..225) the accumulated crown time drops by
 // CastleSiegeDecayAccumulatedTimeValue per second.
 func (w *World) csDecayCrown(o *Object) {
-	if o.Map != csMap || o.CS == nil || o.CS.Crown <= 0 || !w.csBattleOn() {
+	if o.Map != castlesiege.Map || o.CS == nil || o.CS.Crown <= 0 || !w.csBattleOn() {
 		return
 	}
 	if o.X >= 150 && o.X <= 200 && o.Y >= 175 && o.Y <= 225 {
@@ -713,12 +696,12 @@ func (w *World) csStoneProc(o *Object) {
 	cs := csOf(o)
 	cs.StoneSec++
 	lvl := byte(5)
-	if cs.StoneSec < csStoneGrowth {
+	if cs.StoneSec < castlesiege.StoneGrowth {
 		lvl = byte(cs.StoneSec / 12)
 	}
 	if lvl != cs.StoneLvl {
 		cs.StoneLvl = lvl
-		w.broadcast(o, packetCSStoneState(o.Index, lvl))
+		w.broadcast(o, castlesiege.PacketStoneState(o.Index, lvl))
 	}
 	if cs.StoneLvl > 4 {
 		w.csHealAround(o, cs.Side)
@@ -744,7 +727,7 @@ func (w *World) csGuildStone(o *Object) *Object {
 		return nil
 	}
 	s := w.csObj(c.stoneOf(guildNumberOf(o)))
-	if s == nil || s.Class != csClassStone {
+	if s == nil || s.Class != castlesiege.ClassStone {
 		return nil
 	}
 	return s
@@ -765,7 +748,7 @@ func (w *World) csStoneGone(o *Object) {
 func (w *World) csKillLifeStones() {
 	for i := 0; i < SummonStart; i++ {
 		o := w.objects[i]
-		if csIsCastleObject(o) && o.CS.NPCKind != 1 && o.Class == csClassStone {
+		if csIsCastleObject(o) && o.CS.NPCKind != 1 && o.Class == castlesiege.ClassStone {
 			w.csStoneGone(o)
 			w.deleteMonster(o)
 		}
@@ -781,7 +764,7 @@ func (w *World) csSummonStone(o *Object) bool {
 		return false
 	}
 	msg := func(n int) bool { w.systemMessage(o, w.messageFor(o, n)); return false }
-	if o.Map != csMap || c == nil || c.state != csStart {
+	if o.Map != castlesiege.Map || c == nil || c.state != castlesiege.StateStart {
 		return msg(122)
 	}
 	if csSide(o) < 2 {
@@ -793,7 +776,7 @@ func (w *World) csSummonStone(o *Object) bool {
 	if uint(o.X-0x97) < 0x3b && uint(o.Y-0xb0) < 0x36 {
 		return msg(125)
 	}
-	s := w.spawnFixedNPC(csClassStone, o.Map, o.X, o.Y, 1)
+	s := w.spawnFixedNPC(castlesiege.ClassStone, o.Map, o.X, o.Y, 1)
 	if s == nil {
 		return msg(127)
 	}
@@ -813,7 +796,7 @@ func (w *World) csSummonStone(o *Object) bool {
 func (w *World) csSummonMercenary(o *Object, class, x, y int) bool {
 	c := w.cs()
 	msg := func(n int) bool { w.systemMessage(o, w.messageFor(o, n)); return false }
-	if o.Map != csMap || c == nil || c.state != csStart {
+	if o.Map != castlesiege.Map || c == nil || c.state != castlesiege.StateStart {
 		return msg(128)
 	}
 	if csSide(o) != 1 {
@@ -822,7 +805,7 @@ func (w *World) csSummonMercenary(o *Object, class, x, y int) bool {
 	if !csMasterOrAssistant(o) {
 		return msg(130)
 	}
-	if c.mercenaries >= csMaxMercs+1 {
+	if c.mercenaries >= castlesiege.MaxMercs+1 {
 		return msg(131)
 	}
 	m := w.spawnFixedNPC(class, o.Map, x, y, 1)
@@ -846,7 +829,7 @@ func (w *World) csSummonMercenary(o *Object, class, x, y int) bool {
 // csMercenarySearch is FUN_004b2ec0: mercenaries pick a random visible
 // player of another side (not GM, outside the safe zone).
 func (w *World) csMercenarySearch(o *Object) bool {
-	if o.Class != csClassArcher && o.Class != csClassSpear {
+	if o.Class != castlesiege.ClassArcher && o.Class != castlesiege.ClassSpear {
 		return false
 	}
 	var cand []int
@@ -858,7 +841,7 @@ func (w *World) csMercenarySearch(o *Object) bool {
 		if csSide(t) == csSide(o) || !t.Alive || (t.Move != nil && t.Move.Authority == 2) || gmFull(t) {
 			continue
 		}
-		if hasEffectIndex(t, effInvisibility) || w.cellHas(t, gamedata.AttrSafeZone) {
+		if hasEffectIndex(t, effect.Invisibility) || w.cellHas(t, gamedata.AttrSafeZone) {
 			continue
 		}
 		cand = append(cand, e.Index)
@@ -880,7 +863,7 @@ func (w *World) csDropItem(o *Object, it item.Item, x, y int) (handled, ok bool)
 	}
 	switch {
 	case it.Index == item.Make(13, 7) && (it.Level == 0 || it.Level == 1):
-		return true, w.csSummonMercenary(o, csClassArcher+it.Level, x, y)
+		return true, w.csSummonMercenary(o, castlesiege.ClassArcher+it.Level, x, y)
 	case it.Index == item.Make(13, 11) && it.Level == 1:
 		return true, w.csSummonStone(o)
 	}
@@ -911,11 +894,11 @@ type csHit struct {
 func (w *World) csSlingTalk(o, npc *Object) {
 	typ := byte(1)
 	ifType := 15
-	if npc.Class == csClassSlingD {
+	if npc.Class == castlesiege.ClassSlingD {
 		typ, ifType = 2, 16
 	}
 	items(o).If = ifState{Use: true, Type: ifType}
-	w.send(o, packetCSWeaponWindow(typ, npc.Index))
+	w.send(o, castlesiege.PacketWeaponWindow(typ, npc.Index))
 }
 
 // handleCSWeaponUse is B7 01 (FUN_0042a460): [4..5] slingshot index
@@ -930,10 +913,10 @@ func (w *World) handleCSWeaponUse(o *Object, p []byte) {
 	}
 	idx := int(p[4])<<8 | int(p[5])
 	npc := w.csObj(idx)
-	if npc == nil || npc.Type != TypeNPC || (npc.Class != csClassSlingA && npc.Class != csClassSlingD) {
+	if npc == nil || npc.Type != TypeNPC || (npc.Class != castlesiege.ClassSlingA && npc.Class != castlesiege.ClassSlingD) {
 		return
 	}
-	typ := npc.Class - csClassSlingA
+	typ := npc.Class - castlesiege.ClassSlingA
 	zone := int(p[6]) - 1
 	x, y := 0, 0
 	if zone >= 0 && zone < 4 {
@@ -943,15 +926,15 @@ func (w *World) handleCSWeaponUse(o *Object, p []byte) {
 			y = w.rand(z[3]-z[1]) + z[1]
 		}
 	}
-	w.send(o, packetCSWeaponUse(1, idx, byte(typ+1), x, y))
-	other := packetCSWeaponUse(2, idx, byte(typ+1), x, y)
+	w.send(o, castlesiege.PacketWeaponUse(1, idx, byte(typ+1), x, y))
+	other := castlesiege.PacketWeaponUse(2, idx, byte(typ+1), x, y)
 	for _, e := range npc.VP2 {
 		if e.State != VPEmpty && e.Type == byte(TypePlayer) && e.Index != o.Index && e.State == VPVisible {
 			w.sendIndex(e.Index, other)
 		}
 	}
 	// FUN_0042a750: the players within 6 cells of the target see the shot.
-	shot := packetCSWeaponShot(byte(typ+1), x, y)
+	shot := castlesiege.PacketWeaponShot(byte(typ+1), x, y)
 	for i := PlayerStart; i < MaxObjects; i++ {
 		t := w.objects[i]
 		if t.State == StatePlaying && t.Map == npc.Map && abs(t.X-x) <= 6 && abs(t.Y-y) <= 6 {
@@ -960,7 +943,7 @@ func (w *World) handleCSWeaponUse(o *Object, p []byte) {
 	}
 	c := w.cs()
 	if len(c.shots) < 50 {
-		c.shots = append(c.shots, csShot{npc: idx, x: x, y: y, until: w.now().Add(csWeaponDelay)})
+		c.shots = append(c.shots, csShot{npc: idx, x: x, y: y, until: w.now().Add(castlesiege.WeaponDelay)})
 	}
 }
 
@@ -976,7 +959,7 @@ func (w *World) handleCSWeaponHit(o *Object, p []byte) {
 	}
 	idx := int(p[4])<<8 | int(p[5])
 	npc := w.csObj(idx)
-	if npc == nil || npc.Type != TypeNPC || (npc.Class != csClassSlingA && npc.Class != csClassSlingD) {
+	if npc == nil || npc.Type != TypeNPC || (npc.Class != castlesiege.ClassSlingA && npc.Class != castlesiege.ClassSlingD) {
 		return
 	}
 	c := w.cs()
@@ -998,7 +981,7 @@ func (w *World) handleCSWeaponHit(o *Object, p []byte) {
 			continue
 		}
 		if len(c.hits) < 100 {
-			c.hits = append(c.hits, csHit{npc: idx, target: i, at: w.now().Add(csWeaponHit)})
+			c.hits = append(c.hits, csHit{npc: idx, target: i, at: w.now().Add(castlesiege.WeaponHit)})
 		}
 	}
 }
@@ -1040,14 +1023,14 @@ func (w *World) csWeaponDamage(npc, t *Object) {
 		return
 	}
 	if t.Type == TypeMonster && t.Mon != nil && (t.Mon.Attribute == 6 || (t.Class >= 100 && t.Class <= 0x6E) ||
-		t.Class == 0x20B || t.Class == csClassSlingA || t.Class == csClassSlingD) {
+		t.Class == 0x20B || t.Class == castlesiege.ClassSlingA || t.Class == castlesiege.ClassSlingD) {
 		return
 	}
 	dmg := 0
 	switch npc.Class {
-	case csClassSlingA:
+	case castlesiege.ClassSlingA:
 		dmg = w.cfg.Int("Event", "CastleSiegeOffensiveWeaponDamage", 0)
-	case csClassSlingD:
+	case castlesiege.ClassSlingD:
 		dmg = w.cfg.Int("Event", "CastleSiegeDefensiveWeaponDamage", 0)
 	}
 	setObjLife(t, max(objLife(t)-float32(dmg), 0))
@@ -1068,15 +1051,15 @@ func (w *World) csObjectProc() {
 			continue
 		}
 		switch o.Class {
-		case csClassCrown:
+		case castlesiege.ClassCrown:
 			w.csCrownProc()
-		case csClassSwitch1, csClassSwitch2:
+		case castlesiege.ClassSwitch1, castlesiege.ClassSwitch2:
 			w.csSwitchProc(o)
-		case csClassStone:
+		case castlesiege.ClassStone:
 			if o.CS != nil {
 				w.csStoneProc(o)
 			}
-		case csClassStatue:
+		case castlesiege.ClassStatue:
 			w.csStatueProc(o)
 		}
 	}

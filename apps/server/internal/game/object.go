@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/auth"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/effect"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
@@ -113,7 +114,7 @@ type Object struct {
 	// Extension state owned by the gameplay modules (one file each).
 	Move  *moveState    // move.go     (path walking, D3/DF)
 	Mon   *monsterState // monster*.go (monsters and NPCs)
-	Eff   *effectState  // effect.go (CEffect slots obj+0x5fc)
+	Eff   *effect.State // effect.go (CEffect slots obj+0x5fc)
 	Skill *skillState   // skill.go (skill delays, combo, Nova, delayed hits)
 	Duel  *duelState    // duel.go (obj+0x43c..0x450)
 	CS    *csObjState   // castlesiege.go (obj+0x974..0x99c)

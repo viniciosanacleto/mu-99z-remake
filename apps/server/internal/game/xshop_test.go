@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/xshop"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
@@ -36,29 +37,6 @@ func credits(t *testing.T, b *bareWorld, login string) int64 {
 	return n
 }
 
-func TestXShopPacketLayouts(t *testing.T) {
-	if p := packetXShopCredits(0x01020304); !bytes.Equal(p, []byte{0xC1, 8, 0xFA, 0x03, 4, 3, 2, 1}) {
-		t.Fatalf("FA 03 % X", p)
-	}
-	want := []byte{0xC1, 0x10, 0xFA, 0x04, 7, 0, 0, 0, 0x64, 0, 0, 0, 0x1d, 0x00, 0, 0}
-	if p := packetXShopResult(7, 100, 29); !bytes.Equal(p, want) {
-		t.Fatalf("FA 04 % X", p)
-	}
-	if p := packetXShopGMResult(3); len(p) != 12 || p[1] != 12 || p[3] != 6 || p[4] != 3 {
-		t.Fatalf("FA 06 % X", p)
-	}
-	p := packetXShopPage(2, 1, 300, []xshopEntry{{0x401, 0x11223344, 5}, {0x402, 9, 1}})
-	if len(p) != 0x68 || p[1] != 0x68 || p[3] != 0x09 || p[4] != 2 || p[5] != 1 || p[6] != 0xFF || p[7] != 2 {
-		t.Fatalf("FA 09 header % X", p[:8])
-	}
-	if !bytes.Equal(p[8:20], []byte{1, 4, 0, 0, 0x44, 0x33, 0x22, 0x11, 5, 0, 0, 0}) || p[20] != 2 || p[24] != 9 || p[28] != 1 {
-		t.Fatalf("FA 09 entries % X", p[8:32])
-	}
-	if p := packetXShopPage(0, 0, 3, nil); p[6] != 3 || p[7] != 0 {
-		t.Fatalf("FA 09 pages % X", p[:8])
-	}
-}
-
 func TestXShopOptionRules(t *testing.T) {
 	cases := []struct {
 		o     [5]byte
@@ -78,7 +56,7 @@ func TestXShopOptionRules(t *testing.T) {
 		{[5]byte{0, 0, 0, 8}, 7, false},
 	}
 	for i, c := range cases {
-		if got := xshopOptsValid(c.o, c.flags); got != c.ok {
+		if got := xshop.OptionsValid(c.o, c.flags); got != c.ok {
 			t.Fatalf("case %d: %v", i, got)
 		}
 	}
@@ -131,7 +109,7 @@ func TestXShopListPage(t *testing.T) {
 		t.Fatalf("first entry % X", p[8:20])
 	}
 	b.runAsync()
-	if p := find(b.drain(o), 0xFA, 0x03); !bytes.Equal(p, packetXShopCredits(77)) {
+	if p := find(b.drain(o), 0xFA, 0x03); !bytes.Equal(p, xshop.PacketCredits(77)) {
 		t.Fatalf("credits % X", p)
 	}
 	// 120 ms limit, then a page past the end is clamped to the last one.
@@ -169,7 +147,7 @@ func TestXShopPurchase(t *testing.T) {
 	price := b.cw2().prices.Price(29)
 	opts := [5]byte{15, 1, 1, 2, 3}
 	b.xshopBuy(o, buyPacket(29, opts, price))
-	if r := find(b.drain(o), 0xFA, 0x04); !bytes.Equal(r, packetXShopResult(xshopBadPrice, 0, 29)) {
+	if r := find(b.drain(o), 0xFA, 0x04); !bytes.Equal(r, xshop.PacketResult(xshop.ResultBadPrice, 0, 29)) {
 		t.Fatalf("missing +4: % X", r)
 	}
 	b.xshopBuy(o, buyPacket(29, opts, price+4))
@@ -179,13 +157,13 @@ func TestXShopPurchase(t *testing.T) {
 	// A second purchase while the first is pending is busy.
 	b.advance(time.Second)
 	b.xshopBuy(o, buyPacket(0, [5]byte{}, 20))
-	if r := find(b.drain(o), 0xFA, 0x04); r == nil || r[4] != xshopBusy {
+	if r := find(b.drain(o), 0xFA, 0x04); r == nil || r[4] != xshop.ResultBusy {
 		t.Fatalf("pending % X", r)
 	}
 	b.runAsync()
 	r := find(b.drain(o), 0xFA, 0x04)
 	want := 100 - int64(price) - 4
-	if !bytes.Equal(r, packetXShopResult(xshopOK, uint32(want), 29)) {
+	if !bytes.Equal(r, xshop.PacketResult(xshop.ResultOK, uint32(want), 29)) {
 		t.Fatalf("result % X", r)
 	}
 	if credits(t, b, o.P.Account.Login) != want {
@@ -225,22 +203,22 @@ func TestXShopPurchaseRefusals(t *testing.T) {
 		return r[4]
 	}
 	b.xshopBuy(o, buyPacket(0x1FFF, [5]byte{}, 25))
-	if r := result(); r != xshopNoItem {
+	if r := result(); r != xshop.ResultNoItem {
 		t.Fatalf("unknown item %d", r)
 	}
 	b.xshopBuy(o, buyPacket(0, [5]byte{0, 1}, 20)) // Kris has no skill
-	if r := result(); r != xshopBadOpts {
+	if r := result(); r != xshop.ResultBadOptions {
 		t.Fatalf("skill on Kris %d", r)
 	}
 	// Not enough credits: the DataServer answers with the balance.
 	b.xshopBuy(o, buyPacket(0, [5]byte{}, 20))
 	b.runAsync()
-	if r := find(b.drain(o), 0xFA, 0x04); !bytes.Equal(r, packetXShopResult(xshopNoCredit, 5, 0)) {
+	if r := find(b.drain(o), 0xFA, 0x04); !bytes.Equal(r, xshop.PacketResult(xshop.ResultNoCredit, 5, 0)) {
 		t.Fatalf("no credit % X", r)
 	}
 	// 500 ms between purchases.
 	b.xshopBuy(o, buyPacket(0, [5]byte{}, 20))
-	if r := result(); r != xshopBusy {
+	if r := result(); r != xshop.ResultBusy {
 		t.Fatalf("500 ms %d", r)
 	}
 	// A full bag: 2.
@@ -249,7 +227,7 @@ func TestXShopPurchaseRefusals(t *testing.T) {
 		o.P.Inventory[s] = newItem(14*512+13, 0)
 	}
 	b.xshopBuy(o, buyPacket(0, [5]byte{}, 20))
-	if r := result(); r != xshopFailed {
+	if r := result(); r != xshop.ResultFailed {
 		t.Fatalf("full bag %d", r)
 	}
 }
@@ -264,7 +242,7 @@ func TestXShopRefundWhenItemCannotBeGiven(t *testing.T) {
 		o.P.Inventory[s] = newItem(14*512+13, 0)
 	}
 	b.runAsync()
-	if r := find(b.drain(o), 0xFA, 0x04); !bytes.Equal(r, packetXShopResult(xshopFailed, 100, 0)) {
+	if r := find(b.drain(o), 0xFA, 0x04); !bytes.Equal(r, xshop.PacketResult(xshop.ResultFailed, 100, 0)) {
 		t.Fatalf("refund result % X", r)
 	}
 	if credits(t, b, o.P.Account.Login) != 100 {
@@ -328,9 +306,9 @@ func TestXShopGMPrice(t *testing.T) {
 }
 
 // rechargeChunks collects the FA 0F chunks into the 0x23f3-byte block.
-func rechargeChunks(t *testing.T, pk [][]byte) *[rechargeSize]byte {
+func rechargeChunks(t *testing.T, pk [][]byte) *[xshop.RechargeSize]byte {
 	t.Helper()
-	d := new([rechargeSize]byte)
+	d := new([xshop.RechargeSize]byte)
 	n := 0
 	for _, p := range pk {
 		if len(p) < 4 || p[2] != 0xFA || p[3] != 0x0F {
@@ -340,10 +318,10 @@ func rechargeChunks(t *testing.T, pk [][]byte) *[rechargeSize]byte {
 			t.Fatalf("chunk size %d", len(p))
 		}
 		off := int(binary.LittleEndian.Uint16(p[4:]))
-		if off != n*rechargeChunk {
+		if off != n*xshop.RechargeChunk {
 			t.Fatalf("chunk %d offset %d", n, off)
 		}
-		copy(d[off:], p[6:6+min(rechargeChunk, rechargeSize-off)])
+		copy(d[off:], p[6:6+min(xshop.RechargeChunk, xshop.RechargeSize-off)])
 		n++
 	}
 	if n != 48 {
@@ -359,37 +337,15 @@ func TestXShopRechargeFromOriginalFiles(t *testing.T) {
 	d := rechargeChunks(t, b.drain(o))
 	// The shipped file is inactive with every field empty and no image:
 	// the 48 chunks carry an all-zero block.
-	if *d != ([rechargeSize]byte{}) {
-		t.Fatalf("block not empty: active %d holder %q key %q side %d", d[rcActive],
-			fieldText(d[rcHolder:rcHolder+0x60]), fieldText(d[rcKey:rcKey+0x80]),
-			binary.LittleEndian.Uint16(d[rcQRSize:]))
+	if *d != ([xshop.RechargeSize]byte{}) {
+		t.Fatalf("block not empty: active %d holder %q key %q side %d", d[xshop.RechargeActive],
+			xshop.FieldText(d[xshop.RechargeHolder:xshop.RechargeHolder+0x60]), xshop.FieldText(d[xshop.RechargeKey:xshop.RechargeKey+0x80]),
+			binary.LittleEndian.Uint16(d[xshop.RechargeQRSize:]))
 	}
 	// 3 s between requests.
 	b.xshopRecharge(o, []byte{0xC1, 4, 0xFA, 0x0E})
 	if len(b.drain(o)) != 0 {
 		t.Fatal("inside 3 s")
-	}
-}
-
-func TestEMVAmount(t *testing.T) {
-	for _, c := range []struct {
-		in, want string
-		ok       bool
-	}{
-		{"000201" + "540525.00" + "6304ABCD", "25.00", true},
-		{"00020126", "", false},               // length past the end
-		{"0002015404" + "1.00", "1.00", true}, // tag 54 last
-		{"5404" + "1.00" + "5404" + "2.00", "", false},
-		{"0A0201", "", false},
-		{"000201", "", false}, // no tag 54
-	} {
-		v, ok := emvAmount(c.in)
-		if v != c.want || ok != c.ok {
-			t.Fatalf("%q: %q %v", c.in, v, ok)
-		}
-	}
-	if !amountText("25.00") || amountText("2500") || amountText("2a.00") || amountText(".00") {
-		t.Fatal("amount format")
 	}
 }
 
@@ -403,19 +359,19 @@ func TestXShopRechargeUploadRoundTrip(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(dir, "Custom"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	d := new([rechargeSize]byte)
-	d[rcActive] = 1
-	copy(d[rcHolder:], "Fulano")
-	copy(d[rcKey:], "chave@pix")
-	copy(d[rcCopy:], "000201"+"540510.50"+"6304ABCD")
-	binary.LittleEndian.PutUint16(d[rcQRSize:], 16)
+	d := new([xshop.RechargeSize]byte)
+	d[xshop.RechargeActive] = 1
+	copy(d[xshop.RechargeHolder:], "Fulano")
+	copy(d[xshop.RechargeKey:], "chave@pix")
+	copy(d[xshop.RechargeCopy:], "000201"+"540510.50"+"6304ABCD")
+	binary.LittleEndian.PutUint16(d[xshop.RechargeQRSize:], 16)
 	for i := 0; i < 16*16; i += 3 {
-		d[rcQRBits+i/8] |= 1 << (i % 8)
+		d[xshop.RechargeQRBits+i/8] |= 1 << (i % 8)
 	}
 	send := func() [][]byte {
 		var acks [][]byte
-		for off := 0; off < rechargeSize; off += rechargeChunk {
-			p := packetRechargeChunk(off, d)
+		for off := 0; off < xshop.RechargeSize; off += xshop.RechargeChunk {
+			p := xshop.PacketRechargeChunk(off, d)
 			p[3] = 0x10
 			b.xshopRechargeUpload(o, p)
 			acks = append(acks, b.drain(o)...)
@@ -449,52 +405,17 @@ func TestXShopRechargeUploadRoundTrip(t *testing.T) {
 	// The saved file reads back as the same block.
 	b.xshopRecharge(o, []byte{0xC1, 4, 0xFA, 0x0E})
 	got := rechargeChunks(t, b.drain(o))
-	copy(d[rcValue:], "10.50")
+	copy(d[xshop.RechargeValue:], "10.50")
 	if *got != *d {
 		t.Fatal("round trip differs")
 	}
 	// A chunk out of order breaks the upload (ack) and a new start inside
 	// 3 s is refused.
-	p := packetRechargeChunk(0, d)
+	p := xshop.PacketRechargeChunk(0, d)
 	p[3] = 0x10
 	b.xshopRechargeUpload(o, p)
 	if len(b.drain(o)) != 1 {
 		t.Fatal("restart inside 3 s not acknowledged")
-	}
-}
-
-func TestRechargeImageRoundTrip(t *testing.T) {
-	d := new([rechargeSize]byte)
-	binary.LittleEndian.PutUint16(d[rcQRSize:], 5)
-	d[rcQRBits] = 0b10100101
-	d[rcQRBits+3] = 0x01 // bit 24, the last of 5x5
-	path := filepath.Join(t.TempDir(), "q.bmp")
-	if err := os.WriteFile(path, encodeRechargeBMP(d), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	var back [rechargeSize]byte
-	if !loadRechargeImage(path, &back) || back != *d {
-		t.Fatalf("round trip % X", back[rcQRSize:rcQRSize+8])
-	}
-	// A 24-bit bottom-up 4x2 image scales into a 4x4 matrix, centred.
-	img := []byte{'B', 'M', 0, 0, 0, 0, 0, 0, 0, 0, 0x36, 0, 0, 0, 0x28, 0, 0, 0, 4, 0, 0, 0, 2, 0, 0, 0, 1, 0, 24, 0}
-	img = append(img, make([]byte, 0x36-len(img))...)
-	// bottom row (y=1): white, black, white, black; top row (y=0): black x4
-	img = append(img, 0xff, 0xff, 0xff, 0, 0, 0, 0xff, 0xff, 0xff, 0, 0, 0)
-	img = append(img, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-	if err := os.WriteFile(path, img, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	clear(back[:])
-	if !loadRechargeImage(path, &back) || binary.LittleEndian.Uint16(back[rcQRSize:]) != 4 {
-		t.Fatal("24-bit image")
-	}
-	// rows 1 and 2 of the 4x4 matrix: 1111 then 0101 (bits 4..11).
-	if back[rcQRBits] != 0xF0 || back[rcQRBits+1] != 0x0A {
-		t.Fatalf("bits % X", back[rcQRBits:rcQRBits+2])
-	}
-	if loadRechargeImage(filepath.Join(t.TempDir(), "none.bmp"), &back) {
-		t.Fatal("missing file loaded")
 	}
 }
 

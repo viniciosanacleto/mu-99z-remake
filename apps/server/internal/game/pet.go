@@ -4,7 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/chaosmix"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
@@ -43,7 +45,7 @@ func (w *World) petTable() *[petMaxTableLevel + 1]uint32 {
 func (w *World) maxPetLevel() int { return w.cfg.Int("Common", "MaxPetLevel", 0) }
 
 // isPet reports the Dark Horse / Dark Raven indexes.
-func isPet(idx int) bool { return idx == idxDarkHorse || idx == idxDarkRaven }
+func isPet(idx int) bool { return idx == chaosmix.ItemDarkHorse || idx == chaosmix.ItemDarkRaven }
 
 // petInitTable is FUN_0048d010 with an explicit table: level capped to
 // MaxPetLevel, experience clamped into [table[level], table[level+1]).
@@ -136,7 +138,7 @@ func petPrice(it item.Item) (itemPrices, bool) {
 		return itemPrices{}, false
 	}
 	v := uint32(it.PetLevel) * 2000000
-	if it.Index == idxDarkRaven {
+	if it.Index == chaosmix.ItemDarkRaven {
 		v = uint32(it.PetLevel) * 1000000
 	}
 	buy := v
@@ -160,9 +162,9 @@ func petPrice(it item.Item) (itemPrices, bool) {
 // (FUN_004dacf0; petType 0 raven, 1 horse; invenType 0xFE marks a level
 // up after a kill).
 func packetPetInfo(petType, invenType, pos byte, level int, exp uint32) []byte {
-	p := newPacket(frame.C1, 0xA9, -1, 0x0C)
+	p := packet.New(frame.C1, 0xA9, -1, 0x0C)
 	p[3], p[4], p[5], p[6] = petType, invenType, pos, byte(level)
-	u32le(p[8:], exp)
+	packet.PutUint32(p[8:], exp)
 	return p
 }
 
@@ -190,7 +192,7 @@ func (w *World) petKillExp(o *Object, exp int64) {
 		slot  int
 		index int
 		typ   byte
-	}{{8, idxDarkHorse, 1}, {1, idxDarkRaven, 0}}
+	}{{8, chaosmix.ItemDarkHorse, 1}, {1, chaosmix.ItemDarkRaven, 0}}
 	for _, pt := range pets {
 		it := &o.P.Inventory[pt.slot]
 		if it.Index != pt.index {
@@ -254,7 +256,7 @@ func (w *World) handlePetInfo(o *Object, p []byte) {
 		}
 		it = trade(src).Box[pos]
 	case 4:
-		if pos >= chaosBoxSlots {
+		if pos >= chaosmix.BoxSlots {
 			return
 		}
 		it = chaos(o).Box[pos]
@@ -389,7 +391,7 @@ func pet(o *Object) *petState {
 // packetPetCommand is C1 07 A7 00 mode targetHi targetLo (FUN_0046b450 /
 // FUN_0046b2d0 / FUN_0046b3b0).
 func packetPetCommand(mode byte, target int) []byte {
-	p := newPacket(frame.C1, 0xA7, 0, 7)
+	p := packet.New(frame.C1, 0xA7, 0, 7)
 	p[4], p[5], p[6] = mode, byte(target>>8), byte(target)
 	return p
 }

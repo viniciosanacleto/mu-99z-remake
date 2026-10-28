@@ -4,6 +4,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -114,7 +115,7 @@ func (w *World) expBounds(o *Object) {
 // (u16 clamped to 65000, then u32), fruits, experience.
 func (w *World) packetLevelUp(o *Object) []byte {
 	p, c, s := o.P, o.P.Char, w.statsOf(o)
-	b := newPacket(frame.C1, 0xF3, 0x05, 0x30)
+	b := packet.New(frame.C1, 0xF3, 0x05, 0x30)
 	maxLife := float64(float32(p.AddLife) + c.MaxLife)
 	maxMana := float64(float32(p.AddMana) + c.MaxMana)
 	clampF := func(f float64) int {
@@ -123,27 +124,27 @@ func (w *World) packetLevelUp(o *Object) []byte {
 		}
 		return 65000
 	}
-	u16le(b[4:], c.Level)
-	u16le(b[6:], c.LevelUpPoints)
-	u16le(b[8:], clampF(maxLife))
-	u16le(b[10:], clampF(maxMana))
-	u16le(b[12:], clamp65000(s.MaxBP+s.AddBP))
-	u16le(b[14:], c.FruitAddPoints)
-	u16le(b[16:], maxFruit(o.Class, c.Level))
-	u16le(b[18:], c.FruitSubPoints)
-	u16le(b[20:], maxFruit(o.Class, c.Level))
-	u32le(b[24:], uint32(int32(c.LevelUpPoints)))
-	u32le(b[28:], uint32(int64(math.RoundToEven(maxLife))))
-	u32le(b[32:], uint32(int64(math.RoundToEven(maxMana))))
-	u32le(b[36:], uint32(int32(s.MaxBP+s.AddBP)))
-	u32le(b[40:], uint32(c.Experience))
-	u32le(b[44:], p.NextExp)
+	packet.PutUint16(b[4:], c.Level)
+	packet.PutUint16(b[6:], c.LevelUpPoints)
+	packet.PutUint16(b[8:], clampF(maxLife))
+	packet.PutUint16(b[10:], clampF(maxMana))
+	packet.PutUint16(b[12:], packet.Clamp65000(s.MaxBP+s.AddBP))
+	packet.PutUint16(b[14:], c.FruitAddPoints)
+	packet.PutUint16(b[16:], maxFruit(o.Class, c.Level))
+	packet.PutUint16(b[18:], c.FruitSubPoints)
+	packet.PutUint16(b[20:], maxFruit(o.Class, c.Level))
+	packet.PutUint32(b[24:], uint32(int32(c.LevelUpPoints)))
+	packet.PutUint32(b[28:], uint32(int64(math.RoundToEven(maxLife))))
+	packet.PutUint32(b[32:], uint32(int64(math.RoundToEven(maxMana))))
+	packet.PutUint32(b[36:], uint32(int32(s.MaxBP+s.AddBP)))
+	packet.PutUint32(b[40:], uint32(c.Experience))
+	packet.PutUint32(b[44:], p.NextExp)
 	return b
 }
 
 // packetLevelUpEffect is C1 06 48 index(BE) 0x10, sent to the viewport.
 func packetLevelUpEffect(index int) []byte {
-	b := newPacket(frame.C1, 0x48, -1, 6)
+	b := packet.New(frame.C1, 0x48, -1, 6)
 	b[3], b[4], b[5] = byte(index>>8), byte(index), 0x10
 	return b
 }
@@ -151,21 +152,21 @@ func packetLevelUpEffect(index int) []byte {
 // packetPartyKillExp is C3 18 9C (FUN_004dab00) with the flag of bit 7 of
 // byte 3.
 func packetPartyKillExp(monster int, flag bool, exp uint32, damage int, cur, next uint32) []byte {
-	b := newPacket(frame.C3, 0x9C, -1, 0x18)
+	b := packet.New(frame.C3, 0x9C, -1, 0x18)
 	b[3], b[4] = byte(monster>>8), byte(monster)
 	if flag {
 		b[3] |= 0x80
 	}
-	u16le(b[6:], int(exp>>16))
-	u16le(b[8:], int(exp&0xFFFF))
+	packet.PutUint16(b[6:], int(exp>>16))
+	packet.PutUint16(b[8:], int(exp&0xFFFF))
 	d := damage
 	if d >= 0xFDE9 {
 		b[10], b[11] = 0xFD, 0xE8
 	} else {
 		b[10], b[11] = byte(d>>8), byte(d)
 	}
-	u32le(b[16:], cur)
-	u32le(b[20:], next)
+	packet.PutUint32(b[16:], cur)
+	packet.PutUint32(b[20:], next)
 	return b
 }
 

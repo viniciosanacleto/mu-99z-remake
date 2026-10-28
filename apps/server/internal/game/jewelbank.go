@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
@@ -44,9 +45,9 @@ var jewelBankPack = [2]int{12*512 + 141, 12*512 + 136}
 
 // packetJewelBank is C1 2C F3 F5 + ten u32 counters (FUN_0044ced0).
 func packetJewelBank(v [store.JewelBankTypes]int) []byte {
-	p := newPacket(frame.C1, 0xF3, 0xF5, 0x2C)
+	p := packet.New(frame.C1, 0xF3, 0xF5, 0x2C)
 	for i, n := range v {
-		u32le(p[4+4*i:], uint32(int32(n)))
+		packet.PutUint32(p[4+4*i:], uint32(int32(n)))
 	}
 	return p
 }

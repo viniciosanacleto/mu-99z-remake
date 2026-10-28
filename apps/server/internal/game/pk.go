@@ -3,6 +3,7 @@ package game
 import (
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
@@ -42,7 +43,7 @@ func registerPk(h *hooks) {
 
 // packetPKLevel is C1 07 F3 08 index(BE) level.
 func packetPKLevel(index, level int) []byte {
-	b := newPacket(frame.C1, 0xF3, 0x08, 7)
+	b := packet.New(frame.C1, 0xF3, 0x08, 7)
 	b[4], b[5], b[6] = byte(index>>8), byte(index), byte(level)
 	return b
 }

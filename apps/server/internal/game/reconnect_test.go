@@ -2,11 +2,11 @@ package game
 
 import (
 	"context"
-	"encoding/binary"
 	"testing"
 	"time"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/reconnect"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
@@ -39,34 +39,6 @@ func reconnectRows(t *testing.T, b *bareWorld) []store.ReconnectRow {
 		t.Fatal(err)
 	}
 	return rows
-}
-
-// The record keeps the FUN_004e1350 offsets.
-func TestReconnectRecordLayout(t *testing.T) {
-	r := &reconnectRecord{Account: "acc", Name: "Hero", IP: "10.0.0.1", HWID: "HW-1", Time: 300, Party: 7,
-		AutoCount: 2, AutoAmount: [5]int{1, 2, 3, 4, 5}, AutoReset: true, AutoPoints: [5]int{6, 7, 8, 9, 10},
-		PartyFlags: 5, PartyPassword: "pw", AttackActive: true, AttackOffline: true, AttackBuff: 1,
-		AttackSkill: 0x1234, AttackMap: 3, AttackX: 100, AttackY: 101, PickOn: true, Helper: true, PShopOpen: true,
-		StoreOffline: 1, StoreType: 4}
-	r.Prices[0], r.Prices[31] = 1000, 2000
-	b := r.encode()
-	le := binary.LittleEndian
-	if len(b) != 400 || string(b[0:3]) != "acc" || string(b[0x16:0x1a]) != "Hero" || string(b[0x21:0x29]) != "10.0.0.1" ||
-		string(b[0x31:0x35]) != "HW-1" || le.Uint32(b[0x60:]) != 300 || le.Uint32(b[0x64:]) != 7 ||
-		le.Uint32(b[0x68:]) != 2 || le.Uint32(b[0x7c:]) != 5 || b[0x80] != 1 || le.Uint32(b[0x94:]) != 10 ||
-		le.Uint32(b[0x98:]) != 5 || string(b[0x9c:0x9e]) != "pw" || b[0xa7] != 1 || b[0xa8] != 1 ||
-		le.Uint16(b[0xb0:]) != 0x1234 || b[0xb2] != 3 || b[0xb3] != 100 || b[0xb4] != 101 || b[0xb5] != 1 ||
-		b[0xb6] != 0 || b[0xb7] != 1 || b[0xb8] != 1 || b[0xb9] != 1 || b[0xba] != 4 ||
-		le.Uint32(b[0xbc:]) != 1000 || le.Uint32(b[0x138:]) != 2000 {
-		t.Fatalf("layout % X", b[:reconnectRecordSize])
-	}
-	back, ok := decodeReconnect(b)
-	if !ok || *back != *r {
-		t.Fatalf("round trip %+v", back)
-	}
-	if _, ok := decodeReconnect(b[:0x100]); ok {
-		t.Fatal("short data accepted")
-	}
 }
 
 // Leaving the game stores the record (and the ReconnectData row); after
@@ -260,7 +232,7 @@ func TestReconnectOfflineStore(t *testing.T) {
 	}
 	o.P.Inventory[ShopStart] = item.Item{Index: item.Make(14, 13), Durability: 1}
 	o.P.Inventory[ShopStart+1] = item.Item{Index: item.Make(14, 14), Durability: 1}
-	r := &reconnectRecord{Name: "Seller", PShopOpen: true, StoreOffline: 1, StoreType: 2, Party: -1}
+	r := &reconnect.Record{Name: "Seller", PShopOpen: true, StoreOffline: 1, StoreType: 2, Party: -1}
 	r.Prices[0], r.Prices[1] = 5, 0
 	b.rc().records["Seller"] = r
 
@@ -291,10 +263,10 @@ func TestOfflineReconnectAtStart(t *testing.T) {
 	if _, _, err := b.store.CreateCharacter(ctx, acc.ID, "Robot", 0x10); err != nil {
 		t.Fatal(err)
 	}
-	r := &reconnectRecord{Account: "robotacc", Name: "Robot", IP: "10.1.1.1", HWID: "HW", Time: 300, Party: -1,
+	r := &reconnect.Record{Account: "robotacc", Name: "Robot", IP: "10.1.1.1", HWID: "HW", Time: 300, Party: -1,
 		PartyFlags: 3, AttackActive: true, AttackOffline: true, AttackSkill: 19, AttackX: 130, AttackY: 130}
-	other := &reconnectRecord{Account: "robotacc", Name: "Normal", IP: "10.1.1.1", HWID: "HW", Time: 300, Party: -1}
-	rows := []store.ReconnectRow{{Name: "Normal", Data: other.encode()}, {Name: "Robot", Data: r.encode()}}
+	other := &reconnect.Record{Account: "robotacc", Name: "Normal", IP: "10.1.1.1", HWID: "HW", Time: 300, Party: -1}
+	rows := []store.ReconnectRow{{Name: "Normal", Data: other.Encode()}, {Name: "Robot", Data: r.Encode()}}
 
 	// Switch off: only the cache is filled.
 	b.reconnectLoaded(rows)
@@ -342,9 +314,9 @@ func TestOfflineReconnectHelperTimesOut(t *testing.T) {
 	b.store.CreateCharacter(ctx, acc.ID, "Helper", 0x10)
 	withConfigs(t, b, map[string]map[string]string{"Common": {"ReconnectOfflineSwitch": "1"},
 		"Custom": {"CustomStoreOfflineSwitch": "1"}})
-	r := &reconnectRecord{Account: "helperacc", Name: "Helper", IP: "10.1.1.2", HWID: "HW", Time: 300, Party: -1,
+	r := &reconnect.Record{Account: "helperacc", Name: "Helper", IP: "10.1.1.2", HWID: "HW", Time: 300, Party: -1,
 		Helper: true}
-	b.reconnectLoaded([]store.ReconnectRow{{Name: "Helper", Data: r.encode()}})
+	b.reconnectLoaded([]store.ReconnectRow{{Name: "Helper", Data: r.Encode()}})
 	b.settle()
 	if b.users != 1 {
 		t.Fatalf("users %d", b.users)
@@ -361,11 +333,11 @@ func TestOfflineReconnectHelperTimesOut(t *testing.T) {
 // first second of the instance: the rows of its ServerCode fill the cache.
 func TestReconnectReplayOnFirstSecond(t *testing.T) {
 	b := newBareWorld(t)
-	r := &reconnectRecord{Account: "a", Name: "Stored", Time: 300, Party: -1}
+	r := &reconnect.Record{Account: "a", Name: "Stored", Time: 300, Party: -1}
 	rs := b.store.(store.ReconnectStore)
 	ctx := context.Background()
-	rs.SaveReconnect(ctx, store.ReconnectRow{Name: "Stored", ServerCode: b.cfg.ServerCode, Data: r.encode(), Time: 300})
-	rs.SaveReconnect(ctx, store.ReconnectRow{Name: "Elsewhere", ServerCode: b.cfg.ServerCode + 1, Data: r.encode(), Time: 300})
+	rs.SaveReconnect(ctx, store.ReconnectRow{Name: "Stored", ServerCode: b.cfg.ServerCode, Data: r.Encode(), Time: 300})
+	rs.SaveReconnect(ctx, store.ReconnectRow{Name: "Elsewhere", ServerCode: b.cfg.ServerCode + 1, Data: r.Encode(), Time: 300})
 	b.reconnectSecond()
 	b.settle()
 	if got := b.rc().records["Stored"]; got == nil || got.Time != 300 || b.rc().records["Elsewhere"] != nil {

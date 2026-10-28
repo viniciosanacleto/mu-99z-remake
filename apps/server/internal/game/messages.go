@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -66,10 +67,10 @@ func packetNotice(typ, count, opacity byte, delay uint16, color uint32, speed by
 		n = 0xFF
 		text = text[:n-0x11]
 	}
-	p := newPacket(frame.C1, 0x0D, -1, n)
+	p := packet.New(frame.C1, 0x0D, -1, n)
 	p[3], p[4], p[5] = typ, count, opacity
-	u16le(p[6:], int(delay))
-	u32le(p[8:], color)
+	packet.PutUint16(p[6:], int(delay))
+	packet.PutUint32(p[8:], color)
 	p[12] = speed
 	copy(p[13:], text)
 	return p

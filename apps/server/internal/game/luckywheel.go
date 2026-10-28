@@ -5,6 +5,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
@@ -57,15 +58,15 @@ func (w *World) wheelCost() int { return w.cfg.Int("Custom", "LuckyWheelCustValu
 
 // packetWheelCost is C1 08 FB FC price(u32).
 func packetWheelCost(cost uint32) []byte {
-	p := newPacket(frame.C1, 0xFB, 0xFC, 8)
-	u32le(p[4:], cost)
+	p := packet.New(frame.C1, 0xFB, 0xFC, 8)
+	packet.PutUint32(p[4:], cost)
 	return p
 }
 
 // packetWheelResult is C1 08 FB 16 position(u32).
 func packetWheelResult(key int) []byte {
-	p := newPacket(frame.C1, 0xFB, 0x16, 8)
-	u32le(p[4:], uint32(key))
+	p := packet.New(frame.C1, 0xFB, 0x16, 8)
+	packet.PutUint32(p[4:], uint32(key))
 	return p
 }
 
@@ -80,12 +81,12 @@ func (w *World) packetWheelList() []byte {
 		}
 	}
 	sort.Slice(rows, func(i, j int) bool { return rows[i].Index < rows[j].Index })
-	p := newPacket(frame.C2, 0xFB, 0xFB, 6+32*len(rows))
+	p := packet.New(frame.C2, 0xFB, 0xFB, 6+32*len(rows))
 	p[5] = byte(len(rows))
 	for i, r := range rows {
 		b := p[6+32*i:]
 		for k, v := range []int{r.Index, r.Type, r.Item, r.Level, r.Luck, r.Skill, r.Option, r.Excellent} {
-			u32le(b[4*k:], uint32(int32(v)))
+			packet.PutUint32(b[4*k:], uint32(int32(v)))
 		}
 	}
 	return p

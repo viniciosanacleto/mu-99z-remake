@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/mapitem"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
@@ -273,16 +274,16 @@ func (w *World) pickProc(o *Object) {
 	excOn := w.cfg.Int("Custom", "CustomPickExcellentPick", 0) != 0 && pk.Exc != 0
 	setOn := w.cfg.Int("Custom", "CustomPickAncientPick", 0) != 0 && pk.Set != 0
 	moneyOn := w.cfg.Int("Custom", "CustomPickMoneyPick", 0) != 0 && pk.Money != 0
-	for i := range t.items {
-		m := &t.items[i]
-		if !m.valid() || !m.Live || m.Looting || m.State == mapItemRemoved || now.Sub(m.Created) <= 999*time.Millisecond {
+	for i := range t.Items {
+		m := &t.Items[i]
+		if !m.Valid() || !m.Live || m.Looting || m.State == mapitem.StateRemoved || now.Sub(m.Created) <= 999*time.Millisecond {
 			continue
 		}
 		if w.pickBlocked(o, m.Item) || !nearPos(o, o.Map, m.X, m.Y, rng) {
 			continue
 		}
 		take := (jewelOn && w.jewelItem(m.Item.Index)) || (excOn && excellentItem(m.Item)) ||
-			(setOn && m.Item.SetOption&3 != 0) || (moneyOn && m.Item.Index == MoneyIndex)
+			(setOn && m.Item.SetOption&3 != 0) || (moneyOn && m.Item.Index == mapitem.MoneyIndex)
 		if !take && pk.Count != 0 {
 			name := w.pickName(m.Item)
 			for _, f := range pk.Texts {

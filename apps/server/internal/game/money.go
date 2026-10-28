@@ -3,6 +3,7 @@ package game
 import (
 	"encoding/binary"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
@@ -10,7 +11,7 @@ import (
 // (FUN_004da370; the money is passed in ECX and stored byte by byte from
 // the most significant).
 func packetMoney(money uint32) []byte {
-	p := newPacket(frame.C3, 0x22, 0xFE, 0x10)
+	p := packet.New(frame.C3, 0x22, 0xFE, 0x10)
 	binary.BigEndian.PutUint32(p[4:], money)
 	return p
 }

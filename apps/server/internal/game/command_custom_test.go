@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/mapitem"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
@@ -392,16 +393,16 @@ func TestCustomPickCommandsAndLoot(t *testing.T) {
 	n := b.addMapItem(0, x+1, y, newItem(14*512+13, 0), -1)
 	m := b.addMapItem(0, x+1, y, newItem(14*512+22, 0), -1)
 	b.pickTick()
-	if !b.mapItems(0).items[n].valid() {
+	if !b.mapItems(0).Items[n].Valid() {
 		t.Fatal("picked before one second")
 	}
 	b.advance(2 * time.Second)
 	b.pickTick()
 	b.runAsync() // the item serial
-	if b.mapItems(0).items[n].State != mapItemRemoved || b.countItems(o, 14*512+13, 0) != 1 {
+	if b.mapItems(0).Items[n].State != mapitem.StateRemoved || b.countItems(o, 14*512+13, 0) != 1 {
 		t.Fatal("not picked")
 	}
-	if b.mapItems(0).items[m].State == mapItemRemoved {
+	if b.mapItems(0).Items[m].State == mapitem.StateRemoved {
 		t.Fatal("blocked item picked")
 	}
 	b.runCommand(o, "/pick")

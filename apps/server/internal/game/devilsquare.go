@@ -4,6 +4,8 @@ import (
 	"math"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/devilsquare"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
@@ -13,50 +15,9 @@ import (
 // EMPTY -> READY (entry open) -> STAND -> START -> CLEAN -> EMPTY, driven
 // by the 1-second timer FUN_0046e260.
 
-const (
-	dsBlank = iota
-	dsEmpty
-	dsReady
-	dsStand
-	dsStart
-	dsClean
-)
-
-const (
-	dsSquares   = 6
-	dsMaxUsers  = 50
-	dsMaxMobs   = 200
-	dsEntrySec  = 1 // EventEntryLevel.dat section
-	dsStageSec  = 2 // EventStageSpawn.dat section
-	dsKickGate  = 0x1B
-	dsCharon    = 0xED
-	itemDSInvit = 0x1C13 // Devil's Invitation (14,19), level = square + 1
-	itemDSFree  = 0x1A2E // free entrance (13,46)
-)
-
-// dsGates are the entry gates of FUN_004701f0 per square.
-var dsGates = [dsSquares]int{0x3A, 0x3B, 0x3C, 0x3D, 0x6F, 0x70}
-
-type dsUser struct {
-	Index, Score, Rank, Exp, Money int
-}
-
-type dsSquare struct {
-	Index, State, Map int
-	Remain            int       // r[3], seconds
-	Target            time.Time // r[4]
-	Tick              time.Time // r[5]
-	Open              bool      // r[6]
-	LastMin           int       // r[7]
-	Warned            bool      // r[8]
-	Stage             int       // r[9]
-	Users             [dsMaxUsers]dsUser
-	Mobs              []int // r[0x104], at most 200
-}
-
 type devilSquare struct {
 	data *gamedata.DevilSquare
-	sq   [dsSquares]dsSquare
+	sq   [devilsquare.Squares]devilsquare.Square
 }
 
 func registerDevilsquare(h *hooks) {
@@ -84,7 +45,7 @@ func registerDevilsquare(h *hooks) {
 		// FUN_0046de30: start every square when DevilSquareEvent is on.
 		for i := range ds.sq {
 			if w.dsOn() {
-				ds.sq[i].State = dsEmpty
+				ds.sq[i].State = devilsquare.StateEmpty
 				w.dsEnterEmpty(&ds.sq[i])
 			}
 		}
@@ -103,7 +64,7 @@ func registerDevilsquare(h *hooks) {
 			w.dsMonsterKilled(victim)
 		}
 	})
-	h.npcTalk[dsCharon] = func(w *World, o, npc *Object) bool { w.dsCharonTalk(o); return true }
+	h.npcTalk[devilsquare.Charon] = func(w *World, o, npc *Object) bool { w.dsCharonTalk(o); return true }
 }
 
 func (w *World) ds() *devilSquare { return w.ev().ds }
@@ -112,24 +73,18 @@ func (w *World) dsOn() bool { return w.cfg.Int("Event", "DevilSquareEvent", 0) !
 
 // --- packets -----------------------------------------------------------
 
-// packetDSResult is C1 04 90 result (FUN_004701f0).
-func packetDSResult(r byte) []byte { return []byte{0xC1, 0x04, 0x90, r} }
-
-// packetDSState is C1 04 92 state: 0 entry closing, 1 starting, 2 ending.
-func packetDSState(s byte) []byte { return []byte{0xC1, 0x04, 0x92, s} }
-
 // packetDSRanking is FUN_004705d0: C1 size 93 myRank+1 count, then
 // 24-byte entries (name[10] + 2 padding, score, experience, zen) — the
 // player's own first, then ranks 1..9.
-func packetDSRanking(w *World, s *dsSquare, self dsUser) []byte {
-	entry := func(u dsUser) []byte {
+func packetDSRanking(w *World, s *devilsquare.Square, self devilsquare.User) []byte {
+	entry := func(u devilsquare.User) []byte {
 		b := make([]byte, 24)
 		if o := w.objects[u.Index]; o.P != nil && o.P.Char != nil {
 			copy(b[:10], o.P.Char.Name)
 		}
-		u32le(b[12:], uint32(u.Score))
-		u32le(b[16:], uint32(u.Exp))
-		u32le(b[20:], uint32(u.Money))
+		packet.PutUint32(b[12:], uint32(u.Score))
+		packet.PutUint32(b[16:], uint32(u.Exp))
+		packet.PutUint32(b[20:], uint32(u.Money))
 		return b
 	}
 	body := entry(self)
@@ -155,7 +110,7 @@ func packetDSRanking(w *World, s *dsSquare, self dsUser) []byte {
 
 // --- users ---------------------------------------------------------------
 
-func (w *World) dsUserCount(s *dsSquare) int {
+func (w *World) dsUserCount(s *devilsquare.Square) int {
 	n := 0
 	for _, u := range s.Users {
 		if u.Index >= 0 && u.Index < MaxObjects {
@@ -165,23 +120,14 @@ func (w *World) dsUserCount(s *dsSquare) int {
 	return n
 }
 
-func (s *dsSquare) user(index int) *dsUser {
-	for i := range s.Users {
-		if s.Users[i].Index == index {
-			return &s.Users[i]
-		}
-	}
-	return nil
-}
-
 // dsAddUser is FUN_0046eea0 (also counts the entry, obj+0x209c).
-func (w *World) dsAddUser(s *dsSquare, o *Object) bool {
-	if s.user(o.Index) != nil {
+func (w *World) dsAddUser(s *devilsquare.Square, o *Object) bool {
+	if s.User(o.Index) != nil {
 		return false
 	}
 	for i := range s.Users {
 		if u := s.Users[i]; u.Index < 0 || u.Index >= MaxObjects {
-			s.Users[i] = dsUser{Index: o.Index}
+			s.Users[i] = devilsquare.User{Index: o.Index}
 			o.P.entries.DS++
 			w.saveCharacter(o, nil)
 			return true
@@ -191,20 +137,20 @@ func (w *World) dsAddUser(s *dsSquare, o *Object) bool {
 }
 
 // dsCleanUsers is FUN_0046f040: users that left the game or the map.
-func (w *World) dsCleanUsers(s *dsSquare) {
+func (w *World) dsCleanUsers(s *devilsquare.Square) {
 	for i := range s.Users {
 		u := s.Users[i].Index
 		if u < 0 || u >= MaxObjects {
 			continue
 		}
 		if o := w.objects[u]; o.State != StatePlaying || o.Map != s.Map {
-			s.Users[i] = dsUser{Index: -1}
+			s.Users[i] = devilsquare.User{Index: -1}
 		}
 	}
 }
 
 // dsUsersSend is FUN_00470140.
-func (w *World) dsUsersSend(s *dsSquare, p []byte) {
+func (w *World) dsUsersSend(s *devilsquare.Square, p []byte) {
 	for _, u := range s.Users {
 		if u.Index >= 0 && u.Index < MaxObjects {
 			w.send(w.objects[u.Index], p)
@@ -214,7 +160,7 @@ func (w *World) dsUsersSend(s *dsSquare, p []byte) {
 
 // dsUsersMsg is FUN_0046ff50. The original picks the language of
 // objects[slot] (the slot number, not the user), kept as is.
-func (w *World) dsUsersMsg(s *dsSquare, typ byte, n int, args ...any) {
+func (w *World) dsUsersMsg(s *devilsquare.Square, typ byte, n int, args ...any) {
 	for i, u := range s.Users {
 		if u.Index >= 0 && u.Index < MaxObjects {
 			text := w.messageFor(w.objects[i], n, args...)
@@ -240,27 +186,22 @@ func (w *World) dsTick() {
 		s.Tick = now
 		s.Remain = int(math.Floor(s.Target.Sub(now).Seconds()))
 		switch s.State {
-		case dsEmpty:
+		case devilsquare.StateEmpty:
 			w.dsEmptyProc(s)
-		case dsReady:
+		case devilsquare.StateReady:
 			w.dsReadyProc(s)
-		case dsStand:
+		case devilsquare.StateStand:
 			w.dsStandProc(s)
-		case dsStart:
+		case devilsquare.StateStart:
 			w.dsStartProc(s)
-		case dsClean:
+		case devilsquare.StateClean:
 			w.dsCleanUsers(s)
 			if s.Remain < 1 && w.dsOn() {
-				s.State = dsEmpty
+				s.State = devilsquare.StateEmpty
 				w.dsEnterEmpty(s)
 			}
 		}
 	}
-}
-
-func (s *dsSquare) setRemain(now time.Time, sec int) {
-	s.Remain = sec
-	s.Target = now.Add(time.Duration(sec) * time.Second)
 }
 
 // minuteOf is the "remain/60, minus one on exact minutes" of the procs.
@@ -273,7 +214,7 @@ func minuteOf(remain int) int {
 }
 
 // dsEmptyProc is FUN_0046e3a0.
-func (w *World) dsEmptyProc(s *dsSquare) {
+func (w *World) dsEmptyProc(s *devilsquare.Square) {
 	d := w.ds().data
 	if s.Remain > 0 && s.Remain <= d.ReadyTime*60 {
 		if m := minuteOf(s.Remain); s.LastMin != m {
@@ -288,14 +229,14 @@ func (w *World) dsEmptyProc(s *dsSquare) {
 			w.noticeAllMsg(NoticeGold, 726)
 		}
 		if w.dsOn() {
-			s.State = dsReady
+			s.State = devilsquare.StateReady
 			w.dsEnterReady(s)
 		}
 	}
 }
 
 // dsReadyProc is FUN_0046e4b0.
-func (w *World) dsReadyProc(s *dsSquare) {
+func (w *World) dsReadyProc(s *devilsquare.Square) {
 	d := w.ds().data
 	if s.Remain > 0 {
 		w.dsCleanUsers(s)
@@ -307,7 +248,7 @@ func (w *World) dsReadyProc(s *dsSquare) {
 		}
 	}
 	if s.Remain > 0 && s.Remain <= 30 && !s.Warned {
-		w.sendAll(packetDSState(0))
+		w.sendAll(devilsquare.PacketState(0))
 		s.Warned = true
 	}
 	if s.Remain > 0 {
@@ -318,23 +259,23 @@ func (w *World) dsReadyProc(s *dsSquare) {
 	}
 	w.dsUsersMsg(s, NoticeBlue, 32, s.Index+1, d.StandTime)
 	if w.dsOn() {
-		s.State = dsStand
+		s.State = devilsquare.StateStand
 		w.dsEnterStand(s)
 	}
 }
 
 // dsStandProc is FUN_0046e610.
-func (w *World) dsStandProc(s *dsSquare) {
+func (w *World) dsStandProc(s *devilsquare.Square) {
 	w.dsCleanUsers(s)
 	if w.dsUserCount(s) == 0 {
 		if w.dsOn() {
-			s.State = dsEmpty
+			s.State = devilsquare.StateEmpty
 			w.dsEnterEmpty(s)
 		}
 		return
 	}
 	if s.Remain > 0 && s.Remain <= 30 && !s.Warned {
-		w.dsUsersSend(s, packetDSState(1))
+		w.dsUsersSend(s, devilsquare.PacketState(1))
 		s.Warned = true
 	}
 	if s.Remain > 0 {
@@ -342,18 +283,18 @@ func (w *World) dsStandProc(s *dsSquare) {
 	}
 	w.dsUsersMsg(s, NoticeGold, 33)
 	if w.dsOn() {
-		s.State = dsStart
+		s.State = devilsquare.StateStart
 		w.dsEnterStart(s)
 	}
 }
 
 // dsStartProc is FUN_0046e6b0: stages 1..4 when the remaining time drops
 // to 80/60/40/20 % of EventTime.
-func (w *World) dsStartProc(s *dsSquare) {
+func (w *World) dsStartProc(s *devilsquare.Square) {
 	w.dsCleanUsers(s)
 	if w.dsUserCount(s) == 0 {
 		if w.dsOn() {
-			s.State = dsEmpty
+			s.State = devilsquare.StateEmpty
 			w.dsEnterEmpty(s)
 		}
 		return
@@ -367,7 +308,7 @@ func (w *World) dsStartProc(s *dsSquare) {
 		}
 	}
 	if s.Remain > 0 && s.Remain <= 30 && !s.Warned {
-		w.dsUsersSend(s, packetDSState(2))
+		w.dsUsersSend(s, devilsquare.PacketState(2))
 		s.Warned = true
 	}
 	if s.Remain > 0 {
@@ -375,13 +316,13 @@ func (w *World) dsStartProc(s *dsSquare) {
 	}
 	w.dsUsersMsg(s, NoticeGold, 34)
 	if w.dsOn() {
-		s.State = dsClean
+		s.State = devilsquare.StateClean
 		w.dsEnterClean(s)
 	}
 }
 
 // dsEnterEmpty is FUN_0046e8e0.
-func (w *World) dsEnterEmpty(s *dsSquare) {
+func (w *World) dsEnterEmpty(s *devilsquare.Square) {
 	s.Open, s.LastMin, s.Warned, s.Stage = false, -1, false, 0
 	w.dsKickUsers(s)
 	w.dsClearMobs(s)
@@ -390,11 +331,11 @@ func (w *World) dsEnterEmpty(s *dsSquare) {
 
 // dsSyncSchedule is FUN_0046eaf0: the next start of DevilSquare.dat
 // section 1; without one the square goes BLANK.
-func (w *World) dsSyncSchedule(s *dsSquare) {
+func (w *World) dsSyncSchedule(s *devilsquare.Square) {
 	now := w.now()
 	next, ok := nextSchedule(w.ds().data.Schedule, now)
 	if !ok {
-		s.State = dsBlank
+		s.State = devilsquare.StateBlank
 		return
 	}
 	s.Target = next
@@ -402,27 +343,27 @@ func (w *World) dsSyncSchedule(s *dsSquare) {
 }
 
 // dsEnterReady is FUN_0046e930.
-func (w *World) dsEnterReady(s *dsSquare) {
+func (w *World) dsEnterReady(s *devilsquare.Square) {
 	s.Open, s.LastMin, s.Warned, s.Stage = true, -1, false, 0
-	s.setRemain(w.now(), w.ds().data.ReadyTime*60)
+	s.SetRemain(w.now(), w.ds().data.ReadyTime*60)
 }
 
 // dsEnterStand is FUN_0046e990.
-func (w *World) dsEnterStand(s *dsSquare) {
+func (w *World) dsEnterStand(s *devilsquare.Square) {
 	s.Open, s.LastMin, s.Warned = false, -1, false
-	s.setRemain(w.now(), w.ds().data.StandTime*60)
+	s.SetRemain(w.now(), w.ds().data.StandTime*60)
 }
 
 // dsEnterStart is FUN_0046e9f0.
-func (w *World) dsEnterStart(s *dsSquare) {
+func (w *World) dsEnterStart(s *devilsquare.Square) {
 	s.Open, s.LastMin, s.Warned = false, -1, false
 	w.dsSpawnStage(s, 0)
-	s.setRemain(w.now(), w.ds().data.EventTime*60)
+	s.SetRemain(w.now(), w.ds().data.EventTime*60)
 }
 
 // dsEnterClean is FUN_0046ea60: monsters removed, ranking, experience,
 // zen, item bags and the ranking window.
-func (w *World) dsEnterClean(s *dsSquare) {
+func (w *World) dsEnterClean(s *devilsquare.Square) {
 	s.Open, s.LastMin, s.Warned = false, -1, false
 	w.dsClearMobs(s)
 	w.dsRank(s)
@@ -430,29 +371,29 @@ func (w *World) dsEnterClean(s *dsSquare) {
 	w.dsGiveMoney(s)
 	w.dsGiveItemBags(s)
 	w.dsSendRanking(s)
-	s.setRemain(w.now(), w.ds().data.CloseTime*60)
+	s.SetRemain(w.now(), w.ds().data.CloseTime*60)
 }
 
 // dsKickUsers is FUN_0046eff0: gate 27 for every user.
-func (w *World) dsKickUsers(s *dsSquare) {
+func (w *World) dsKickUsers(s *devilsquare.Square) {
 	for i := range s.Users {
 		u := s.Users[i].Index
 		if u >= 0 && u < MaxObjects {
-			w.gateMove(w.objects[u], dsKickGate)
-			s.Users[i] = dsUser{Index: -1}
+			w.gateMove(w.objects[u], devilsquare.KickGate)
+			s.Users[i] = devilsquare.User{Index: -1}
 		}
 	}
 }
 
 // dsSpawnStage is FUN_0046f970: the EventStageSpawn section 2 rows of the
 // square and stage.
-func (w *World) dsSpawnStage(s *dsSquare, stage int) {
+func (w *World) dsSpawnStage(s *devilsquare.Square, stage int) {
 	for _, r := range w.ev().stage {
-		if r.Event != dsStageSec || r.Level != s.Index || r.Stage != stage {
+		if r.Event != devilsquare.StageSection || r.Level != s.Index || r.Stage != stage {
 			continue
 		}
 		for _, idx := range w.spawnStage(s.Map, r.Monster, r.RegenTime) {
-			if len(s.Mobs) >= dsMaxMobs {
+			if len(s.Mobs) >= devilsquare.MaxMobs {
 				w.deleteMonster(w.objects[idx])
 				continue
 			}
@@ -462,7 +403,7 @@ func (w *World) dsSpawnStage(s *dsSquare, stage int) {
 }
 
 // dsClearMobs is FUN_0046f6d0.
-func (w *World) dsClearMobs(s *dsSquare) {
+func (w *World) dsClearMobs(s *devilsquare.Square) {
 	for _, idx := range s.Mobs {
 		if o := w.objects[idx]; o.State != StateEmpty {
 			w.deleteMonster(o)
@@ -473,7 +414,7 @@ func (w *World) dsClearMobs(s *dsSquare) {
 
 // dsRank is FUN_0046f140: rank = users with a higher score, or the same
 // score in an earlier slot.
-func (w *World) dsRank(s *dsSquare) {
+func (w *World) dsRank(s *devilsquare.Square) {
 	for i := range s.Users {
 		me := &s.Users[i]
 		if me.Index < 0 || me.Index >= MaxObjects {
@@ -495,7 +436,7 @@ func (w *World) dsRank(s *dsSquare) {
 // dsGiveExperience is FUN_0046f2a0: ranks 0..9 get the section 2 value
 // times AddEventExperienceRate_AL (no experience under effects 31/42),
 // MaxLevelUpEvent levels at most.
-func (w *World) dsGiveExperience(s *dsSquare) {
+func (w *World) dsGiveExperience(s *devilsquare.Square) {
 	d := w.ds().data
 	for i := range s.Users {
 		u := &s.Users[i]
@@ -515,7 +456,7 @@ func (w *World) dsGiveExperience(s *dsSquare) {
 }
 
 // dsGiveMoney is FUN_0046f3f0 (zen capped at 2,000,000,000).
-func (w *World) dsGiveMoney(s *dsSquare) {
+func (w *World) dsGiveMoney(s *devilsquare.Square) {
 	d := w.ds().data
 	for i := range s.Users {
 		u := &s.Users[i]
@@ -535,7 +476,7 @@ func (w *World) dsGiveMoney(s *dsSquare) {
 
 // dsGiveItemBags is FUN_0046f520: item bag type 1 (Devil Square), index
 // = square, dropped at the user's position.
-func (w *World) dsGiveItemBags(s *dsSquare) {
+func (w *World) dsGiveItemBags(s *devilsquare.Square) {
 	for _, u := range s.Users {
 		if u.Index < 0 || u.Index >= MaxObjects || u.Rank >= 10 || w.hooks.itemBag == nil {
 			continue
@@ -547,7 +488,7 @@ func (w *World) dsGiveItemBags(s *dsSquare) {
 
 // dsSendRanking is FUN_004705d0: the ranking window and the C1 20 3F
 // score report to the DataServer.
-func (w *World) dsSendRanking(s *dsSquare) {
+func (w *World) dsSendRanking(s *devilsquare.Square) {
 	for _, u := range s.Users {
 		if u.Index >= 0 && u.Index < MaxObjects {
 			o := w.objects[u.Index]
@@ -560,9 +501,9 @@ func (w *World) dsSendRanking(s *dsSquare) {
 // --- kills / deaths ------------------------------------------------------
 
 // dsSquareOf is FUN_0047b370 on section 1 and the matching square.
-func (w *World) dsSquareOf(o *Object) *dsSquare {
-	lv := w.ev().entry.Level(dsEntrySec, o.Class, o.P.Char.Level)
-	if lv < 0 || lv >= dsSquares || w.ds() == nil {
+func (w *World) dsSquareOf(o *Object) *devilsquare.Square {
+	lv := w.ev().entry.Level(devilsquare.EntrySection, o.Class, o.P.Char.Level)
+	if lv < 0 || lv >= devilsquare.Squares || w.ds() == nil {
 		return nil
 	}
 	return &w.ds().sq[lv]
@@ -583,7 +524,7 @@ func (w *World) dsMonsterKilled(mon *Object) {
 		return
 	}
 	s := w.dsSquareOf(p)
-	if s == nil || s.State != dsStart {
+	if s == nil || s.State != devilsquare.StateStart {
 		return
 	}
 	owned := false
@@ -593,7 +534,7 @@ func (w *World) dsMonsterKilled(mon *Object) {
 	if !owned {
 		return
 	}
-	if u := s.user(p.Index); u != nil {
+	if u := s.User(p.Index); u != nil {
 		u.Score += mon.Mon.Level * (s.Index + 1)
 	}
 }
@@ -604,9 +545,9 @@ func (w *World) dsPlayerDied(o *Object) {
 	if o.P == nil || o.P.Char == nil {
 		return
 	}
-	if s := w.dsSquareOf(o); s != nil && s.State == dsStart {
-		if u := s.user(o.Index); u != nil {
-			*u = dsUser{Index: -1}
+	if s := w.dsSquareOf(o); s != nil && s.State == devilsquare.StateStart {
+		if u := s.User(o.Index); u != nil {
+			*u = devilsquare.User{Index: -1}
 		}
 	}
 }
@@ -618,12 +559,12 @@ func (w *World) dsCharonTalk(o *Object) {
 	if !w.dsOn() {
 		return
 	}
-	lv := w.ev().entry.Level(dsEntrySec, o.Class, o.P.Char.Level)
+	lv := w.ev().entry.Level(devilsquare.EntrySection, o.Class, o.P.Char.Level)
 	if lv < 0 || lv > 5 {
 		w.send(o, packetNotice(NoticeBlue, 0, 0, 0, 0, 0, w.messageFor(o, 35)))
 		return
 	}
-	if w.countItems(o, itemDSInvit, lv+1) == 0 && w.countItems(o, itemDSFree, 0) == 0 &&
+	if w.countItems(o, devilsquare.ItemInvitation, lv+1) == 0 && w.countItems(o, devilsquare.ItemFreeTicket, 0) == 0 &&
 		w.cfg.Int("Event", "DevilSquareNPCWithoutEntrance", 0) == 0 {
 		w.send(o, []byte{0xC1, 0x07, 0xF3, 0x40, 0x01, 0x02, 0x00})
 		return
@@ -642,7 +583,7 @@ func (w *World) handleDSEnter(o *Object, p []byte) {
 	}
 	sq, slot := int(p[3]), int(byte(p[4]-12))
 	if sq > 5 {
-		w.send(o, packetDSResult(1))
+		w.send(o, devilsquare.PacketResult(1))
 		return
 	}
 	al := accountLevel(o)
@@ -651,44 +592,44 @@ func (w *World) handleDSEnter(o *Object, p []byte) {
 		return
 	}
 	if slot >= BagStart+64 {
-		w.send(o, packetDSResult(1))
+		w.send(o, devilsquare.PacketResult(1))
 		return
 	}
 	it := o.P.Inventory[slot]
-	if it.IsEmpty() || !(it.Index == itemDSInvit && it.Level == sq+1 || it.Index == itemDSFree) {
-		w.send(o, packetDSResult(1))
+	if it.IsEmpty() || !(it.Index == devilsquare.ItemInvitation && it.Level == sq+1 || it.Index == devilsquare.ItemFreeTicket) {
+		w.send(o, devilsquare.PacketResult(1))
 		return
 	}
 	s := &w.ds().sq[sq]
 	if !s.Open {
-		w.send(o, packetDSResult(2))
+		w.send(o, devilsquare.PacketResult(2))
 		return
 	}
-	lv := w.ev().entry.Level(dsEntrySec, o.Class, o.P.Char.Level)
+	lv := w.ev().entry.Level(devilsquare.EntrySection, o.Class, o.P.Char.Level)
 	switch {
 	case sq < lv:
-		w.send(o, packetDSResult(3))
+		w.send(o, devilsquare.PacketResult(3))
 		return
 	case sq > lv:
-		w.send(o, packetDSResult(4))
+		w.send(o, devilsquare.PacketResult(4))
 		return
 	}
 	if w.dsUserCount(s) >= w.cfg.Int("Event", "DevilSquareMaxUser", 0) {
-		w.send(o, packetDSResult(5))
+		w.send(o, devilsquare.PacketResult(5))
 		return
 	}
 	if w.cfg.Int("Common", "PKLimitFree", 0) == 0 && int(o.PKLevel) > 4 && w.cfg.Int("Common", "PKLimitEventEntry", 0) != 0 {
-		w.send(o, packetDSResult(6))
+		w.send(o, devilsquare.PacketResult(6))
 		return
 	}
 	if !w.dsAddUser(s, o) {
-		w.send(o, packetDSResult(5))
+		w.send(o, devilsquare.PacketResult(5))
 		return
 	}
 	w.consumeEntryItem(o, slot)
-	w.send(o, packetDSResult(0))
+	w.send(o, devilsquare.PacketResult(0))
 	items(o).If = ifState{}
-	w.gateMove(o, dsGates[sq])
+	w.gateMove(o, devilsquare.Gates[sq])
 }
 
 // consumeEntryItem is FUN_004970f0: one durability of a stack, otherwise
@@ -707,13 +648,13 @@ func (w *World) consumeEntryItem(o *Object, slot int) {
 // dsRemainTime is the type 1 branch of 91 (FUN_004d8430): users in the
 // square while READY, otherwise the minutes to the next start.
 func (w *World) dsRemainTime(o *Object, p []byte) []byte {
-	lv := w.ev().entry.Level(dsEntrySec, o.Class, o.P.Char.Level)
+	lv := w.ev().entry.Level(devilsquare.EntrySection, o.Class, o.P.Char.Level)
 	if lv < 0 || lv > 5 {
 		w.send(o, packetCustomNotice(0, 0, w.messageFor(o, 35)))
 		return nil
 	}
 	out := packetEventTime(1)
-	if s := &w.ds().sq[lv]; s.State == dsReady {
+	if s := &w.ds().sq[lv]; s.State == devilsquare.StateReady {
 		out[5] = byte(w.dsUserCount(s))
 	} else if next, ok := nextSchedule(w.ds().data.Schedule, w.now()); ok {
 		sec := int(math.Floor(next.Sub(w.now()).Seconds()))

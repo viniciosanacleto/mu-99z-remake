@@ -3,6 +3,7 @@ package game
 import (
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -46,7 +47,7 @@ func (w *World) windowOpen(o *Object) {
 
 // packetWindowTime is C2 F3 EF.
 func packetWindowTime(rows []windowRow) []byte {
-	p := newPacket(frame.C2, 0xF3, 0xEF, 6+40*len(rows))
+	p := packet.New(frame.C2, 0xF3, 0xEF, 6+40*len(rows))
 	p[5] = byte(len(rows))
 	for i, r := range rows {
 		b := p[6+40*i:]
@@ -58,7 +59,7 @@ func packetWindowTime(rows []windowRow) []byte {
 		if r.Open {
 			b[32] = 1
 		}
-		u32le(b[36:], uint32(int32(r.Remain)))
+		packet.PutUint32(b[36:], uint32(int32(r.Remain)))
 	}
 	return p
 }

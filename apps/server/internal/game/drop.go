@@ -6,6 +6,7 @@ import (
 	"math"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -797,7 +798,7 @@ func (w *World) isStackable(index, level int) bool {
 // packetFirework is C1 07 F3 40 [4] type [5] [6] (X/Y, or the index for
 // type 0x3A).
 func packetFirework(typ, a, b byte) []byte {
-	p := newPacket(frame.C1, 0xF3, 0x40, 7)
+	p := packet.New(frame.C1, 0xF3, 0x40, 7)
 	p[4], p[5], p[6] = typ, a, b
 	return p
 }

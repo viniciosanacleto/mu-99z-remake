@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
@@ -77,7 +78,7 @@ func daysInMonth(t time.Time) int {
 // packetDailyMonth is C1 2C FB 17 (FUN_0045a810): [4] days in the month,
 // [5] day, [6] weekday of the 1st, [7..37] claimed flags, [40] time (u32).
 func packetDailyMonth(now time.Time, flags [dailyDays]bool) []byte {
-	p := newPacket(frame.C1, 0xFB, 0x17, 0x2C)
+	p := packet.New(frame.C1, 0xFB, 0x17, 0x2C)
 	first := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	p[4] = byte(daysInMonth(now))
 	p[5] = byte(now.Day())
@@ -87,7 +88,7 @@ func packetDailyMonth(now time.Time, flags [dailyDays]bool) []byte {
 			p[7+i] = 1
 		}
 	}
-	u32le(p[40:], uint32(now.Unix()))
+	packet.PutUint32(p[40:], uint32(now.Unix()))
 	return p
 }
 
@@ -108,8 +109,8 @@ func dailyItemBytes(r gamedata.DailyRewardRow) [5]byte {
 // packetDailyItem is C1 E0 FB 18 (FUN_0045a9d0): [4] item index u16, [6]
 // durability, [7..11] the item, [24] Info1[100], [124] Info2[100].
 func packetDailyItem(r gamedata.DailyRewardRow) []byte {
-	p := newPacket(frame.C1, 0xFB, 0x18, 0xE0)
-	u16le(p[4:], r.Index)
+	p := packet.New(frame.C1, 0xFB, 0x18, 0xE0)
+	packet.PutUint16(p[4:], r.Index)
 	p[6] = byte(r.Durability)
 	ib := dailyItemBytes(r)
 	copy(p[7:12], ib[:])

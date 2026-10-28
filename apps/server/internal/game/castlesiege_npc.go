@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"math"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/castlesiege"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
@@ -50,7 +51,7 @@ func (w *World) csNPCObj(n *csNPC) *Object {
 // csSpawnObject places a castle object on map 30 with no regen
 // (obj+0x294 = 0xFFFF, obj+0x290 = 0): it is removed when it dies.
 func (w *World) csSpawnObject(class, x, y, dir int) *Object {
-	o := w.spawnFixedNPC(class, csMap, x, y, dir)
+	o := w.spawnFixedNPC(class, castlesiege.Map, x, y, dir)
 	if o == nil {
 		return nil
 	}
@@ -62,7 +63,7 @@ func (w *World) csSpawnObject(class, x, y, dir int) *Object {
 // csGateBlock is FUN_0041e5a0: the 6x3 cells (x-2..x+3, y..y+2) of a gate
 // get the 0x10 attribute while it is closed.
 func (w *World) csGateBlock(x, y int, open bool) {
-	t := w.terrain(csMap)
+	t := w.terrain(castlesiege.Map)
 	if t == nil || x < 0 || x > 0xFF || y < 0 || y > 0xFF {
 		return
 	}
@@ -107,7 +108,7 @@ func (w *World) csCreateNPCObject(n *csNPC) *Object {
 	cs := csOf(o)
 	cs.NPCKind = 1
 	switch n.Class {
-	case csClassGate:
+	case castlesiege.ClassGate:
 		def := c.data.GateDefense[clampLevel(n.DF)]
 		m.Defense, m.MagicDefense = def, def
 		cs.DFLevel = byte(n.DF)
@@ -120,7 +121,7 @@ func (w *World) csCreateNPCObject(n *csNPC) *Object {
 			csOf(lv).Link = o.Index
 			cs.Link = lv.Index
 		}
-	case csClassStatue:
+	case castlesiege.ClassStatue:
 		def := c.data.StatueDefense[clampLevel(n.DF)]
 		m.Defense, m.MagicDefense = def, def
 		cs.DFLevel, cs.RGLevel = byte(n.DF), byte(n.RG)
@@ -136,7 +137,7 @@ func (w *World) csLeverOf(n *csNPC) *Object {
 	if n.Lever < 0 || n.Lever >= MaxObjects {
 		return nil
 	}
-	if o := w.objects[n.Lever]; o.State == StatePlaying && o.Class == csClassLever {
+	if o := w.objects[n.Lever]; o.State == StatePlaying && o.Class == castlesiege.ClassLever {
 		return o
 	}
 	return nil
@@ -147,7 +148,7 @@ func (w *World) csCreateLever(x, y int) *Object {
 	if x < 0 || x > 0xFF || y < 0 || y > 0xFF {
 		return nil
 	}
-	o := w.csSpawnObject(csClassLever, x, y, 1)
+	o := w.csSpawnObject(castlesiege.ClassLever, x, y, 1)
 	if o == nil {
 		return nil
 	}
@@ -161,7 +162,7 @@ func (w *World) csCreateLever(x, y int) *Object {
 // csCheckLevers is FUN_0041dd70: every gate entry gets a lever.
 func (w *World) csCheckLevers() {
 	for _, n := range w.cs().npcs {
-		if n.Class == csClassGate && w.csLeverOf(n) == nil {
+		if n.Class == castlesiege.ClassGate && w.csLeverOf(n) == nil {
 			if lv := w.csCreateLever(n.X, n.Y+csLeverDY); lv != nil {
 				n.Lever = lv.Index
 			}
@@ -239,7 +240,7 @@ func (w *World) csSaveNPCs() {
 
 // csIsCastleObject reports a castle object on map 30 (obj+0x974 set).
 func csIsCastleObject(o *Object) bool {
-	return o.State == StatePlaying && o.Map == csMap && o.CS != nil && o.CS.NPCKind != 0
+	return o.State == StatePlaying && o.Map == castlesiege.Map && o.CS != nil && o.CS.NPCKind != 0
 }
 
 // csClearBattleNPCs is FUN_0041d970: every castle object but the DB NPCs
@@ -248,13 +249,13 @@ func csIsCastleObject(o *Object) bool {
 func (w *World) csClearBattleNPCs() {
 	for i := 0; i < SummonStart; i++ {
 		o := w.objects[i]
-		if !csIsCastleObject(o) || o.CS.NPCKind == 1 || o.Class == csClassLever {
+		if !csIsCastleObject(o) || o.CS.NPCKind == 1 || o.Class == castlesiege.ClassLever {
 			continue
 		}
 		switch o.Class {
-		case csClassStone:
+		case castlesiege.ClassStone:
 			w.csStoneGone(o)
-		case csClassArcher, csClassSpear:
+		case castlesiege.ClassArcher, castlesiege.ClassSpear:
 			c := w.cs()
 			c.mercenaries = max(c.mercenaries-1, 0)
 		}
@@ -275,7 +276,7 @@ func (w *World) csSpawnBattleNPCs() {
 		}
 		o.Mon.Life, o.Mon.MaxLife = float32(n.Life), float32(n.MaxLife)
 		csOf(o).NPCKind = 2
-		if n.Class == csClassSlingA {
+		if n.Class == castlesiege.ClassSlingA {
 			csOf(o).NPCKind = 3
 		}
 	}
@@ -284,7 +285,7 @@ func (w *World) csSpawnBattleNPCs() {
 // csCloseGates is FUN_0041f9c0 (siege start).
 func (w *World) csCloseGates() {
 	for _, n := range w.cs().npcs {
-		if n.Class != csClassGate {
+		if n.Class != castlesiege.ClassGate {
 			continue
 		}
 		if o := w.csNPCObj(n); o != nil {
@@ -306,10 +307,10 @@ func (w *World) csRefreshNPCs() {
 			continue
 		}
 		switch n.Class {
-		case csClassGate:
+		case castlesiege.ClassGate:
 			o.CS.DFLevel = byte(n.DF)
 			o.Mon.Defense = c.data.GateDefense[clampLevel(n.DF)]
-		case csClassStatue:
+		case castlesiege.ClassStatue:
 			o.Mon.Defense = c.data.StatueDefense[clampLevel(n.DF)]
 			o.CS.DFLevel, o.CS.RGLevel = byte(n.DF), byte(n.RG)
 		}
@@ -320,7 +321,7 @@ func (w *World) csRefreshNPCs() {
 func (w *World) csStatueAlive() bool {
 	for i := 0; i < SummonStart; i++ {
 		o := w.objects[i]
-		if o.State == StatePlaying && o.Class == csClassStatue && o.Map == csMap && o.Alive && o.Mon != nil {
+		if o.State == StatePlaying && o.Class == castlesiege.ClassStatue && o.Map == castlesiege.Map && o.Alive && o.Mon != nil {
 			return true
 		}
 	}
@@ -331,7 +332,7 @@ func (w *World) csStatueAlive() bool {
 // crown room disappears.
 func (w *World) csRemoveShield() {
 	for i := 0; i < SummonStart; i++ {
-		if o := w.objects[i]; o.State == StatePlaying && o.Class == csClassShield && o.Mon != nil {
+		if o := w.objects[i]; o.State == StatePlaying && o.Class == castlesiege.ClassShield && o.Mon != nil {
 			w.deleteMonster(o)
 		}
 	}
@@ -341,7 +342,7 @@ func (w *World) csRemoveShield() {
 // battle (FUN_0041e180 / FUN_0041df10).
 func (w *World) csStatueGone() {
 	c := w.cs()
-	if c.state == csStart && !w.csStatueAlive() {
+	if c.state == castlesiege.StateStart && !w.csStatueAlive() {
 		w.csRemoveShield()
 		c.crownRoom = true
 		w.log.Info("[Castle Siege] Crown Room entrance is open")
@@ -370,14 +371,14 @@ func (w *World) csNPCKilled(o *Object) {
 	n.Life, n.X, n.Y = n.BaseLife, n.BaseX, n.BaseY
 	n.Obj, n.Live = -1, 0
 	switch n.Class {
-	case csClassGate:
+	case castlesiege.ClassGate:
 		w.csSetGate(o, true)
 		w.log.Info("[Castle Siege] Castle Gate has been destroyed.", "index", n.Index, "x", n.X, "y", n.Y)
-	case csClassStatue:
+	case castlesiege.ClassStatue:
 		w.log.Info("[Castle Siege] Defend Statue has been destroyed.", "index", n.Index, "x", n.BaseX, "y", n.BaseY)
 		w.csStatueGone()
 	}
-	if c.state != csStart {
+	if c.state != castlesiege.StateStart {
 		if st := w.csStore(); st != nil {
 			group, class, index := c.group, n.Class, n.Index
 			w.async(func(ctx context.Context) func() {
@@ -392,13 +393,13 @@ func (w *World) csNPCKilled(o *Object) {
 // whose object vanished are treated as destroyed.
 func (w *World) csCheckDestroyed() {
 	for _, n := range w.cs().npcs {
-		if (n.Class != csClassGate && n.Class != csClassStatue) || n.Obj == -1 {
+		if (n.Class != castlesiege.ClassGate && n.Class != castlesiege.ClassStatue) || n.Obj == -1 {
 			continue
 		}
 		if o := w.csNPCObj(n); o != nil && o.Alive {
 			continue
 		}
-		if n.Class == csClassGate {
+		if n.Class == castlesiege.ClassGate {
 			if n.Obj >= 0 && n.Obj < MaxObjects {
 				w.csSetGate(w.objects[n.Obj], true)
 			}
@@ -454,11 +455,11 @@ func csUnionMaster(w *World, o *Object) string {
 		return ""
 	}
 	mgr := w.guildMgr()
-	g, ok := mgr.byNumber(n)
+	g, ok := mgr.ByNumber(n)
 	if !ok || g.Union == 0 {
 		return ""
 	}
-	if u, ok := mgr.byNumber(g.Union); ok {
+	if u, ok := mgr.ByNumber(g.Union); ok {
 		return u.Name
 	}
 	return ""
@@ -481,9 +482,9 @@ func (w *World) csManager(o *Object) bool {
 // (3 per point) in FUN_00420930.
 func csNPCCost(n *csNPC) int64 {
 	switch n.Class {
-	case csClassGate:
+	case castlesiege.ClassGate:
 		return int64(n.BaseMaxLife) * 5
-	case csClassStatue:
+	case castlesiege.ClassStatue:
 		return int64(n.BaseMaxLife) * 3
 	}
 	return 0
@@ -502,13 +503,13 @@ func (w *World) handleCSNPCBuy(o *Object, p []byte) {
 	}
 	if n.Live > 0 {
 		if t := w.csNPCObj(n); t != nil && t.Alive {
-			w.send(o, packetCSNPCBuy(0, number, index))
+			w.send(o, castlesiege.PacketNPCBuy(0, number, index))
 			return
 		}
 	}
 	cost := csNPCCost(n)
 	if o.P.Char.Money < cost {
-		w.send(o, packetCSNPCBuy(3, number, index))
+		w.send(o, castlesiege.PacketNPCBuy(3, number, index))
 		return
 	}
 	st := w.csStore()
@@ -545,7 +546,7 @@ func (w *World) csNPCBuyDone(idx, result, number, index int, cost int64) {
 		o.P.Char.Money -= cost
 		w.sendMoney(o)
 	}
-	w.send(o, packetCSNPCBuy(byte(result), number, index))
+	w.send(o, castlesiege.PacketNPCBuy(byte(result), number, index))
 }
 
 // csRepairCost is FUN_00420b20: gates (lost life + DF level x 200000) x 5,
@@ -553,9 +554,9 @@ func (w *World) csNPCBuyDone(idx, result, number, index int, cost int64) {
 func csRepairCost(n *csNPC, t *Object) int64 {
 	lost := int64(math.Round(float64(t.Mon.MaxLife - t.Mon.Life)))
 	switch n.Class {
-	case csClassGate:
+	case castlesiege.ClassGate:
 		return (lost + int64(t.CS.DFLevel)*csGateRepairBase) * 5
-	case csClassStatue:
+	case castlesiege.ClassStatue:
 		return int64(int(t.CS.RGLevel)+int(t.CS.DFLevel))*csStatueRepair + lost*3
 	}
 	return 0
@@ -571,18 +572,18 @@ func (w *World) handleCSNPCRepair(o *Object, p []byte) {
 	n := c.npcEntry(number, index)
 	t := w.csNPCObj(n)
 	if n == nil || t == nil || !t.Alive {
-		w.send(o, packetCSNPCRepair(0, number, index, 0, 0))
+		w.send(o, castlesiege.PacketNPCRepair(0, number, index, 0, 0))
 		return
 	}
 	csOf(t)
 	if t.Mon.Life > t.Mon.MaxLife {
 		t.Mon.Life = t.Mon.MaxLife
-		w.send(o, packetCSNPCRepair(1, number, index, int(t.Mon.MaxLife), int(t.Mon.Life)))
+		w.send(o, castlesiege.PacketNPCRepair(1, number, index, int(t.Mon.MaxLife), int(t.Mon.Life)))
 		return
 	}
 	cost := csRepairCost(n, t)
 	if cost > o.P.Char.Money {
-		w.send(o, packetCSNPCRepair(3, number, index, 0, 0))
+		w.send(o, castlesiege.PacketNPCRepair(3, number, index, 0, 0))
 		return
 	}
 	st := w.csStore()
@@ -615,7 +616,7 @@ func (w *World) csNPCRepairDone(idx, result, number, index, hp, maxHP int, cost 
 			w.sendMoney(o)
 		}
 	}
-	w.send(o, packetCSNPCRepair(byte(result), number, index, hp, maxHP))
+	w.send(o, castlesiege.PacketNPCRepair(byte(result), number, index, hp, maxHP))
 }
 
 // Upgrade types of B2 07.
@@ -646,7 +647,7 @@ func (w *World) handleCSNPCUpgrade(o *Object, p []byte) {
 	c := w.cs()
 	number, index := int(binary.LittleEndian.Uint32(p[4:])), int(binary.LittleEndian.Uint32(p[8:]))
 	typ, value := int(int32(binary.LittleEndian.Uint32(p[12:]))), int(int32(binary.LittleEndian.Uint32(p[16:])))
-	fail := func(r byte) { w.send(o, packetCSNPCUpgrade(r, number, index, typ, value)) }
+	fail := func(r byte) { w.send(o, castlesiege.PacketNPCUpgrade(r, number, index, typ, value)) }
 	n := c.npcEntry(number, index)
 	if n == nil {
 		fail(7)
@@ -656,7 +657,7 @@ func (w *World) handleCSNPCUpgrade(o *Object, p []byte) {
 	newValue := value
 	level := func(cur int) bool { return value >= 1 && value <= 3 && value == cur+1 }
 	switch number {
-	case csClassGate:
+	case castlesiege.ClassGate:
 		switch typ {
 		case csUpDefense:
 			if !level(n.DF) {
@@ -679,7 +680,7 @@ func (w *World) handleCSNPCUpgrade(o *Object, p []byte) {
 			fail(5)
 			return
 		}
-	case csClassStatue:
+	case castlesiege.ClassStatue:
 		switch typ {
 		case csUpDefense:
 			if !level(n.DF) {
@@ -748,12 +749,12 @@ func (w *World) csNPCUpgradeDone(idx, result, number, index, typ, value int) {
 			t := w.csNPCObj(n)
 			if t != nil && t.CS != nil && t.CS.NPCKind != 0 {
 				switch {
-				case typ == csUpDefense && (number == csClassGate || number == csClassStatue):
+				case typ == csUpDefense && (number == castlesiege.ClassGate || number == castlesiege.ClassStatue):
 					n.DF = value
 					def := c.data.GateDefense[clampLevel(value)]
 					t.Mon.Defense, t.Mon.MagicDefense = def, def
 					t.CS.DFLevel = byte(value)
-				case typ == csUpRegen && number == csClassStatue:
+				case typ == csUpRegen && number == castlesiege.ClassStatue:
 					n.RG = value
 					t.CS.RGLevel = byte(value)
 				case typ == csUpLife:
@@ -764,7 +765,7 @@ func (w *World) csNPCUpgradeDone(idx, result, number, index, typ, value int) {
 		}
 	}
 	if o := w.objects[idx]; o.State == StatePlaying && o.IsPlayer() {
-		w.send(o, packetCSNPCUpgrade(byte(result), number, index, typ, value))
+		w.send(o, castlesiege.PacketNPCUpgrade(byte(result), number, index, typ, value))
 	}
 }
 
@@ -774,22 +775,22 @@ func (w *World) handleCSNPCList(o *Object, p []byte) {
 		return
 	}
 	if !w.csOwnerGuild(o) || !csMasterOrAssistant(o) {
-		w.send(o, packetCSNPCList(2, nil))
+		w.send(o, castlesiege.PacketNPCList(2, nil))
 		return
 	}
 	class := 0
 	switch p[3] {
 	case 1:
-		class = csClassGate
+		class = castlesiege.ClassGate
 	case 2:
-		class = csClassStatue
+		class = castlesiege.ClassStatue
 	}
-	var list []csNPCListEntry
+	var list []castlesiege.NPCListEntry
 	for _, n := range w.cs().npcs {
 		if n.Class != class {
 			continue
 		}
-		e := csNPCListEntry{Class: n.Class, Index: n.Index, DF: n.DF, RG: n.RG, MaxLife: n.BaseMaxLife, X: n.X, Y: n.Y}
+		e := castlesiege.NPCListEntry{Class: n.Class, Index: n.Index, DF: n.DF, RG: n.RG, MaxLife: n.BaseMaxLife, X: n.X, Y: n.Y}
 		if t := w.csNPCObj(n); t != nil && t.Alive && t.Mon.Life != 0 && t.CS != nil && t.CS.NPCKind != 0 {
 			e.Live = true
 			e.MaxLife, e.Life = int(math.Round(float64(t.Mon.MaxLife))), int(math.Round(float64(t.Mon.Life)))
@@ -797,7 +798,7 @@ func (w *World) handleCSNPCList(o *Object, p []byte) {
 		}
 		list = append(list, e)
 	}
-	w.send(o, packetCSNPCList(1, list))
+	w.send(o, castlesiege.PacketNPCList(1, list))
 }
 
 // --- gates ----------------------------------------------------------------
@@ -808,7 +809,7 @@ func (w *World) csLeverTalk(o, lever *Object) {
 	c := w.cs()
 	result, gate := byte(4), -1
 	allowed := false
-	if c.state == csStart {
+	if c.state == castlesiege.StateStart {
 		allowed = csSide(o) == 1
 	} else {
 		allowed = w.csOwnerGuild(o) || w.csOwnerAlliance(o)
@@ -816,12 +817,12 @@ func (w *World) csLeverTalk(o, lever *Object) {
 	if allowed {
 		result = 2
 		if l := csOf(lever).Link; l >= 0 && l < MaxObjects {
-			if g := w.objects[l]; g.State == StatePlaying && g.Class == csClassGate {
+			if g := w.objects[l]; g.State == StatePlaying && g.Class == castlesiege.ClassGate {
 				result, gate = 1, l
 			}
 		}
 	}
-	w.send(o, packetCSLever(result, gate))
+	w.send(o, castlesiege.PacketLever(result, gate))
 	if result == 1 {
 		items(o).If = ifState{Use: true, Type: csIfLever}
 	}
@@ -834,7 +835,7 @@ func (w *World) handleCSGateOperate(o *Object, p []byte) {
 		return
 	}
 	c := w.cs()
-	if c.state == csStart {
+	if c.state == castlesiege.StateStart {
 		if csSide(o) != 1 {
 			return
 		}
@@ -843,12 +844,12 @@ func (w *World) handleCSGateOperate(o *Object, p []byte) {
 	}
 	op := p[4]
 	gi := int(p[5])<<8 | int(p[6])
-	if gi < 0 || gi >= MaxObjects || w.objects[gi].State != StatePlaying || w.objects[gi].Class != csClassGate {
-		w.send(o, packetCSGateOperate(2, 0, -1))
+	if gi < 0 || gi >= MaxObjects || w.objects[gi].State != StatePlaying || w.objects[gi].Class != castlesiege.ClassGate {
+		w.send(o, castlesiege.PacketGateOperate(2, 0, -1))
 		return
 	}
 	for _, n := range c.npcs {
-		if n.Obj == gi && n.Class == csClassGate && n.Live == 2 {
+		if n.Obj == gi && n.Class == castlesiege.ClassGate && n.Live == 2 {
 			// The block follows the operation but the effect 13 is added in
 			// both cases (CastleSiege.exe 0x41a35b); the viewport
 			// (FUN_00515510) re-syncs it with obj+0x975.
@@ -858,12 +859,12 @@ func (w *World) handleCSGateOperate(o *Object, p []byte) {
 				w.hooks.eventEffect(w, g, csEffGateOpen, true)
 			}
 			csOf(g).GateOpen = op
-			w.send(o, packetCSGateOperate(1, op, gi))
-			w.broadcast(g, packetCSGateState(op, gi))
+			w.send(o, castlesiege.PacketGateOperate(1, op, gi))
+			w.broadcast(g, castlesiege.PacketGateState(op, gi))
 			return
 		}
 	}
-	w.send(o, packetCSGateOperate(0, 0, -1))
+	w.send(o, castlesiege.PacketGateOperate(0, 0, -1))
 }
 
 // csSignOfLord is the Sign of Lord (14,21) +3 counted by B2 04.

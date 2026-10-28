@@ -3,8 +3,8 @@ package game
 import (
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/move"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
 // Movement: walking (D3, FUN_004d8b80), position fix (DF, FUN_004d80d0),
@@ -12,24 +12,14 @@ import (
 // FUN_004c4480). The path arrays mirror obj+0x200 (X), obj+0x21e (Y) and
 // obj+0x23c (direction bytes), 15 shorts each in the original.
 
-// pathSlots is the size of the original path arrays (15) plus one spare
-// slot: a client path of 15 steps writes index 15, which in the original
-// aliases the next array (Y[0] / dir[0..1]); here it lands in the spare
-// slot (see the report's open unknowns). The walker never uses it
-// (PathCur < 15).
-const pathSlots = 16
-
-// PlayerMoveSpeed is the obj+0x374 value players get when loaded.
-const PlayerMoveSpeed = 400
-
 // moveState is the per-object movement, teleport and chat state owned by
 // move.go, teleport.go, chat.go and command.go.
 type moveState struct {
-	PathCount    int             // obj+0x1d8
-	PathCur      int             // obj+0x1dc
-	PathStartEnd byte            // obj+0x1e0
-	PathX, PathY [pathSlots]int  // obj+0x200 / obj+0x21e
-	PathDir      [pathSlots]byte // obj+0x23c
+	PathCount    int                  // obj+0x1d8
+	PathCur      int                  // obj+0x1dc
+	PathStartEnd byte                 // obj+0x1e0
+	PathX, PathY [move.PathSlots]int  // obj+0x200 / obj+0x21e
+	PathDir      [move.PathSlots]byte // obj+0x23c
 
 	// OldX/OldY are obj+0x1ca/0x1cc: the cell that holds the 0x02
 	// occupancy bit (the walk target, not the current step).
@@ -73,7 +63,7 @@ func mv(o *Object) *moveState {
 	if o.Move == nil {
 		o.Move = &moveState{OldX: o.X, OldY: o.Y}
 		if o.Type == TypePlayer {
-			o.Move.MoveSpeed = PlayerMoveSpeed
+			o.Move.MoveSpeed = move.PlayerMoveSpeed
 		}
 	}
 	return o.Move
@@ -81,19 +71,6 @@ func mv(o *Object) *moveState {
 
 // setMoveSpeed sets obj+0x374 (monsters: MonsterList MoveSpeed).
 func (w *World) setMoveSpeed(o *Object, ms int) { mv(o).MoveSpeed = ms }
-
-// dirTable is DAT_005683d4: {dx, dy} for the 8 client directions.
-var dirTable = [8][2]int{{-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}}
-
-// dirStep returns the offsets of a direction nibble. Nibbles 8..15 read
-// past the original table (DAT_005683f4..); they are treated as no
-// movement.
-func dirStep(d byte) (int, int) {
-	if d < 8 {
-		return dirTable[d][0], dirTable[d][1]
-	}
-	return 0, 0
-}
 
 func (w *World) hasEffect(o *Object, e int) bool {
 	return w.hooks.moveEffect != nil && w.hooks.moveEffect(w, o, e)
@@ -119,7 +96,7 @@ func canPlayerAct(o *Object) bool {
 // clearPath empties the path (the memset sequences of FUN_004d8b80).
 func (m *moveState) clearPath() {
 	m.PathCount, m.PathCur, m.PathStartEnd = 0, 0, 0
-	m.PathX, m.PathY = [pathSlots]int{}, [pathSlots]int{}
+	m.PathX, m.PathY = [move.PathSlots]int{}, [move.PathSlots]int{}
 }
 
 // stuckInWall is FUN_0050d120: when every cell of the 3x3 square starting
@@ -152,32 +129,6 @@ func (w *World) stuckInWall(o *Object) bool {
 		w.gateMove(o, gate)
 	}
 	return true
-}
-
-// packetWalk is C1 08 D3 idxHi idxLo TX TY dir<<4 (FUN_004d8b80).
-func packetWalk(index, tx, ty, dir int) []byte {
-	p := newPacket(frame.C1, 0xD3, -1, 8)
-	p[3], p[4] = byte(index>>8), byte(index)
-	p[5], p[6] = byte(tx), byte(ty)
-	p[7] = byte(dir) << 4
-	return p
-}
-
-// packetPosition is C1 07 DF idxHi idxLo X Y (FUN_004d80d0).
-func packetPosition(index, x, y int) []byte {
-	p := newPacket(frame.C1, 0xDF, -1, 7)
-	p[3], p[4] = byte(index>>8), byte(index)
-	p[5], p[6] = byte(x), byte(y)
-	return p
-}
-
-// packetAction is C1 09 18 idxHi idxLo dir action targetHi targetLo
-// (FUN_004d8300; the two target bytes are copied from the request).
-func packetAction(index int, dir, action, t0, t1 byte) []byte {
-	p := newPacket(frame.C1, 0x18, -1, 9)
-	p[3], p[4] = byte(index>>8), byte(index)
-	p[5], p[6], p[7], p[8] = dir, action, t0, t1
-	return p
 }
 
 // sendToViewers is the loop shared by D3/DF/18: VP2 entries of type 1
@@ -244,9 +195,9 @@ func (w *World) walk(o *Object, sx, sy int, dirs []byte) bool {
 	m.PathStartEnd = 1
 	m.PathX[0], m.PathY[0] = sx, sy
 	m.PathDir[0] = byte(o.Dir)
-	for k := 1; k <= n && k < pathSlots; k++ {
+	for k := 1; k <= n && k < move.PathSlots; k++ {
 		d := dirs[k-1]
-		dx, dy := dirStep(d)
+		dx, dy := move.DirStep(d)
 		m.PathX[k] = m.PathX[k-1] + dx
 		m.PathY[k] = m.PathY[k-1] + dy
 		o.TX, o.TY = m.PathX[k], m.PathY[k]
@@ -269,14 +220,14 @@ func (w *World) walk(o *Object, sx, sy int, dirs []byte) bool {
 		// axis, at most 256 cells, looking for the 0x10 attribute.
 		x, y := o.X, o.Y
 		for i := 0; i < 0x100; i++ {
-			x, y = stepToward(x, o.TX), stepToward(y, o.TY)
+			x, y = move.StepToward(x, o.TX), move.StepToward(y, o.TY)
 			if t.Get(x, y)&gamedata.AttrWall != 0 {
 				// obj+0x270 = 1 is overwritten with 0 by FUN_00511cb0
 				// right away (same order as the original).
 				m.PathCount, m.PathCur, m.PathStartEnd = 0, 0, 0
 				m.Flag270 = 1
 				w.resendPosition(o, o.X, o.Y)
-				w.send(o, packetAction(o.Index, byte(o.Dir), 0x7A, 0, 0))
+				w.send(o, move.PacketAction(o.Index, byte(o.Dir), 0x7A, 0, 0))
 				return false
 			}
 			if x == o.TX && y == o.TY {
@@ -289,22 +240,12 @@ func (w *World) walk(o *Object, sx, sy int, dirs []byte) bool {
 	m.OldX, m.OldY = o.TX, o.TY
 	o.ActionState = 0
 	w.setOccupancy(o, m.OldX, m.OldY, true)
-	p := packetWalk(o.Index, o.TX, o.TY, o.Dir)
+	p := move.PacketWalk(o.Index, o.TX, o.TY, o.Dir)
 	if o.Type == TypePlayer {
 		w.send(o, p)
 	}
 	w.sendToViewers(o, p)
 	return true
-}
-
-func stepToward(v, target int) int {
-	if v > target {
-		return v - 1
-	}
-	if v < target {
-		return v + 1
-	}
-	return v
 }
 
 // setOccupancy sets or clears the 0x02 attribute of one cell.
@@ -362,7 +303,7 @@ func (w *World) handlePosition(o *Object, pkt []byte) {
 	o.X, o.Y, o.TX, o.TY = x, y, x, y
 	m.OldX, m.OldY = x, y
 	w.setOccupancy(o, x, y, true)
-	p := packetPosition(o.Index, o.TX, o.TY)
+	p := move.PacketPosition(o.Index, o.TX, o.TY)
 	if o.Type == TypePlayer {
 		w.send(o, p)
 	}
@@ -392,32 +333,7 @@ func (w *World) handleAction(o *Object, pkt []byte) {
 		o.ActionState = action - 0x80 + 2
 		m.Flag270 = o.PoseState
 	}
-	w.sendToViewers(o, packetAction(o.Index, pkt[3], action, t0, t1))
-}
-
-// noWalkMonster lists the monster classes FUN_004c4480 never moves
-// (castle/event statues and gates).
-func noWalkMonster(class int) bool {
-	switch class {
-	case 0x83, 0x84, 0x85, 0x86, 0xCC, 0xCD, 0xCE, 0xCF, 0xD0, 0xD1,
-		0xD8, 0xD9, 0xDA, 0xDB, 0x115, 0x116, 0x11B, 0x120, 0x20C, 0x20D, 0x20F, 0x210:
-		return true
-	}
-	return false
-}
-
-// stepDelay is the per-step delay of FUN_004c4480: (Slow ? 300 : 0) +
-// MoveSpeed, times 1.3 truncated (FISTP with RC=chop) for even (diagonal)
-// directions.
-func stepDelay(dir byte, moveSpeed int, slow bool) time.Duration {
-	base := moveSpeed
-	if slow {
-		base += 300
-	}
-	if dir%2 == 0 {
-		base = int(float64(base) * 1.3)
-	}
-	return time.Duration(base) * time.Millisecond
+	w.sendToViewers(o, move.PacketAction(o.Index, pkt[3], action, t0, t1))
 }
 
 // moveTick is FUN_004c4480 (timer id 1, every 100 ms).
@@ -430,16 +346,16 @@ func (w *World) moveTick() {
 		if w.immobilized(o) {
 			continue
 		}
-		if o.Type == TypeMonster && noWalkMonster(o.Class) {
+		if o.Type == TypeMonster && move.NoWalkMonster(o.Class) {
 			// TODO(move): obj+0x37e == 6 also excludes the monster; the
 			// field is owned by the monster module and not identified.
 			continue
 		}
 		m := o.Move
-		if m.PathCur >= pathSlots {
+		if m.PathCur >= move.PathSlots {
 			continue
 		}
-		if now.Sub(m.LastStep) <= stepDelay(m.PathDir[m.PathCur], m.MoveSpeed, m.Slow) || m.PathCur >= 15 {
+		if now.Sub(m.LastStep) <= move.StepDelay(m.PathDir[m.PathCur], m.MoveSpeed, m.Slow) || m.PathCur >= 15 {
 			continue
 		}
 		k := m.PathCur
@@ -449,7 +365,7 @@ func (w *World) moveTick() {
 			if o.Type != TypePlayer {
 				m.PathStartEnd = 0
 			}
-			m.PathX, m.PathY = [pathSlots]int{}, [pathSlots]int{}
+			m.PathX, m.PathY = [move.PathSlots]int{}, [move.PathSlots]int{}
 			w.resendPosition(o, o.X, o.Y)
 			continue
 		}

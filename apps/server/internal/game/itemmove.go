@@ -2,6 +2,7 @@ package game
 
 import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
@@ -24,7 +25,7 @@ func registerItemmove(h *hooks) {
 // packetMoveResult is C3 0C 24 result targetSlot item[7] (result = the
 // target flag on success, 0xFF on failure with FF bytes).
 func packetMoveResult(result byte, slot byte, it *item.Item) []byte {
-	p := newPacket(frame.C3, 0x24, int(result), 0x0C)
+	p := packet.New(frame.C3, 0x24, int(result), 0x0C)
 	p[4] = slot
 	if it == nil {
 		for i := 5; i < 12; i++ {

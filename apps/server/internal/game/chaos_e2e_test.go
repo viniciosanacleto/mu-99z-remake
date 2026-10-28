@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"testing"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/chaosmix"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -39,12 +40,12 @@ func TestChaosAndPShopEndToEnd(t *testing.T) {
 		o.Map, o.X, o.Y, o.TX, o.TY = 0, 130, 130, 130, 130
 		o.P.Char.Level = 50
 		o.Live = LiveNormal
-		o.P.Inventory[BagStart] = item.Item{Index: idxChaos, Durability: 1}
-		o.P.Inventory[BagStart+1] = item.Item{Index: idxDSEye, Level: 1, Durability: 1}
-		o.P.Inventory[BagStart+2] = item.Item{Index: idxBless, Durability: 1}
+		o.P.Inventory[BagStart] = item.Item{Index: chaosmix.ItemChaos, Durability: 1}
+		o.P.Inventory[BagStart+1] = item.Item{Index: chaosmix.ItemDSEye, Level: 1, Durability: 1}
+		o.P.Inventory[BagStart+2] = item.Item{Index: chaosmix.ItemBless, Durability: 1}
 		n := w.objects[npcIndex]
 		n.reset()
-		n.State, n.Type, n.Class = StatePlaying, TypeNPC, chaosGoblin
+		n.State, n.Type, n.Class = StatePlaying, TypeNPC, chaosmix.Goblin
 		n.Map, n.X, n.Y = 0, 131, 130
 		n.Live, n.Alive = LiveNormal, true
 	})
@@ -64,7 +65,7 @@ func TestChaosAndPShopEndToEnd(t *testing.T) {
 	// Devil Square preview without a key: no answer; the mix says 7.
 	c.send(frame.Build(frame.C1, 0x88, 0, 2, 0, 0, 0))
 	c.send(frame.Build(frame.C1, 0x86, 2))
-	if r := c.next(0x86, -1); r[3] != mixWrongItems {
+	if r := c.next(0x86, -1); r[3] != chaosmix.ResultWrongItems {
 		t.Fatalf("86 = % X", r)
 	}
 	// The Dinorant preview with the same box: no answer either; type 0x31

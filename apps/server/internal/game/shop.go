@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -162,7 +163,7 @@ func shopTalk(w *World, o, npc *Object) bool {
 // packetNpcWindow is C3 0B 30 type + 7 zero bytes (FUN_004c2eb0: 0 = shop,
 // FUN_00517ba0: 2 = warehouse).
 func packetNpcWindow(typ byte) []byte {
-	p := newPacket(frame.C3, 0x30, int(typ), 0x0B)
+	p := packet.New(frame.C3, 0x30, int(typ), 0x0B)
 	return p
 }
 
@@ -181,7 +182,7 @@ func packetItemList(list []item.Item) []byte {
 		body = append(body, e[:]...)
 		n++
 	}
-	p := newPacket(frame.C2, 0x31, -1, 6+len(body))
+	p := packet.New(frame.C2, 0x31, -1, 6+len(body))
 	p[4] = 0
 	p[5] = byte(n)
 	copy(p[6:], body)
@@ -190,7 +191,7 @@ func packetItemList(list []item.Item) []byte {
 
 // packetBuyResult is C1 0B 32 result item[7] (FUN_0049a910).
 func packetBuyResult(result byte, it *item.Item) []byte {
-	p := newPacket(frame.C1, 0x32, int(result), 0x0B)
+	p := packet.New(frame.C1, 0x32, int(result), 0x0B)
 	if it != nil {
 		it.EncodeWire(p[4:11], false)
 	}
@@ -199,14 +200,14 @@ func packetBuyResult(result byte, it *item.Item) []byte {
 
 // packetSellResult is C1 08 33 result money(u32) (FUN_0049adb0).
 func packetSellResult(result byte, money uint32) []byte {
-	p := newPacket(frame.C1, 0x33, int(result), 8)
+	p := packet.New(frame.C1, 0x33, int(result), 8)
 	binary.LittleEndian.PutUint32(p[4:], money)
 	return p
 }
 
 // packetRepairResult is C1 08 34 money(u32) (FUN_0049b080).
 func packetRepairResult(money uint32) []byte {
-	p := newPacket(frame.C1, 0x34, -1, 8)
+	p := packet.New(frame.C1, 0x34, -1, 8)
 	binary.LittleEndian.PutUint32(p[4:], money)
 	return p
 }

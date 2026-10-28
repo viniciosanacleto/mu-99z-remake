@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"math/rand/v2"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/chaosmix"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
@@ -29,51 +31,10 @@ import (
 //     (FUN_004753e0 with map 0xFF) and land in chaos box slot 0 when the
 //     answer arrives (FUN_004742b0).
 
-const (
-	chaosBoxSlots = 32
-	chaosGoblin   = 0xEE
-
-	// Interface 13 (0x340): the second mix window (pet trainer box). The 24
-	// flag 5 and the pet mix failure list (C2 31 05) use it.
-	ifChaosBox2 = 13
-
-	// Item indexes used by the recipes.
-	idxChaos      = 0x180F // 12,15 Jewel of Chaos
-	idxBless      = 0x1C0D // 14,13
-	idxSoul       = 0x1C0E // 14,14
-	idxLife       = 0x1C10 // 14,16
-	idxDSEye      = 0x1C11 // 14,17 Devil's Eye
-	idxDSKey      = 0x1C12 // 14,18 Devil's Key
-	idxDSInvite   = 0x1C13 // 14,19 Devil's Invitation
-	idxCreation   = 0x1C16 // 14,22
-	idxGuardian   = 0x1C1F // 14,31
-	idxCharmLuck  = 0x1C35 // 14,53 Charm of Luck
-	idxUniria     = 0x1A02 // 13,2
-	idxDinorant   = 0x1A03 // 13,3
-	idxDarkHorse  = 0x1A04 // 13,4
-	idxDarkRaven  = 0x1A05 // 13,5
-	idxLifeStone  = 0x1A0B // 13,11
-	idxFeather    = 0x1A0E // 13,14 (level 1 = Crest of Monarch)
-	idxFruit      = 0x1A0F // 13,15
-	idxArchangel  = 0x1A10 // 13,16 Scroll of Archangel
-	idxBloodBone  = 0x1A11 // 13,17
-	idxCloak      = 0x1A12 // 13,18 Invisibility Cloak
-	idxSpirit     = 0x1A1F // 13,31 Spirit (level 0 horse, 1 raven)
-	idxSiegePot   = 0x1C07 // 14,7
-	idxFenrir     = 0x1A25 // 13,37
-	idxNoUpgrade1 = 0x1C60 // 14,96
-	idxNoUpgrade2 = 0x1CBE // 14,190
-)
-
-// Mix results of C1 0B 86.
-const (
-	mixFail       = 0
-	mixSuccess    = 1
-	mixNoMoney    = 2
-	mixWrongItems = 7
-	mixWrongLevel = 8
-	mixCharms     = 0xF0
-)
+// ifChaosBox2 is interface 13 (0x340): the second mix window (pet
+// trainer box). The 24 flag 5 and the pet mix failure list (C2 31 05) use
+// it.
+const ifChaosBox2 = 13
 
 // chaosRand stands for FUN_005138d0 / FUN_00513720 (non-negative random
 // numbers); tests replace it.
@@ -81,11 +42,11 @@ var chaosRand = func() int { return int(rand.Int32()) }
 
 // chaosState is the per-player chaos box state.
 type chaosState struct {
-	Box   [chaosBoxSlots]item.Item // obj+0x420
-	Lock  bool                     // obj+0x430: a mix is running (cleared by the 86 result)
-	Money int64                    // obj+0x428: zen of the current mix (with tax)
-	Rate  int                      // obj+0x42c: success rate of the current mix
-	Mixed bool                     // obj+0x5d7: a mix was attempted since the box opened
+	Box   [chaosmix.BoxSlots]item.Item // obj+0x420
+	Lock  bool                         // obj+0x430: a mix is running (cleared by the 86 result)
+	Money int64                        // obj+0x428: zen of the current mix (with tax)
+	Rate  int                          // obj+0x42c: success rate of the current mix
+	Mixed bool                         // obj+0x5d7: a mix was attempted since the box opened
 
 	// Inventory transaction (obj+0x3dc; FUN_0050d380 begin, FUN_0050d620
 	// commit, FUN_0050d750 rollback): the box works on a copy of the
@@ -110,20 +71,12 @@ func chaos(o *Object) *chaosState {
 	return o.P.Chaos
 }
 
-// chaosData holds the tables the mixes read (loaded by a start hook).
-type chaosData struct {
-	bags  []gamedata.BagEntry
-	rates *gamedata.ItemOptionRate
-	exc   []gamedata.ExcellentOptionRate
-	sets  *gamedata.SetItemTypes
-}
-
-// chaosData returns the World's tables (worlds of the same process load
+// chaosmix.Data returns the World's tables (worlds of the same process load
 // them independently).
-func (w *World) chaosData() *chaosData { return w.chaos }
+func (w *World) chaosData() *chaosmix.Data { return w.chaos }
 
 func registerChaos(h *hooks) {
-	h.npcTalk[chaosGoblin] = func(w *World, o, npc *Object) bool {
+	h.npcTalk[chaosmix.Goblin] = func(w *World, o, npc *Object) bool {
 		w.chaosTalk(o)
 		return true
 	}
@@ -146,18 +99,18 @@ func registerChaos(h *hooks) {
 }
 
 func loadChaosData(w *World) error {
-	d := &chaosData{}
+	d := &chaosmix.Data{}
 	var err error
-	if d.bags, err = gamedata.LoadEventItemBags(w.configDir); err != nil {
+	if d.Bags, err = gamedata.LoadEventItemBags(w.configDir); err != nil {
 		return err
 	}
-	if d.rates, err = gamedata.LoadItemOptionRate(w.configDir); err != nil {
+	if d.Rates, err = gamedata.LoadItemOptionRate(w.configDir); err != nil {
 		return err
 	}
-	if d.exc, err = gamedata.LoadExcellentOptionRate(w.configDir); err != nil {
+	if d.Exc, err = gamedata.LoadExcellentOptionRate(w.configDir); err != nil {
 		return err
 	}
-	if d.sets, err = gamedata.LoadSetItemType(w.configDir); err != nil {
+	if d.Sets, err = gamedata.LoadSetItemType(w.configDir); err != nil {
 		return err
 	}
 	w.chaos = d
@@ -228,62 +181,16 @@ func (w *World) chaosLogout(o *Object) {
 
 // --- packets -----------------------------------------------------------------
 
-// packetChaosResult is C1 0B 86 result item[7] (FUN_0042ff70); a nil item
-// is sent as FF bytes.
-func packetChaosResult(result byte, it *item.Item) []byte {
-	p := newPacket(frame.C1, 0x86, int(result), 0x0B)
-	if it == nil {
-		for i := 4; i < 11; i++ {
-			p[i] = 0xFF
-		}
-		return p
-	}
-	it.EncodeWire(p[4:11], false)
-	return p
-}
-
-// packetChaosList is C2 size 31 type count {slot, item[7]} (FUN_0042fd60):
-// type 3 for the chaos box, 5 for interface 13.
-func packetChaosList(typ byte, box []item.Item) []byte {
-	var body []byte
-	n := 0
-	for slot, it := range box {
-		if it.IsEmpty() {
-			continue
-		}
-		var e [8]byte
-		e[0] = byte(slot)
-		it.EncodeWire(e[1:], false)
-		body = append(body, e[:]...)
-		n++
-	}
-	p := newPacket(frame.C2, 0x31, -1, 6+len(body))
-	p[4] = typ
-	p[5] = byte(n)
-	copy(p[6:], body)
-	return p
-}
-
-// packetChaosRate is C1 10 88 00 rate(u32) money(u32) tax(u32)
-// (FUN_0042ee40).
-func packetChaosRate(rate, money, tax uint32) []byte {
-	p := newPacket(frame.C1, 0x88, -1, 0x10)
-	binary.LittleEndian.PutUint32(p[4:], rate)
-	binary.LittleEndian.PutUint32(p[8:], money)
-	binary.LittleEndian.PutUint32(p[12:], tax)
-	return p
-}
-
 // packetTaxInfo is C1 06 B2 1A type rate (FUN_004dae50).
 func packetTaxInfo(typ, rate byte) []byte {
-	p := newPacket(frame.C1, 0xB2, 0x1A, 6)
+	p := packet.New(frame.C1, 0xB2, 0x1A, 6)
 	p[4], p[5] = typ, rate
 	return p
 }
 
 // chaosSendResult is FUN_0042ff70: it also releases the mix lock.
 func (w *World) chaosSendResult(o *Object, result byte, it *item.Item) {
-	w.send(o, packetChaosResult(result, it))
+	w.send(o, chaosmix.PacketResult(result, it))
 	chaos(o).Lock = false
 }
 
@@ -298,7 +205,7 @@ func (w *World) chaosSendList(o *Object, second bool) {
 	if st.Type != want || st.State == 1 {
 		return
 	}
-	w.send(o, packetChaosList(typ, chaos(o).Box[:]))
+	w.send(o, chaosmix.PacketList(typ, chaos(o).Box[:]))
 }
 
 // chaosClear is FUN_0042a910.
@@ -353,7 +260,7 @@ func (w *World) handleChaosClose(o *Object) {
 	w.chaosCommit(o)
 	c := chaos(o)
 	c.Lock, c.Mixed = false, false
-	w.send(o, newPacket(frame.C1, 0x87, -1, 3))
+	w.send(o, packet.New(frame.C1, 0x87, -1, 3))
 }
 
 // --- item moves (24 flags 3, 5..20) ------------------------------------------------
@@ -397,7 +304,7 @@ func (w *World) accountLockRefused(o *Object) bool {
 
 // inventoryToChaos is FUN_00497fc0 (with the item test FUN_004950b0).
 func (w *World) inventoryToChaos(o *Object, src, dst, flag int) int {
-	if src < 0 || src >= BagEnd || dst < 0 || dst >= chaosBoxSlots {
+	if src < 0 || src >= BagEnd || dst < 0 || dst >= chaosmix.BoxSlots {
 		return -1
 	}
 	it := o.P.Inventory[src]
@@ -424,7 +331,7 @@ func (w *World) inventoryToChaos(o *Object, src, dst, flag int) int {
 
 // chaosToInventory is FUN_004979a0.
 func (w *World) chaosToInventory(o *Object, src, dst int) int {
-	if src < 0 || src >= chaosBoxSlots || dst < 0 || dst >= BagEnd {
+	if src < 0 || src >= chaosmix.BoxSlots || dst < 0 || dst >= BagEnd {
 		return -1
 	}
 	c := chaos(o)
@@ -442,7 +349,7 @@ func (w *World) chaosToInventory(o *Object, src, dst int) int {
 
 // chaosToChaos is FUN_00498090.
 func (w *World) chaosToChaos(o *Object, src, dst, flag int) int {
-	if src < 0 || src >= chaosBoxSlots || dst < 0 || dst >= chaosBoxSlots || src == dst {
+	if src < 0 || src >= chaosmix.BoxSlots || dst < 0 || dst >= chaosmix.BoxSlots || src == dst {
 		return -1
 	}
 	c := chaos(o)
@@ -521,13 +428,13 @@ func (w *World) handleChaosMix(o *Object, p []byte) {
 // value-based mixes (other items add their buy price, CItem+0x7c).
 func (w *World) jewelValue(it item.Item) int64 {
 	switch it.Index {
-	case idxBless:
+	case chaosmix.ItemBless:
 		return 100000
-	case idxSoul:
+	case chaosmix.ItemSoul:
 		return 70000
-	case idxChaos:
+	case chaosmix.ItemChaos:
 		return 40000
-	case idxCreation, idxLife:
+	case chaosmix.ItemCreation, chaosmix.ItemLife:
 		return 450000
 	}
 	return w.itemPrice(it).Buy
@@ -536,7 +443,7 @@ func (w *World) jewelValue(it item.Item) int64 {
 // isExcellent is FUN_0048ad90 (Dinorant and Fenrir options are not
 // excellent).
 func isExcellent(it item.Item) bool {
-	return it.Index != idxDinorant && it.Index != idxFenrir && it.Excellent != 0
+	return it.Index != chaosmix.ItemDinorant && it.Index != chaosmix.ItemFenrir && it.Excellent != 0
 }
 
 // isSet is FUN_0048adc0 (CItem+0xb3 & 3).
@@ -547,7 +454,7 @@ func isSet(it item.Item) bool { return it.SetOption&3 != 0 }
 func (w *World) charmBonus(c *chaosState, rate *int) bool {
 	n := 0
 	for _, it := range c.Box {
-		if it.Index == idxCharmLuck {
+		if it.Index == chaosmix.ItemCharmLuck {
 			n += int(it.Durability)
 		}
 	}
@@ -565,7 +472,7 @@ func (w *World) chaosCharge(o *Object) bool {
 	tax := c.Money * w.castleTax(o) / 100
 	c.Money += tax
 	if uint32(c.Money) > uint32(o.P.Char.Money) {
-		w.chaosSendResult(o, mixNoMoney, nil)
+		w.chaosSendResult(o, chaosmix.ResultNoMoney, nil)
 		return false
 	}
 	o.P.Char.Money -= c.Money
@@ -584,7 +491,7 @@ func (w *World) chaosRateCfg(o *Object, key string) int {
 func (w *World) chaosFailClear(o *Object, second bool) {
 	w.chaosClear(o)
 	w.chaosSendList(o, second)
-	w.chaosSendResult(o, mixFail, nil)
+	w.chaosSendResult(o, chaosmix.ResultFail, nil)
 }
 
 // chaosRoll returns rnd()%100 < rate (FUN_005138d0 / FUN_00513720).
@@ -599,10 +506,10 @@ func (w *World) mixChaosItem(o *Object) {
 			continue
 		}
 		switch it.Index {
-		case idxChaos:
+		case chaosmix.ItemChaos:
 			chaosN++
 			value += w.jewelValue(it)
-		case idxBless, idxSoul:
+		case chaosmix.ItemBless, chaosmix.ItemSoul:
 			value += w.jewelValue(it)
 		default:
 			if it.Level > 3 && it.Option != 0 {
@@ -612,7 +519,7 @@ func (w *World) mixChaosItem(o *Object) {
 		}
 	}
 	if chaosN == 0 || items == 0 {
-		w.chaosSendResult(o, mixWrongItems, nil)
+		w.chaosSendResult(o, chaosmix.ResultWrongItems, nil)
 		return
 	}
 	cfg := w.chaosRateCfg(o, "ChaosItemMixRate")
@@ -621,7 +528,7 @@ func (w *World) mixChaosItem(o *Object) {
 		c.Rate = int(value / 20000)
 	}
 	if !w.charmBonus(c, &c.Rate) {
-		w.chaosSendResult(o, mixCharms, nil)
+		w.chaosSendResult(o, chaosmix.ResultTooManyCharms, nil)
 		return
 	}
 	c.Rate = min(w.bonusRate(o, c.Rate), 100)
@@ -632,7 +539,7 @@ func (w *World) mixChaosItem(o *Object) {
 	if chaosRoll(c.Rate) {
 		res, ok := w.chaosBagItem(o, 0, 0)
 		if !ok {
-			w.chaosSendResult(o, mixFail, nil)
+			w.chaosSendResult(o, chaosmix.ResultFail, nil)
 			return
 		}
 		w.chaosCreateItem(o, res, false)
@@ -651,7 +558,7 @@ func pairedLevels(c *chaosState, a, b int) (chaosN, na, nb, la, lb int) {
 	for _, it := range c.Box {
 		switch {
 		case it.IsEmpty():
-		case it.Index == idxChaos:
+		case it.Index == chaosmix.ItemChaos:
 			chaosN++
 		case it.Index == a:
 			na++
@@ -667,13 +574,13 @@ func pairedLevels(c *chaosState, a, b int) (chaosN, na, nb, la, lb int) {
 // mixDevilSquare is FUN_0042b2a0 (86 02): Devil's Invitation.
 func (w *World) mixDevilSquare(o *Object) {
 	c := chaos(o)
-	chaosN, ne, nk, le, lk := pairedLevels(c, idxDSEye, idxDSKey)
+	chaosN, ne, nk, le, lk := pairedLevels(c, chaosmix.ItemDSEye, chaosmix.ItemDSKey)
 	if chaosN != 1 || ne != 1 || nk != 1 || le != lk {
-		w.chaosSendResult(o, mixWrongItems, nil)
+		w.chaosSendResult(o, chaosmix.ResultWrongItems, nil)
 		return
 	}
 	if le > 7 || lk > 7 {
-		w.chaosSendResult(o, mixWrongLevel, nil)
+		w.chaosSendResult(o, chaosmix.ResultWrongLevel, nil)
 		return
 	}
 	money := [8]int64{0, 100000, 200000, 400000, 700000, 1100000, 1600000, 2000000}
@@ -683,7 +590,7 @@ func (w *World) mixDevilSquare(o *Object) {
 	// Level 7 reads CServerInfo+0x87c, which no key loads (0).
 	c.Money = money[le]
 	if !w.charmBonus(c, &c.Rate) {
-		w.chaosSendResult(o, mixCharms, nil)
+		w.chaosSendResult(o, chaosmix.ResultTooManyCharms, nil)
 		return
 	}
 	c.Rate = min(w.bonusRate(o, c.Rate), 100)
@@ -691,7 +598,7 @@ func (w *World) mixDevilSquare(o *Object) {
 		return
 	}
 	if chaosRoll(c.Rate) {
-		w.chaosCreateItem(o, mixItem{Index: idxDSInvite, Level: le, Durability: 1}, false)
+		w.chaosCreateItem(o, chaosmix.Item{Index: chaosmix.ItemDSInvite, Level: le, Durability: 1}, false)
 		w.chaosLog("[DevilSquareMix][Success][%s][%s] - (ChaosSuccessRate: %d,ChaosMoney: %d)",
 			o.P.Account.Login, o.P.Char.Name, c.Rate, c.Money)
 		return
@@ -722,19 +629,19 @@ func (w *World) mixPlusItem(o *Object, p int) {
 	for i, it := range c.Box {
 		switch {
 		case it.IsEmpty():
-		case it.Index == idxChaos:
+		case it.Index == chaosmix.ItemChaos:
 			chaosN++
-		case it.Index == idxBless:
+		case it.Index == chaosmix.ItemBless:
 			bless++
-		case it.Index == idxSoul:
+		case it.Index == chaosmix.ItemSoul:
 			soul++
-		case it.Index != idxNoUpgrade1 && it.Index != idxNoUpgrade2 && it.Level == p+9:
+		case it.Index != chaosmix.ItemNoUpgrade1 && it.Index != chaosmix.ItemNoUpgrade2 && it.Level == p+9:
 			count++
 			slot = i
 		}
 	}
 	if chaosN != 1 || soul < p+1 || bless < p+1 || count != 1 {
-		w.chaosSendResult(o, mixWrongItems, nil)
+		w.chaosSendResult(o, chaosmix.ResultWrongItems, nil)
 		return
 	}
 	it := c.Box[slot]
@@ -743,7 +650,7 @@ func (w *World) mixPlusItem(o *Object, p int) {
 		c.Rate += w.cfg.ALInt("Common", "AddLuckSuccessRate2", accountLevel(o), 0)
 	}
 	if !w.charmBonus(c, &c.Rate) {
-		w.chaosSendResult(o, mixCharms, nil)
+		w.chaosSendResult(o, chaosmix.ResultTooManyCharms, nil)
 		return
 	}
 	c.Rate = min(w.bonusRate(o, c.Rate), 100)
@@ -761,7 +668,7 @@ func (w *World) mixPlusItem(o *Object, p int) {
 		}
 		w.chaosClear(o)
 		c.Box[0] = up
-		w.chaosSendResult(o, mixSuccess, &up)
+		w.chaosSendResult(o, chaosmix.ResultSuccess, &up)
 		w.chaosAnnounce(o, p, up) // FUN_005120b0 (chaos_announce.go)
 		w.chaosLog("[PlusItemLevelMix][Success][%s][%s] - (Type: %d,ChaosSuccessRate: %d,ChaosMoney: %d)",
 			o.P.Account.Login, o.P.Char.Name, p, c.Rate, c.Money)
@@ -786,7 +693,7 @@ func (w *World) mixPlusItem(o *Object, p int) {
 		c.Box[slot] = it
 	}
 	w.chaosSendList(o, false)
-	w.chaosSendResult(o, mixFail, nil)
+	w.chaosSendResult(o, chaosmix.ResultFail, nil)
 	w.chaosLog("[PlusItemLevelMix][Fail] [%s][%s] - FailMode: %d", o.P.Account.Login, o.P.Char.Name, mode)
 }
 
@@ -797,19 +704,19 @@ func (w *World) mixDinorant(o *Object) {
 	for _, it := range c.Box {
 		switch {
 		case it.IsEmpty():
-		case it.Index == idxChaos:
+		case it.Index == chaosmix.ItemChaos:
 			chaosN++
-		case it.Index == idxUniria && it.Durability == 255:
+		case it.Index == chaosmix.ItemUniria && it.Durability == 255:
 			uniria++
 		}
 	}
 	if chaosN != 1 || uniria != 10 {
-		w.chaosSendResult(o, mixWrongItems, nil)
+		w.chaosSendResult(o, chaosmix.ResultWrongItems, nil)
 		return
 	}
 	c.Rate = w.chaosRateCfg(o, "DinorantMixRate")
 	if !w.charmBonus(c, &c.Rate) {
-		w.chaosSendResult(o, mixCharms, nil)
+		w.chaosSendResult(o, chaosmix.ResultTooManyCharms, nil)
 		return
 	}
 	c.Rate = min(w.bonusRate(o, c.Rate), 100)
@@ -822,11 +729,11 @@ func (w *World) mixDinorant(o *Object) {
 		// FUN_0049f0d0 the bits (at most 3 for the Dinorant).
 		var exc byte
 		if d := w.chaosData(); d != nil {
-			if n, ok := d.rates.Pick(4, 3, chaosRand); ok {
-				exc = chaosMakeExcellent(d.exc, idxDinorant, n, 3)
+			if n, ok := d.Rates.Pick(4, 3, chaosRand); ok {
+				exc = chaosMakeExcellent(d.Exc, chaosmix.ItemDinorant, n, 3)
 			}
 		}
-		w.chaosCreateItem(o, mixItem{Index: idxDinorant, Durability: 0xFF, Excellent: exc}, false)
+		w.chaosCreateItem(o, chaosmix.Item{Index: chaosmix.ItemDinorant, Durability: 0xFF, Excellent: exc}, false)
 		w.chaosLog("[DinorantMix][Success][%s][%s] - (ChaosSuccessRate: %d,ChaosMoney: %d)",
 			o.P.Account.Login, o.P.Char.Name, c.Rate, c.Money)
 		return
@@ -843,19 +750,19 @@ func (w *World) mixFruit(o *Object) {
 	for _, it := range c.Box {
 		switch {
 		case it.IsEmpty():
-		case it.Index == idxChaos:
+		case it.Index == chaosmix.ItemChaos:
 			chaosN++
-		case it.Index == idxCreation:
+		case it.Index == chaosmix.ItemCreation:
 			creation++
 		}
 	}
 	if chaosN != 1 || creation != 1 {
-		w.chaosSendResult(o, mixWrongItems, nil)
+		w.chaosSendResult(o, chaosmix.ResultWrongItems, nil)
 		return
 	}
 	c.Rate = w.chaosRateCfg(o, "FruitMixRate")
 	if !w.charmBonus(c, &c.Rate) {
-		w.chaosSendResult(o, mixCharms, nil)
+		w.chaosSendResult(o, chaosmix.ResultTooManyCharms, nil)
 		return
 	}
 	c.Rate = min(w.bonusRate(o, c.Rate), 100)
@@ -864,7 +771,7 @@ func (w *World) mixFruit(o *Object) {
 		return
 	}
 	if chaosRoll(c.Rate) {
-		w.chaosCreateItem(o, mixItem{Index: idxFruit, Level: chaosRand() % 5}, false)
+		w.chaosCreateItem(o, chaosmix.Item{Index: chaosmix.ItemFruit, Level: chaosRand() % 5}, false)
 		w.chaosLog("[FruitMix][Success][%s][%s] - (ChaosSuccessRate: %d,ChaosMoney: %d)",
 			o.P.Account.Login, o.P.Char.Name, c.Rate, c.Money)
 		return
@@ -874,12 +781,6 @@ func (w *World) mixFruit(o *Object) {
 		o.P.Account.Login, o.P.Char.Name, c.Rate, c.Money)
 }
 
-// isFirstWing is the 0x1800..0x1802 / 0x1829 test of the second wing mix.
-func isFirstWing(idx int) bool { return (idx >= 0x1800 && idx <= 0x1802) || idx == 0x1829 }
-
-// wing2Choice maps the selection items 13,88..13,92 to the wing they force.
-var wing2Choice = [6]int{0, 0x1805, 0x1804, 0x1803, 0x182A, 0x1806}
-
 // mixWing2 is FUN_0042c620 (86 07 second wing, 86 18 cape).
 func (w *World) mixWing2(o *Object, cape int) {
 	c := chaos(o)
@@ -888,13 +789,13 @@ func (w *World) mixWing2(o *Object, cape int) {
 	for _, it := range c.Box {
 		switch {
 		case it.IsEmpty():
-		case it.Index == idxChaos:
+		case it.Index == chaosmix.ItemChaos:
 			chaosN++
-		case it.Index == idxFeather && it.Level == 0:
+		case it.Index == chaosmix.ItemFeather && it.Level == 0:
 			feather++
-		case it.Index == idxFeather && it.Level == 1:
+		case it.Index == chaosmix.ItemFeather && it.Level == 1:
 			crest++
-		case isFirstWing(it.Index):
+		case chaosmix.IsFirstWing(it.Index):
 			wings++
 			wingValue += w.itemPrice(it).Buy
 		case isExcellent(it) && it.Level >= 4:
@@ -908,7 +809,7 @@ func (w *World) mixWing2(o *Object, cape int) {
 		need = crest
 	}
 	if chaosN != 1 || need != 1 || wings != 1 {
-		w.chaosSendResult(o, mixWrongItems, nil)
+		w.chaosSendResult(o, chaosmix.ResultWrongItems, nil)
 		return
 	}
 	cfg := w.chaosRateCfg(o, "Wing2MixRate")
@@ -917,7 +818,7 @@ func (w *World) mixWing2(o *Object, cape int) {
 		c.Rate = int(itemValue/40000 + wingValue/4000000)
 	}
 	if !w.charmBonus(c, &c.Rate) {
-		w.chaosSendResult(o, mixCharms, nil)
+		w.chaosSendResult(o, chaosmix.ResultTooManyCharms, nil)
 		return
 	}
 	c.Rate = w.bonusRate(o, c.Rate)
@@ -933,11 +834,11 @@ func (w *World) mixWing2(o *Object, cape int) {
 	if chaosRoll(c.Rate) {
 		res, ok := w.chaosBagItem(o, 0, 2+cape)
 		if !ok {
-			w.chaosSendResult(o, mixFail, nil)
+			w.chaosSendResult(o, chaosmix.ResultFail, nil)
 			return
 		}
 		if cape == 0 && choice > 0 {
-			res.Index = wing2Choice[choice]
+			res.Index = chaosmix.Wing2Choice[choice]
 		}
 		w.chaosCreateItem(o, res, false)
 		w.chaosLog("[Wing2Mix][Success][%s][%s] - (Type: %d,ChaosSuccessRate: %d,ChaosMoney: %d)",
@@ -952,13 +853,13 @@ func (w *World) mixWing2(o *Object, cape int) {
 // mixBloodCastle is FUN_0042cc50 (86 08): Invisibility Cloak.
 func (w *World) mixBloodCastle(o *Object) {
 	c := chaos(o)
-	chaosN, ns, nb, ls, lb := pairedLevels(c, idxArchangel, idxBloodBone)
+	chaosN, ns, nb, ls, lb := pairedLevels(c, chaosmix.ItemArchangel, chaosmix.ItemBloodBone)
 	if chaosN != 1 || ns != 1 || nb != 1 || ls != lb {
-		w.chaosSendResult(o, mixWrongItems, nil)
+		w.chaosSendResult(o, chaosmix.ResultWrongItems, nil)
 		return
 	}
 	if ls > 8 || lb > 8 {
-		w.chaosSendResult(o, mixWrongLevel, nil)
+		w.chaosSendResult(o, chaosmix.ResultWrongLevel, nil)
 		return
 	}
 	money := [9]int64{0, 50000, 80000, 150000, 250000, 400000, 600000, 850000, 1050000}
@@ -968,7 +869,7 @@ func (w *World) mixBloodCastle(o *Object) {
 	// Level 8 reads CServerInfo+0xa4c, which no key loads (0).
 	c.Money = money[ls]
 	if !w.charmBonus(c, &c.Rate) {
-		w.chaosSendResult(o, mixCharms, nil)
+		w.chaosSendResult(o, chaosmix.ResultTooManyCharms, nil)
 		return
 	}
 	c.Rate = min(w.bonusRate(o, c.Rate), 100)
@@ -982,16 +883,10 @@ func (w *World) mixBloodCastle(o *Object) {
 			o.P.Account.Login, o.P.Char.Name, c.Rate, c.Money)
 		return
 	}
-	w.chaosCreateItem(o, mixItem{Index: idxCloak, Level: ls, Durability: 1}, false)
+	w.chaosCreateItem(o, chaosmix.Item{Index: chaosmix.ItemCloak, Level: ls, Durability: 1}, false)
 	w.chaosLog("[BloodCastleMix][Success][%s][%s] - (ChaosSuccessRate: %d,ChaosMoney: %d)",
 		o.P.Account.Login, o.P.Char.Name, c.Rate, c.Money)
 }
-
-// wing1Choice maps the selection items 13,83..13,86 to the wing they force.
-var wing1Choice = [5]int{0, 0x1802, 0x1801, 0x1800, 0x1829}
-
-// isChaosWeapon lists the chaos weapons of the first wing mix.
-func isChaosWeapon(idx int) bool { return idx == 0x406 || idx == 0x806 || idx == 0xA07 }
 
 // mixWing1 is FUN_0042d170 (86 0B).
 func (w *World) mixWing1(o *Object) {
@@ -1001,12 +896,12 @@ func (w *World) mixWing1(o *Object) {
 	for _, it := range c.Box {
 		switch {
 		case it.IsEmpty():
-		case it.Index == idxChaos:
+		case it.Index == chaosmix.ItemChaos:
 			chaosN++
 			value += w.jewelValue(it)
-		case it.Index == idxBless || it.Index == idxSoul:
+		case it.Index == chaosmix.ItemBless || it.Index == chaosmix.ItemSoul:
 			value += w.jewelValue(it)
-		case isChaosWeapon(it.Index) && it.Level > 3 && it.Option != 0:
+		case chaosmix.IsChaosWeapon(it.Index) && it.Level > 3 && it.Option != 0:
 			weapons++
 			value += w.itemPrice(it).Buy
 		case it.Level >= 4 && it.Option != 0:
@@ -1016,7 +911,7 @@ func (w *World) mixWing1(o *Object) {
 		}
 	}
 	if chaosN == 0 || weapons == 0 {
-		w.chaosSendResult(o, mixWrongItems, nil)
+		w.chaosSendResult(o, chaosmix.ResultWrongItems, nil)
 		return
 	}
 	cfg := w.chaosRateCfg(o, "Wing1MixRate")
@@ -1025,7 +920,7 @@ func (w *World) mixWing1(o *Object) {
 		c.Rate = int(value / 20000)
 	}
 	if !w.charmBonus(c, &c.Rate) {
-		w.chaosSendResult(o, mixCharms, nil)
+		w.chaosSendResult(o, chaosmix.ResultTooManyCharms, nil)
 		return
 	}
 	c.Rate = min(w.bonusRate(o, c.Rate), 100)
@@ -1036,11 +931,11 @@ func (w *World) mixWing1(o *Object) {
 	if chaosRoll(c.Rate) {
 		res, ok := w.chaosBagItem(o, 0, 1)
 		if !ok {
-			w.chaosSendResult(o, mixFail, nil)
+			w.chaosSendResult(o, chaosmix.ResultFail, nil)
 			return
 		}
 		if choice > 0 {
-			res.Index = wing1Choice[choice]
+			res.Index = chaosmix.Wing1Choice[choice]
 		}
 		w.chaosCreateItem(o, res, false)
 		w.chaosLog("[Wing1Mix][Success][%s][%s] - (ChaosSuccessRate: %d,ChaosMoney: %d)",
@@ -1059,27 +954,27 @@ func (w *World) mixPet(o *Object, t int) {
 	for _, it := range c.Box {
 		switch {
 		case it.IsEmpty():
-		case it.Index == idxChaos:
+		case it.Index == chaosmix.ItemChaos:
 			chaosN++
-		case it.Index == idxSpirit && it.Level == t:
+		case it.Index == chaosmix.ItemSpirit && it.Level == t:
 			spirit++
-		case it.Index == idxSpirit && (it.Level == 0 || it.Level == 1):
-		case it.Index == idxBless:
+		case it.Index == chaosmix.ItemSpirit && (it.Level == 0 || it.Level == 1):
+		case it.Index == chaosmix.ItemBless:
 			bless++
-		case it.Index == idxSoul:
+		case it.Index == chaosmix.ItemSoul:
 			soul++
-		case it.Index == idxCreation:
+		case it.Index == chaosmix.ItemCreation:
 			creation++
 		}
 	}
 	need := 5 - 3*t
 	if chaosN != 1 || spirit != 1 || bless != need || soul != need || creation != 1 {
-		w.chaosSendResult(o, mixWrongItems, nil)
+		w.chaosSendResult(o, chaosmix.ResultWrongItems, nil)
 		return
 	}
 	c.Rate = w.chaosRateCfg(o, "PetMixRate")
 	if !w.charmBonus(c, &c.Rate) {
-		w.chaosSendResult(o, mixCharms, nil)
+		w.chaosSendResult(o, chaosmix.ResultTooManyCharms, nil)
 		return
 	}
 	c.Rate = min(w.bonusRate(o, c.Rate), 100)
@@ -1088,7 +983,7 @@ func (w *World) mixPet(o *Object, t int) {
 		return
 	}
 	if chaosRoll(c.Rate) {
-		w.chaosCreateItem(o, mixItem{Index: idxDarkHorse + t}, false)
+		w.chaosCreateItem(o, chaosmix.Item{Index: chaosmix.ItemDarkHorse + t}, false)
 		w.chaosLog("[PetMix][Success][%s][%s] - (Type: %d,ChaosSuccessRate: %d,ChaosMoney: %d)",
 			o.P.Account.Login, o.P.Char.Name, t, c.Rate, c.Money)
 		return
@@ -1106,9 +1001,9 @@ func (w *World) mixSiegePotion(o *Object, t int) {
 	bless, soul := 0, 0
 	for _, it := range c.Box {
 		switch it.Index {
-		case idxBless:
+		case chaosmix.ItemBless:
 			bless++
-		case idxSoul:
+		case chaosmix.ItemSoul:
 			soul++
 		}
 	}
@@ -1117,14 +1012,14 @@ func (w *World) mixSiegePotion(o *Object, t int) {
 		n = soul
 	}
 	if n == 0 || n > 25 {
-		w.chaosSendResult(o, mixWrongItems, nil)
+		w.chaosSendResult(o, chaosmix.ResultWrongItems, nil)
 		return
 	}
 	c.Money = int64(2-t) * 50000
 	if !w.chaosCharge(o) {
 		return
 	}
-	w.chaosCreateItem(o, mixItem{Index: idxSiegePot, Level: t, Durability: byte((bless + soul) * 10)}, false)
+	w.chaosCreateItem(o, chaosmix.Item{Index: chaosmix.ItemSiegePot, Level: t, Durability: byte((bless + soul) * 10)}, false)
 	w.chaosLog("[SiegePotionMix][Success][%s][%s] - (Type: %d,ChaosSuccessRate: %d,ChaosMoney: %d)",
 		o.P.Account.Login, o.P.Char.Name, t, c.Rate, c.Money)
 }
@@ -1135,25 +1030,25 @@ func (w *World) mixLifeStone(o *Object) {
 	chaosN, bless, soul, guardian := 0, 0, 0, 0
 	for _, it := range c.Box {
 		switch it.Index {
-		case idxChaos:
+		case chaosmix.ItemChaos:
 			chaosN++
-		case idxBless:
+		case chaosmix.ItemBless:
 			bless++
-		case idxSoul:
+		case chaosmix.ItemSoul:
 			soul++
-		case idxGuardian:
+		case chaosmix.ItemGuardian:
 			guardian++
 		}
 	}
 	if chaosN != 1 || bless != 5 || soul != 5 || guardian != 1 {
-		w.chaosSendResult(o, mixWrongItems, nil)
+		w.chaosSendResult(o, chaosmix.ResultWrongItems, nil)
 		return
 	}
 	c.Money = 5000000
 	if !w.chaosCharge(o) {
 		return
 	}
-	w.chaosCreateItem(o, mixItem{Index: idxLifeStone, Level: 1}, false)
+	w.chaosCreateItem(o, chaosmix.Item{Index: chaosmix.ItemLifeStone, Level: 1}, false)
 	w.chaosLog("[LifeStoneMix][Success][%s][%s] - (ChaosSuccessRate: %d,ChaosMoney: %d)",
 		o.P.Account.Login, o.P.Char.Name, c.Rate, c.Money)
 }
@@ -1163,7 +1058,7 @@ func (w *World) mixLifeStone(o *Object) {
 // branch for everyone else applies: notice 0x2E7 and result 0.
 func (w *World) mixSenior(o *Object) {
 	w.systemMessage(o, w.messageFor(o, 0x2e7))
-	w.chaosSendResult(o, mixFail, nil)
+	w.chaosSendResult(o, chaosmix.ResultFail, nil)
 }
 
 // mixChaosCard is FUN_0042e4c0 (86 28): one chaos card of the last kind
@@ -1188,12 +1083,12 @@ func (w *World) mixChaosCard(o *Object) {
 		count[kind]++
 	}
 	if kind == 0 || count[kind] != 1 {
-		w.chaosSendResult(o, mixWrongItems, nil)
+		w.chaosSendResult(o, chaosmix.ResultWrongItems, nil)
 		return
 	}
 	res, ok := w.chaosBagItem(o, 7, kind-1)
 	if !ok {
-		w.chaosSendResult(o, mixFail, nil)
+		w.chaosSendResult(o, chaosmix.ResultFail, nil)
 		return
 	}
 	w.chaosCreateItem(o, res, false)
@@ -1222,12 +1117,12 @@ func (w *World) mixCherryBlossom(o *Object) {
 	}
 	need := [4]int{0, 10, 30, 255}
 	if kind == 0 || sum[kind] != need[kind] {
-		w.chaosSendResult(o, mixWrongItems, nil)
+		w.chaosSendResult(o, chaosmix.ResultWrongItems, nil)
 		return
 	}
 	res, ok := w.chaosBagItem(o, 9, kind-1)
 	if !ok {
-		w.chaosSendResult(o, mixFail, nil)
+		w.chaosSendResult(o, chaosmix.ResultFail, nil)
 		return
 	}
 	w.chaosCreateItem(o, res, false)
@@ -1237,36 +1132,15 @@ func (w *World) mixCherryBlossom(o *Object) {
 
 // --- result items ------------------------------------------------------------------
 
-// mixItem is the item a recipe asks the DataServer to create
-// (FUN_004753e0 arguments).
-type mixItem struct {
-	Index, Level int
-	Durability   byte // 0 = computed (FUN_00494500) unless listed in fixedDurability
-	Skill, Luck  bool
-	Option       int
-	Excellent    byte
-	SetOption    byte
-}
-
-// fixedDurability lists the items whose created durability is the one the
-// mix passes (FUN_004742b0); the others get FUN_00494500.
-func fixedDurability(idx int) bool {
-	switch idx {
-	case idxCloak, idxFenrir, 0x1A33, idxSiegePot, idxDSInvite, 0x1C6D:
-		return true
-	}
-	return false
-}
-
 // chaosCreateItem is FUN_004753e0 with map 0xFF followed by the answer
 // FUN_004742b0: the serial comes from the store, then (if the chaos box is
 // still open) the box is cleared, the item is put in slot 0 and 86 01 is
 // sent. second is unused for map 0xFF (interface 7 only).
-func (w *World) chaosCreateItem(o *Object, m mixItem, second bool) {
+func (w *World) chaosCreateItem(o *Object, m chaosmix.Item, second bool) {
 	cn := o.conn
 	w.async(func(ctx context.Context) func() {
 		serial, err := w.store.NextItemSerial(ctx)
-		if err == nil && (m.Index == idxDarkHorse || m.Index == idxDarkRaven) {
+		if err == nil && (m.Index == chaosmix.ItemDarkHorse || m.Index == chaosmix.ItemDarkRaven) {
 			if ps, ok := w.store.(store.PetStore); ok {
 				err = ps.CreatePetInfo(ctx, store.DefaultPetInfo(serial))
 			}
@@ -1289,39 +1163,39 @@ func (w *World) chaosCreateItem(o *Object, m mixItem, second bool) {
 }
 
 // chaosPlaceResult is the map 0xFF branch of FUN_004742b0.
-func (w *World) chaosPlaceResult(o *Object, m mixItem, serial uint32) {
+func (w *World) chaosPlaceResult(o *Object, m chaosmix.Item, serial uint32) {
 	it := item.Item{Index: m.Index, Level: m.Level, Serial: serial, Skill: m.Skill, Luck: m.Luck,
 		Option: m.Option, Excellent: m.Excellent & 0x3F, SetOption: m.SetOption}
-	if fixedDurability(m.Index) {
+	if chaosmix.FixedDurability(m.Index) {
 		it.Durability = float32(m.Durability)
 	} else {
 		info, _ := w.itemInfo(m.Index)
 		it.Durability = float32(maxDurability(info, m.Index, m.Level, it.Excellent != 0, isSet(it)))
 	}
-	if m.Index == idxDarkHorse || m.Index == idxDarkRaven {
+	if m.Index == chaosmix.ItemDarkHorse || m.Index == chaosmix.ItemDarkRaven {
 		petInit(&it, 1, 0, w.maxPetLevel())
 	}
 	w.chaosClear(o)
 	chaos(o).Box[0] = it
-	w.chaosSendResult(o, mixSuccess, &it)
+	w.chaosSendResult(o, chaosmix.ResultSuccess, &it)
 }
 
 // chaosBagItem rolls the item of the bag with (SpecialValue, SpecialLevel)
 // (FUN_004912f0 + FUN_0048f980) for the player.
-func (w *World) chaosBagItem(o *Object, value, level int) (mixItem, bool) {
+func (w *World) chaosBagItem(o *Object, value, level int) (chaosmix.Item, bool) {
 	d := w.chaosData()
 	if d == nil {
-		return mixItem{}, false
+		return chaosmix.Item{}, false
 	}
 	var bag *gamedata.ItemBag
-	for _, e := range d.bags {
+	for _, e := range d.Bags {
 		if e.SpecialValue == value && (e.SpecialLevel == -1 || e.SpecialLevel == level) && e.SpecialState == -1 {
 			bag = e.Bag
 			break
 		}
 	}
 	if bag == nil {
-		return mixItem{}, false
+		return chaosmix.Item{}, false
 	}
 	return chaosRollBag(d, bag, o.Class, int(o.P.Char.Class&0x0F), chaosRand)
 }
@@ -1337,7 +1211,7 @@ func (w *World) chaosBagItem(o *Object, value, level int) (mixItem, bool) {
 //     from FUN_0049f0d0 mode 1 and the ancient byte from FUN_0049f270.
 //     Without excellent bits the GradeCount is passed as the "new option"
 //     of CItem::Convert.
-func chaosRollBag(d *chaosData, bag *gamedata.ItemBag, class, changeUp int, rnd func() int) (mixItem, bool) {
+func chaosRollBag(d *chaosmix.Data, bag *gamedata.ItemBag, class, changeUp int, rnd func() int) (chaosmix.Item, bool) {
 	var row *gamedata.BagRow
 	for i := range bag.Bags {
 		if rnd()%10000 < bag.Bags[i].DropRate {
@@ -1346,7 +1220,7 @@ func chaosRollBag(d *chaosData, bag *gamedata.ItemBag, class, changeUp int, rnd 
 		}
 	}
 	if row == nil || class < 0 || class >= 5 {
-		return mixItem{}, false
+		return chaosmix.Item{}, false
 	}
 	var drops []gamedata.BagDrop
 	total := 0
@@ -1359,7 +1233,7 @@ func chaosRollBag(d *chaosData, bag *gamedata.ItemBag, class, changeUp int, rnd 
 		total += dr.SectionRate
 	}
 	if total == 0 {
-		return mixItem{}, false
+		return chaosmix.Item{}, false
 	}
 	x := rnd() % total
 	var sec *gamedata.BagDrop
@@ -1372,18 +1246,18 @@ func chaosRollBag(d *chaosData, bag *gamedata.ItemBag, class, changeUp int, rnd 
 		start += drops[i].SectionRate
 	}
 	if sec == nil {
-		return mixItem{}, false
+		return chaosmix.Item{}, false
 	}
 	list := bag.Sections[sec.Section]
 	if len(list) == 0 {
-		return mixItem{}, false
+		return chaosmix.Item{}, false
 	}
 	bi := list[uint(rnd())%uint(len(list))]
 	if bi.Index < 0 {
-		return mixItem{}, false
+		return chaosmix.Item{}, false
 	}
-	m := mixItem{Index: bi.Index, Level: bi.Level}
-	pick := func(s int) (int, bool) { return d.rates.Pick(s, bi.Option[s], rnd) }
+	m := chaosmix.Item{Index: bi.Index, Level: bi.Level}
+	pick := func(s int) (int, bool) { return d.Rates.Pick(s, bi.Option[s], rnd) }
 	if v, ok := pick(0); ok {
 		m.Level = v
 	}
@@ -1404,11 +1278,11 @@ func chaosRollBag(d *chaosData, bag *gamedata.ItemBag, class, changeUp int, rnd 
 		setN = v
 	}
 	maxExc := 6
-	if bi.Index == idxDinorant || bi.Index == idxFenrir {
+	if bi.Index == chaosmix.ItemDinorant || bi.Index == chaosmix.ItemFenrir {
 		maxExc = 3
 	}
-	m.Excellent = chaosMakeExcellent(d.exc, bi.Index, excN, maxExc)
-	m.SetOption = chaosMakeSet(d.sets, bi.Index, setN, rnd)
+	m.Excellent = chaosMakeExcellent(d.Exc, bi.Index, excN, maxExc)
+	m.SetOption = chaosmix.MakeSet(d.Sets, bi.Index, setN, rnd)
 	if m.Excellent == 0 {
 		m.Excellent = byte(bi.Grade)
 	}
@@ -1432,50 +1306,6 @@ func chaosMakeExcellent(rows []gamedata.ExcellentOptionRate, index, count, maxOp
 		}
 	}
 	return exc
-}
-
-// chaosMakeSet is FUN_0049f270: the ancient byte for a set option value.
-// 1/2: random among the tiers with an option row (tier 1 gives 5 or 9,
-// tier 2 gives 10 or 6 for values 1/2); 3/4: tier 1 (5/9); 5/6: tier 2
-// (6/10).
-func chaosMakeSet(sets *gamedata.SetItemTypes, index, value int, rnd func() int) byte {
-	if sets == nil || value == 0 {
-		return 0
-	}
-	r, ok := sets.Get(index)
-	if !ok {
-		return 0
-	}
-	t1, t2 := byte(9), byte(10)
-	if value%2 == 1 {
-		t1 = 5
-	}
-	if value == 2 || value == 5 {
-		t2 = 6
-	}
-	switch value {
-	case 1, 2:
-		var cand []byte
-		if r.Option[0] > 0 {
-			cand = append(cand, t1)
-		}
-		if r.Option[1] > 0 {
-			cand = append(cand, t2)
-		}
-		if len(cand) == 0 {
-			return 0
-		}
-		return cand[rnd()%len(cand)]
-	case 3, 4:
-		if r.Option[0] > 0 {
-			return t1
-		}
-	case 5, 6:
-		if r.Option[1] > 0 {
-			return t2
-		}
-	}
-	return 0
 }
 
 // --- rate preview (88) --------------------------------------------------------------
@@ -1502,7 +1332,7 @@ func (w *World) handleChaosRate(o *Object, p []byte) {
 		rate = 100
 	}
 	rate = max(rate, 0)
-	w.send(o, packetChaosRate(uint32(rate), uint32(money), uint32(tax)))
+	w.send(o, chaosmix.PacketRate(uint32(rate), uint32(money), uint32(tax)))
 }
 
 // chaosPreview reproduces the per-type branches of FUN_0042ee40; ok is
@@ -1521,12 +1351,12 @@ func (w *World) chaosPreview(o *Object, c *chaosState, typ uint32) (int, int64, 
 		for _, it := range c.Box {
 			switch {
 			case it.IsEmpty():
-			case it.Index == idxChaos:
+			case it.Index == chaosmix.ItemChaos:
 				chaosN++
 				value += w.jewelValue(it)
-			case it.Index == idxBless || it.Index == idxSoul:
+			case it.Index == chaosmix.ItemBless || it.Index == chaosmix.ItemSoul:
 				value += w.jewelValue(it)
-			case typ == 0xB && isChaosWeapon(it.Index):
+			case typ == 0xB && chaosmix.IsChaosWeapon(it.Index):
 				if it.Level > 3 && it.Option != 0 {
 					n++
 					value += w.itemPrice(it).Buy
@@ -1556,9 +1386,9 @@ func (w *World) chaosPreview(o *Object, c *chaosState, typ uint32) (int, int64, 
 		r = min(r, 100)
 		return r, int64(r) * 10000, true
 	case 2, 8:
-		a, b, maxL := idxDSEye, idxDSKey, 7
+		a, b, maxL := chaosmix.ItemDSEye, chaosmix.ItemDSKey, 7
 		if typ == 8 {
-			a, b, maxL = idxArchangel, idxBloodBone, 8
+			a, b, maxL = chaosmix.ItemArchangel, chaosmix.ItemBloodBone, 8
 		}
 		chaosN, na, nb, la, lb := pairedLevels(c, a, b)
 		if chaosN != 1 || na != 1 || nb != 1 || la != lb || la > maxL {
@@ -1585,11 +1415,11 @@ func (w *World) chaosPreview(o *Object, c *chaosState, typ uint32) (int, int64, 
 		for i, it := range c.Box {
 			switch {
 			case it.IsEmpty():
-			case it.Index == idxChaos:
+			case it.Index == chaosmix.ItemChaos:
 				chaosN++
-			case it.Index == idxBless:
+			case it.Index == chaosmix.ItemBless:
 				bless++
-			case it.Index == idxSoul:
+			case it.Index == chaosmix.ItemSoul:
 				soul++
 			case it.Level == pv+9:
 				n++
@@ -1609,9 +1439,9 @@ func (w *World) chaosPreview(o *Object, c *chaosState, typ uint32) (int, int64, 
 	case 5:
 		chaosN, uniria := 0, 0
 		for _, it := range c.Box {
-			if it.Index == idxChaos {
+			if it.Index == chaosmix.ItemChaos {
 				chaosN++
-			} else if it.Index == idxUniria && it.Durability == 255 {
+			} else if it.Index == chaosmix.ItemUniria && it.Durability == 255 {
 				uniria++
 			}
 		}
@@ -1623,9 +1453,9 @@ func (w *World) chaosPreview(o *Object, c *chaosState, typ uint32) (int, int64, 
 	case 6:
 		chaosN, creation := 0, 0
 		for _, it := range c.Box {
-			if it.Index == idxChaos {
+			if it.Index == chaosmix.ItemChaos {
 				chaosN++
-			} else if it.Index == idxCreation {
+			} else if it.Index == chaosmix.ItemCreation {
 				creation++
 			}
 		}
@@ -1644,13 +1474,13 @@ func (w *World) chaosPreview(o *Object, c *chaosState, typ uint32) (int, int64, 
 		for _, it := range c.Box {
 			switch {
 			case it.IsEmpty():
-			case it.Index == idxChaos:
+			case it.Index == chaosmix.ItemChaos:
 				chaosN++
-			case it.Index == idxFeather && it.Level == 0:
+			case it.Index == chaosmix.ItemFeather && it.Level == 0:
 				feather++
-			case it.Index == idxFeather && it.Level == 1:
+			case it.Index == chaosmix.ItemFeather && it.Level == 1:
 				crest++
-			case isFirstWing(it.Index):
+			case chaosmix.IsFirstWing(it.Index):
 				wings++
 				wingValue += w.itemPrice(it).Buy
 			case isExcellent(it) && it.Level > 3:
@@ -1680,15 +1510,15 @@ func (w *World) chaosPreview(o *Object, c *chaosState, typ uint32) (int, int64, 
 		for _, it := range c.Box {
 			switch {
 			case it.IsEmpty():
-			case it.Index == idxChaos:
+			case it.Index == chaosmix.ItemChaos:
 				chaosN++
-			case it.Index == idxSpirit && it.Level == t:
+			case it.Index == chaosmix.ItemSpirit && it.Level == t:
 				spirit++
-			case it.Index == idxBless:
+			case it.Index == chaosmix.ItemBless:
 				bless++
-			case it.Index == idxSoul:
+			case it.Index == chaosmix.ItemSoul:
 				soul++
-			case it.Index == idxCreation:
+			case it.Index == chaosmix.ItemCreation:
 				creation++
 			}
 		}

@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/effect"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -27,9 +29,9 @@ import (
 
 // skillWorld holds the skill/effect tables of the instance.
 type skillWorld struct {
-	effects    map[int]effectInfo // EffectList.txt
-	damage     map[int][2]int     // SkillDamage.txt section 0: PvM, PvP rate
-	effectRate map[int]int        // SkillDamage.txt section 1
+	effects    map[int]effect.Info // EffectList.txt
+	damage     map[int][2]int      // SkillDamage.txt section 0: PvM, PvP rate
+	effectRate map[int]int         // SkillDamage.txt section 1
 	combos     map[[2]int]comboRow
 	enabler    []enablerRow
 	areaSkills map[int]bool // SkillUseArea.txt section 0
@@ -112,7 +114,7 @@ func loadSkillWorld(dataDir, configDir string) (*skillWorld, error) {
 	sw := &skillWorld{damage: map[int][2]int{}, effectRate: map[int]int{}, combos: map[[2]int]comboRow{},
 		areaSkills: map[int]bool{}}
 	var err error
-	if sw.effects, err = loadEffectList(configDir); err != nil {
+	if sw.effects, err = effect.LoadList(configDir); err != nil {
 		return nil, err
 	}
 	f, err := gamedata.LoadSkillConfig(configDir)
@@ -149,7 +151,7 @@ func loadSkillWorld(dataDir, configDir string) (*skillWorld, error) {
 // packetSkillArea is C3 09 1E (FUN_00501740): [3] skill, [4..5] user BE,
 // [6] x, [7] y, [8] dir.
 func packetSkillArea(skill, user, x, y, dir int) []byte {
-	p := newPacket(frame.C3, 0x1E, -1, 9)
+	p := packet.New(frame.C3, 0x1E, -1, 9)
 	p[3] = byte(skill)
 	p[4], p[5] = byte(user>>8), byte(user)
 	p[6], p[7], p[8] = byte(x), byte(y), byte(dir)
@@ -159,7 +161,7 @@ func packetSkillArea(skill, user, x, y, dir int) []byte {
 // packetNovaStage is C1 07 BA (FUN_0050e640): [3..4] user BE, [5] 0x28,
 // [6] charge stage.
 func packetNovaStage(user, stage int) []byte {
-	p := newPacket(frame.C1, 0xBA, -1, 7)
+	p := packet.New(frame.C1, 0xBA, -1, 7)
 	p[3], p[4] = byte(user>>8), byte(user)
 	p[5], p[6] = 0x28, byte(stage)
 	return p
@@ -167,7 +169,7 @@ func packetNovaStage(user, stage int) []byte {
 
 // packetKillCount is C1 05 B8 count (FUN_0050e0c0).
 func packetKillCount(n int) []byte {
-	p := newPacket(frame.C1, 0xB8, -1, 5)
+	p := packet.New(frame.C1, 0xB8, -1, 5)
 	p[3] = 1
 	p[4] = byte(n)
 	return p
@@ -706,7 +708,7 @@ func (w *World) dispatchSkill(o *Object, ref *skillRef, target, x, y, angle int,
 	st := sk(o)
 	st.DefenseTime = time.Time{} // obj+0x8d4 = 0
 	if o.Move != nil && o.Move.Authority == 1 {
-		w.removeEffect(o, effInvisibility)
+		w.removeEffect(o, effect.Invisibility)
 	}
 	switch ref.Num {
 	case chainLightningSkill:

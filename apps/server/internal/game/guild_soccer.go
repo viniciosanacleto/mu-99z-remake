@@ -3,6 +3,7 @@ package game
 import (
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/guild"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
@@ -127,14 +128,14 @@ func (w *World) soccerBegin(o *Object, own, enemy int) bool {
 	if s.state != soccerEmpty {
 		w.clearWar(own)
 		w.clearWar(enemy)
-		w.send(o, packetGuildWarRequestResult(4))
+		w.send(o, guild.PacketWarRequestResult(4))
 		return false
 	}
 	s.teams[0].guild, s.teams[1].guild = own, enemy
 	mgr := w.guildMgr()
-	g0, _ := mgr.byNumber(own)
-	g1, _ := mgr.byNumber(enemy)
-	for i := 0; i < guildMaxMembers; i++ {
+	g0, _ := mgr.ByNumber(own)
+	g1, _ := mgr.ByNumber(enemy)
+	for i := 0; i < guild.MaxMembers; i++ {
 		if m := w.playerHere(g0.Members[i].Name); m != nil {
 			w.soccerAdd(0, m)
 		}

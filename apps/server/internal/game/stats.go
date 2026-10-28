@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -1201,8 +1202,8 @@ func maxFruit(class, level int) int {
 func (w *World) packetCharStats(o *Object) []byte {
 	p, c, s := o.P, o.P.Char, w.statsOf(o)
 	ef := &s.Effects
-	b := newPacket(frame.C1, 0xF3, 0xE1, 0xCC)
-	put := func(off, v int) { u32le(b[off:], uint32(int32(v))) }
+	b := packet.New(frame.C1, 0xF3, 0xE1, 0xCC)
+	put := func(off, v int) { packet.PutUint32(b[off:], uint32(int32(v))) }
 	put(4, c.LevelUpPoints)
 	put(8, int(c.Life))
 	put(12, int(float64(p.AddLife)+float64(c.MaxLife)))
@@ -1291,8 +1292,8 @@ func (w *World) packetCharOptions(o *Object) []byte {
 	s := w.statsOf(o)
 	k := &w.statsData.k
 	cls := min(max(o.Class, 0), 4)
-	b := newPacket(frame.C1, 0xF3, 0xE3, 0x3C)
-	put := func(off, v int) { u32le(b[off:], uint32(int32(v))) }
+	b := packet.New(frame.C1, 0xF3, 0xE3, 0x3C)
+	put := func(off, v int) { packet.PutUint32(b[off:], uint32(int32(v))) }
 	put(4, s.DamageReflect)
 	put(8, s.CriticalDamageRate)
 	put(12, k.damageRatePvM[cls]*s.CriticalDamageRate)
@@ -1364,7 +1365,7 @@ func (w *World) handleStatAdd(o *Object, pkt []byte) {
 		return
 	}
 	typ := int(pkt[4])
-	b := newPacket(frame.C1, 0xF3, 0x06, 0x30)
+	b := packet.New(frame.C1, 0xF3, 0x06, 0x30)
 	if w.addStatPoint(o, typ, 1) {
 		p, c, s := o.P, o.P.Char, w.statsOf(o)
 		b[4] = byte(typ + 0x10)
@@ -1372,14 +1373,14 @@ func (w *World) handleStatAdd(o *Object, pkt []byte) {
 		maxMana := int(math.RoundToEven(float64(float32(p.AddMana) + c.MaxMana)))
 		switch typ {
 		case 2:
-			u16le(b[6:], clamp65000(maxLife))
+			packet.PutUint16(b[6:], packet.Clamp65000(maxLife))
 		case 3:
-			u16le(b[6:], clamp65000(maxMana))
+			packet.PutUint16(b[6:], packet.Clamp65000(maxMana))
 		}
-		u16le(b[8:], clamp65000(s.AddBP+s.MaxBP))
+		packet.PutUint16(b[8:], packet.Clamp65000(s.AddBP+s.MaxBP))
 		for i, v := range []int{c.LevelUpPoints, maxLife, maxMana, s.AddBP + s.MaxBP,
 			c.Strength, c.Dexterity, c.Vitality, c.Energy, c.Leadership} {
-			u32le(b[12+4*i:], uint32(int32(v)))
+			packet.PutUint32(b[12+4*i:], uint32(int32(v)))
 		}
 	}
 	w.send(o, b)

@@ -1,6 +1,9 @@
 package game
 
-import "github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
+import (
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
+)
 
 // NPC talk: 30 (FUN_004c2eb0) and the window close 31 (FUN_004c3170).
 
@@ -10,7 +13,7 @@ func packetObjectChat(index int, text string) []byte {
 	if len(text) > 0x3B {
 		text = text[:0x3B]
 	}
-	p := newPacket(frame.C1, 0x01, -1, len(text)+6)
+	p := packet.New(frame.C1, 0x01, -1, len(text)+6)
 	p[3], p[4] = byte(index>>8), byte(index)
 	copy(p[5:], text)
 	return p

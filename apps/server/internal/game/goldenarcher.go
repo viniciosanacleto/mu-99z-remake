@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
@@ -64,7 +65,7 @@ func (w *World) gaStore() store.GoldenArcherStore {
 func packetRenaCount(n int) []byte {
 	p := make([]byte, 0x10)
 	p[0], p[1], p[2] = 0xC1, 0x10, 0x94
-	u32le(p[4:], uint32(n))
+	packet.PutUint32(p[4:], uint32(n))
 	return p
 }
 

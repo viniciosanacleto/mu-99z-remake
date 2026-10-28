@@ -3,6 +3,7 @@ package game
 import (
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
@@ -61,34 +62,34 @@ func objName(o *Object) string {
 // packetDuelStart is C1 10 AA result idx(BE) name[10] (FUN_00478280,
 // result in CL).
 func packetDuelStart(result byte, about *Object) []byte {
-	p := newPacket(frame.C1, 0xAA, -1, 0x10)
+	p := packet.New(frame.C1, 0xAA, -1, 0x10)
 	p[3] = result
 	p[4], p[5] = byte(about.Index>>8), byte(about.Index)
-	putName(p[6:], objName(about))
+	packet.PutName(p[6:], objName(about))
 	return p
 }
 
 // packetDuelEnd is C1 0F AB idx(BE) name[10] of the receiver itself
 // (FUN_004783e0).
 func packetDuelEnd(o *Object) []byte {
-	p := newPacket(frame.C1, 0xAB, -1, 0x0F)
+	p := packet.New(frame.C1, 0xAB, -1, 0x0F)
 	p[3], p[4] = byte(o.Index>>8), byte(o.Index)
-	putName(p[5:], objName(o))
+	packet.PutName(p[5:], objName(o))
 	return p
 }
 
 // packetDuelAsk is C1 0F AC idx(BE) name[10] of the requester
 // (FUN_00478300).
 func packetDuelAsk(from *Object) []byte {
-	p := newPacket(frame.C1, 0xAC, -1, 0x0F)
+	p := packet.New(frame.C1, 0xAC, -1, 0x0F)
 	p[3], p[4] = byte(from.Index>>8), byte(from.Index)
-	putName(p[5:], objName(from))
+	packet.PutName(p[5:], objName(from))
 	return p
 }
 
 // packetDuelScore is C1 09 AD a(BE) b(BE) scoreA scoreB (FUN_00478460).
 func packetDuelScore(a, b *Object) []byte {
-	p := newPacket(frame.C1, 0xAD, -1, 9)
+	p := packet.New(frame.C1, 0xAD, -1, 9)
 	p[3], p[4] = byte(a.Index>>8), byte(a.Index)
 	p[5], p[6] = byte(b.Index>>8), byte(b.Index)
 	p[7], p[8] = byte(dl(a).Score), byte(dl(b).Score)
@@ -317,7 +318,7 @@ func (w *World) duelKill(killer, victim *Object) {
 	w.send(killer, packetDuelEnd(killer))
 	duelReset(victim)
 	w.send(victim, packetDuelEnd(victim))
-	fw := newPacket(frame.C1, 0xF3, 0x40, 7)
+	fw := packet.New(frame.C1, 0xF3, 0x40, 7)
 	fw[5], fw[6] = byte(killer.X), byte(killer.Y)
 	w.send(killer, fw)
 	w.broadcast(killer, fw)

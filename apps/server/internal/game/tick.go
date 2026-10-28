@@ -3,6 +3,8 @@ package game
 import (
 	"math/rand/v2"
 	"time"
+
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/character"
 )
 
 // Timers of the original (FUN_0047ddb0): ids 0, 1, 4 and 10 every 100 ms
@@ -55,12 +57,12 @@ func (w *World) playerSecond(o *Object, now time.Time) {
 			switch p.LogoutType {
 			case 1:
 				if w.returnToSelect(o) {
-					w.send(o, packetLogoutResult(1))
+					w.send(o, character.PacketLogoutResult(1))
 				}
 			case 0:
-				w.send(o, packetLogoutResult(0))
+				w.send(o, character.PacketLogoutResult(0))
 			default:
-				w.send(o, packetLogoutResult(2))
+				w.send(o, character.PacketLogoutResult(2))
 			}
 		} else {
 			w.systemMessage(o, w.messageFor(o, 0x121, p.LogoutCountdown-1))

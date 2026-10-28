@@ -1,43 +1,11 @@
 package game
 
 import (
-	"slices"
 	"testing"
 	"time"
+
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/monsterskill"
 )
-
-func TestMonsterSkillList(t *testing.T) {
-	cases := []struct {
-		class, at int
-		want      []int
-	}{
-		{0, 0, nil},
-		{1, 150, []int{50}},
-		{1, 17, []int{17}},
-		{0x42, 3, []int{3, 0x11}},
-		{0x4d, 1, []int{1, 3}},
-		{0xa1, 9, []int{9, 1, 0x11, 0x37, 200, 0xc9, 0xca}},
-		{0x231, 1, []int{1, 9, 0x26, 0xee}},
-		{0x10c, 1, []int{1}},
-	}
-	for _, c := range cases {
-		if got := monsterSkillList(c.class, c.at); !slices.Equal(got, c.want) {
-			t.Errorf("monsterSkillList(%#x, %d) = %v want %v", c.class, c.at, got, c.want)
-		}
-	}
-}
-
-func TestPacketAreaSkillAndMonsterSkill(t *testing.T) {
-	p := packetAreaSkill(50, 0x1234, 10, 20, 0)
-	want := []byte{0xC3, 0x09, 0x1E, 50, 0x12, 0x34, 10, 20, 0}
-	if !slices.Equal(p, want) {
-		t.Fatalf("1E = % X", p)
-	}
-	q := packetMonsterSkill(4, 0x1234, 0x5400)
-	if !slices.Equal(q, []byte{0xC1, 0x08, 0x69, 4, 0x34, 0x12, 0x00, 0x54}) {
-		t.Fatalf("69 = % X", q)
-	}
-}
 
 func TestMonsterAreaAttackHitsFive(t *testing.T) {
 	b := newBareWorld(t)
@@ -116,15 +84,15 @@ func TestMonsterSkillUnitWitchQueen(t *testing.T) {
 	}
 	b.drain(p)
 	// Life element: -100 (type 12) and +10% (type 1), C1 26 FF.
-	b.applySkillElement(&monsterSkillElement{Type: 2, IncDecType: 12, IncDecValue: 100}, m, p)
+	b.applySkillElement(&monsterskill.Element{Type: 2, IncDecType: 12, IncDecValue: 100}, m, p)
 	if p.P.Char.Life != 900 || find(b.drain(p), 0x26, 0xFF) == nil {
 		t.Fatalf("life %v", p.P.Char.Life)
 	}
-	b.applySkillElement(&monsterSkillElement{Type: 2, IncDecType: 1, IncDecValue: 10}, m, p)
+	b.applySkillElement(&monsterskill.Element{Type: 2, IncDecType: 1, IncDecValue: 10}, m, p)
 	if p.P.Char.Life != 990 {
 		t.Fatalf("life %v", p.P.Char.Life)
 	}
-	b.applySkillElement(&monsterSkillElement{Type: 2, IncDecType: 0x70, IncDecValue: 5000}, m, p)
+	b.applySkillElement(&monsterskill.Element{Type: 2, IncDecType: 0x70, IncDecValue: 5000}, m, p)
 	if p.P.Char.Life != 0 {
 		t.Fatalf("life %v", p.P.Char.Life)
 	}

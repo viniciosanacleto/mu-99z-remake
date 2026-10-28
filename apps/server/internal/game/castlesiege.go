@@ -18,45 +18,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/castlesiege"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
-)
-
-// States of CCastleSiege+0x1c (SetState FUN_0041c690, process
-// FUN_0041b780).
-const (
-	csIdle1    = 0 // before the cycle start date
-	csRegSiege = 1 // "SIGN1": guild masters register (B2 01)
-	csIdle2    = 2
-	csRegMark  = 3 // "SIGN2": Sign of Lord marks (B2 04)
-	csIdle3    = 4
-	csNotify   = 5 // siege guilds chosen and announced
-	csReady    = 6
-	csStart    = 7 // the battle
-	csEnd      = 8
-	csEndCycle = 9
-)
-
-// Classes of the castle objects (MonsterList.txt).
-const (
-	csMap          = 30
-	csTrialMap     = 31
-	csClassShield  = 0xD7  // 215, removed when the crown room opens (FUN_0041f970)
-	csClassCrown   = 0xD8  // 216
-	csClassSwitch2 = 0xD9  // 217 (switch 1 of CCastleSiege+0x88)
-	csClassSwitch1 = 0xDA  // 218 (switch 2 of CCastleSiege+0x8c)
-	csClassLever   = 0xDB  // 219, the gate lever
-	csClassKeeper  = 0xDC  // 220, Land of Trial gatekeeper
-	csClassSlingA  = 0xDD  // 221, attack slingshot
-	csClassSlingD  = 0xDE  // 222, defense slingshot
-	csClassSenior  = 0xDF  // 223
-	csClassGuard   = 0xE0  // 224, Guardsman
-	csClassGate    = 0x115 // 277
-	csClassStone   = 0x116 // 278, life stone
-	csClassStatue  = 0x11B // 283, guardian statue
-	csClassArcher  = 0x11E // 286, mercenary
-	csClassSpear   = 0x11F // 287, mercenary
-	csClassCanon   = 0x120 // 288, canon tower
 )
 
 // csObjState is the castle part of the object (obj+0x974 .. obj+0x99c).
@@ -285,7 +249,7 @@ func (w *World) csInitData(d store.CastleData, first bool, npcs []store.CastleNP
 	c.taxChaos, c.taxStore, c.taxHunt = d.TaxChaos, d.TaxStore, d.TaxHunt
 	// +0x108 = start + the day/hour/minute of the END_CYCLE row.
 	c.cycleEnd = c.start
-	if s, ok := c.data.ScheduleOf(csEndCycle); ok {
+	if s, ok := c.data.ScheduleOf(castlesiege.StateEndCycle); ok {
 		c.cycleEnd = c.start.Add(time.Duration(s.Day)*24*time.Hour + time.Duration(s.Hour)*time.Hour +
 			time.Duration(s.Minute)*time.Minute)
 	}
@@ -367,28 +331,28 @@ func (w *World) csSetState(state int, setRemain bool) {
 	}
 	c.state = state
 	switch state {
-	case csIdle1:
+	case castlesiege.StateIdle1:
 		w.log.Info("[Castle Siege] SetState IDLE1")
 		if setRemain {
 			w.csRemainToStart()
 		}
-	case csRegSiege:
+	case castlesiege.StateRegSiege:
 		w.csEnterRegSiege(setRemain)
-	case csIdle2, csRegMark, csIdle3:
+	case castlesiege.StateIdle2, castlesiege.StateRegMark, castlesiege.StateIdle3:
 		w.log.Info("[Castle Siege] SetState", "state", state)
 		if setRemain {
 			w.csSetRemainFromSchedule(state)
 		}
-	case csNotify, csReady:
+	case castlesiege.StateNotify, castlesiege.StateReady:
 		if setRemain && !w.csSetRemainFromSchedule(state) {
 			return
 		}
 		w.csLoadSiegeGuildList() // FUN_0041e670
-	case csStart:
+	case castlesiege.StateStart:
 		w.csEnterStart(setRemain)
-	case csEnd:
+	case castlesiege.StateEnd:
 		w.csEnterEnd(setRemain)
-	case csEndCycle:
+	case castlesiege.StateEndCycle:
 		w.csEnterEndCycle()
 		return // SetState(1) already ran the common tail.
 	}
@@ -419,7 +383,7 @@ func (w *World) csRemainToStart() {
 // DataServer resets the siege (WZ_CS_ResetCastleSiege, 0x80 0x0E).
 func (w *World) csEnterRegSiege(setRemain bool) {
 	w.log.Info("[Castle Siege] SetState SIGN1")
-	if setRemain && !w.csSetRemainFromSchedule(csRegSiege) {
+	if setRemain && !w.csSetRemainFromSchedule(castlesiege.StateRegSiege) {
 		return
 	}
 	c, st := w.cs(), w.csStore()
@@ -477,7 +441,7 @@ func (w *World) csEnterEndCycle() {
 			return nil
 		})
 	}
-	w.csSetState(csRegSiege, true)
+	w.csSetState(castlesiege.StateRegSiege, true)
 }
 
 // csSaveSchedule is FUN_004259d0 (WZ_CS_ModifyCastleSchedule).
@@ -531,13 +495,13 @@ func (w *World) csCheckSync() bool {
 		return true
 	}
 	if c.siegeEnded {
-		c.state = csEnd
-		w.csSetState(csEnd, true)
+		c.state = castlesiege.StateEnd
+		w.csSetState(castlesiege.StateEnd, true)
 		return true
 	}
 	if dateKey(c.start) > dateKey(now) {
-		c.state = csIdle1
-		w.csSetState(csIdle1, true)
+		c.state = castlesiege.StateIdle1
+		w.csSetState(castlesiege.StateIdle1, true)
 		return true
 	}
 	prev := 0
@@ -550,8 +514,8 @@ func (w *World) csCheckSync() bool {
 			c.target = now.Add(time.Duration(ms/1000) * time.Second)
 			// A restart during the battle (or in its last 15 minutes of
 			// READY) resumes in READY with 15 minutes left.
-			if c.state == csStart || (c.state == csReady && c.remain < 900000) {
-				c.state = csReady
+			if c.state == castlesiege.StateStart || (c.state == castlesiege.StateReady && c.remain < 900000) {
+				c.state = castlesiege.StateReady
 				c.remain = 900000
 				c.target = now.Add(900 * time.Second)
 			}
@@ -585,30 +549,30 @@ func (w *World) csProcess() {
 		return
 	}
 	switch c.state {
-	case csIdle1:
-		w.csTimedState(csRegSiege, 0, 0)
-	case csRegSiege:
-		w.csTimedState(csIdle2, 30*time.Minute, 111)
-	case csIdle2:
-		w.csTimedState(csRegMark, 0, 0)
-	case csRegMark:
-		w.csTimedState(csIdle3, 30*time.Minute, 112)
-	case csIdle3:
-		w.csTimedState(csNotify, 2*time.Hour, 113)
-	case csNotify:
-		w.csTimedState(csReady, 30*time.Minute, 114)
-	case csReady:
+	case castlesiege.StateIdle1:
+		w.csTimedState(castlesiege.StateRegSiege, 0, 0)
+	case castlesiege.StateRegSiege:
+		w.csTimedState(castlesiege.StateIdle2, 30*time.Minute, 111)
+	case castlesiege.StateIdle2:
+		w.csTimedState(castlesiege.StateRegMark, 0, 0)
+	case castlesiege.StateRegMark:
+		w.csTimedState(castlesiege.StateIdle3, 30*time.Minute, 112)
+	case castlesiege.StateIdle3:
+		w.csTimedState(castlesiege.StateNotify, 2*time.Hour, 113)
+	case castlesiege.StateNotify:
+		w.csTimedState(castlesiege.StateReady, 30*time.Minute, 114)
+	case castlesiege.StateReady:
 		w.csReadyProc()
-	case csStart:
+	case castlesiege.StateStart:
 		w.csStartProc()
-	case csEnd:
-		w.csTimedState(csEndCycle, 0, 0)
-	case csEndCycle:
-		w.csTimedState(csIdle1, 0, 0) // FUN_0041c5f0
+	case castlesiege.StateEnd:
+		w.csTimedState(castlesiege.StateEndCycle, 0, 0)
+	case castlesiege.StateEndCycle:
+		w.csTimedState(castlesiege.StateIdle1, 0, 0) // FUN_0041c5f0
 	}
 	now := w.now()
 	if now.Sub(c.saveTick) > 300*time.Second {
-		if c.state != csStart {
+		if c.state != castlesiege.StateStart {
 			w.csSaveNPCs() // FUN_00426810
 		}
 		c.saveTick = now
@@ -668,7 +632,7 @@ func (w *World) csReadyProc() {
 		c.readyTick = now
 	}
 	if c.remain < 1 {
-		w.csSetState(csStart, true)
+		w.csSetState(castlesiege.StateStart, true)
 	}
 }
 
@@ -677,12 +641,12 @@ func (w *World) csReadyProc() {
 func (w *World) csCalcLeftSiege() int {
 	c := w.cs()
 	c.leftSiege = time.Time{}
-	if c.state < 0 || c.state > 9 || !c.running || c.state == csStart || c.siegeEnded || c.state > csStart {
+	if c.state < 0 || c.state > 9 || !c.running || c.state == castlesiege.StateStart || c.siegeEnded || c.state > castlesiege.StateStart {
 		return -1
 	}
 	left, found := -1, false
 	for _, s := range c.data.Schedule {
-		if s.State == csStart {
+		if s.State == castlesiege.StateStart {
 			break
 		}
 		if found {
@@ -710,7 +674,7 @@ func (w *World) csGlobalNotice(msg int, args ...any) {
 // csSendMap is FUN_004202f0: every player on map 30.
 func (w *World) csSendMap(p []byte) {
 	for i := PlayerStart; i < MaxObjects; i++ {
-		if o := w.objects[i]; o.State == StatePlaying && o.Map == csMap {
+		if o := w.objects[i]; o.State == StatePlaying && o.Map == castlesiege.Map {
 			w.send(o, p)
 		}
 	}

@@ -5,14 +5,15 @@ import (
 	"testing"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/mapitem"
 )
 
 // mapItemsAt returns the valid map items of a map.
-func (b *bareWorld) mapItemsAt(mp int) []mapItem {
-	var out []mapItem
+func (b *bareWorld) mapItemsAt(mp int) []mapitem.Item {
+	var out []mapitem.Item
 	t := b.mapItems(mp)
-	for _, m := range t.items {
-		if m.valid() {
+	for _, m := range t.Items {
+		if m.Valid() {
 			out = append(out, m)
 		}
 	}
@@ -21,7 +22,7 @@ func (b *bareWorld) mapItemsAt(mp int) []mapItem {
 
 // clearMapItems empties a map item table.
 func (b *bareWorld) clearMapItems(mp int) {
-	b.itemData.maps[mp] = newMapItemTable()
+	b.itemData.maps[mp] = mapitem.NewTable()
 }
 
 func TestMakeNewOptionAndSetOption(t *testing.T) {

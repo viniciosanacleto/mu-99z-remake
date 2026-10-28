@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -33,7 +34,7 @@ var classKeys = [5]string{"DW", "DK", "FE", "MG", "DL"}
 // = flag), [5..6] damage BE capped at 65000, [7] effect (low byte),
 // [8..11] target life LE (rounded), [12..15] damage LE.
 func packetDamage(target, damage int, effect int, life float32, flag bool) []byte {
-	p := newPacket(frame.C1, 0xD7, -1, 0x10)
+	p := packet.New(frame.C1, 0xD7, -1, 0x10)
 	p[3], p[4] = byte(target>>8), byte(target)
 	if flag {
 		p[3] |= 0x80
@@ -44,15 +45,15 @@ func packetDamage(target, damage int, effect int, life float32, flag bool) []byt
 	}
 	p[5], p[6] = byte(d>>8), byte(d)
 	p[7] = byte(effect)
-	u32le(p[8:], uint32(int32(math.RoundToEven(float64(life)))))
-	u32le(p[12:], uint32(int32(damage)))
+	packet.PutUint32(p[8:], uint32(int32(math.RoundToEven(float64(life)))))
+	packet.PutUint32(p[12:], uint32(int32(damage)))
 	return p
 }
 
 // packetDie is C1 08 17 (FUN_004da270): [3..4] dead object BE, [5] skill,
 // [6..7] killer BE.
 func packetDie(target, skill, killer int) []byte {
-	p := newPacket(frame.C1, 0x17, -1, 8)
+	p := packet.New(frame.C1, 0x17, -1, 8)
 	p[3], p[4] = byte(target>>8), byte(target)
 	p[5] = byte(skill)
 	p[6], p[7] = byte(killer>>8), byte(killer)
@@ -64,24 +65,24 @@ func packetDie(target, skill, killer int) []byte {
 // [10..11] damage BE capped at 65000, [16..19] experience, [20..23] next
 // experience of the player.
 func packetKillExp(monster int, exp uint32, damage int, cur, next uint32) []byte {
-	p := newPacket(frame.C3, 0x9C, -1, 0x18)
+	p := packet.New(frame.C3, 0x9C, -1, 0x18)
 	p[3], p[4] = byte(monster>>8), byte(monster)
-	u16le(p[6:], int(exp>>16))
-	u16le(p[8:], int(exp&0xFFFF))
+	packet.PutUint16(p[6:], int(exp>>16))
+	packet.PutUint16(p[8:], int(exp&0xFFFF))
 	d := damage
 	if d >= 0xFDE9 {
 		d = 0xFDE8
 	}
 	p[10], p[11] = byte(d>>8), byte(d)
-	u32le(p[16:], cur)
-	u32le(p[20:], next)
+	packet.PutUint32(p[16:], cur)
+	packet.PutUint32(p[20:], next)
 	return p
 }
 
 // packetSkillUse is C3 08 19 (FUN_00501570): [3] skill, [4..5] user BE,
 // [6..7] target BE with bit 7 of [6] = success.
 func packetSkillUse(skill, user, target int, success bool) []byte {
-	p := newPacket(frame.C3, 0x19, -1, 8)
+	p := packet.New(frame.C3, 0x19, -1, 8)
 	p[3] = byte(skill)
 	p[4], p[5] = byte(user>>8), byte(user)
 	p[6], p[7] = byte(target>>8), byte(target)
@@ -94,7 +95,7 @@ func packetSkillUse(skill, user, target int, success bool) []byte {
 // packetAttackAction is C1 09 18 (FUN_004da300): [3..4] attacker BE,
 // [5] dir, [6] action, [7..8] target BE.
 func packetAttackAction(attacker, dir, action, target int) []byte {
-	p := newPacket(frame.C1, 0x18, -1, 9)
+	p := packet.New(frame.C1, 0x18, -1, 9)
 	p[3], p[4] = byte(attacker>>8), byte(attacker)
 	p[5], p[6] = byte(dir), byte(action)
 	p[7], p[8] = byte(target>>8), byte(target)
@@ -105,7 +106,7 @@ func packetAttackAction(attacker, dir, action, target int) []byte {
 // u16 (capped 65000), [16] experience, [20] money, [24] life, [28] mana,
 // [32] BP (u32 LE).
 func packetRespawn(x, y, mp, dir int, life, mana float32, bp int, exp, money uint32) []byte {
-	p := newPacket(frame.C3, 0xF3, 0x04, 0x24)
+	p := packet.New(frame.C3, 0xF3, 0x04, 0x24)
 	p[4], p[5], p[6], p[7] = byte(x), byte(y), byte(mp), byte(dir)
 	cap16 := func(f float32) int {
 		if f > 65000 {
@@ -113,14 +114,14 @@ func packetRespawn(x, y, mp, dir int, life, mana float32, bp int, exp, money uin
 		}
 		return int(math.RoundToEven(float64(f)))
 	}
-	u16le(p[8:], cap16(life))
-	u16le(p[10:], cap16(mana))
-	u16le(p[12:], clamp65000(bp))
-	u32le(p[16:], exp)
-	u32le(p[20:], money)
-	u32le(p[24:], uint32(int32(math.RoundToEven(float64(life)))))
-	u32le(p[28:], uint32(int32(math.RoundToEven(float64(mana)))))
-	u32le(p[32:], uint32(bp))
+	packet.PutUint16(p[8:], cap16(life))
+	packet.PutUint16(p[10:], cap16(mana))
+	packet.PutUint16(p[12:], packet.Clamp65000(bp))
+	packet.PutUint32(p[16:], exp)
+	packet.PutUint32(p[20:], money)
+	packet.PutUint32(p[24:], uint32(int32(math.RoundToEven(float64(life)))))
+	packet.PutUint32(p[28:], uint32(int32(math.RoundToEven(float64(mana)))))
+	packet.PutUint32(p[32:], uint32(bp))
 	return p
 }
 

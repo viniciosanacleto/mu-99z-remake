@@ -6,7 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/character"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/guild"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
@@ -77,226 +78,35 @@ func (w *World) acceptsRequests(o *Object) bool { return w.partyStateOf(o).Flags
 
 // --- packets ---------------------------------------------------------------------
 
-func putName8(dst []byte, s string) { copy(dst[:8], s) }
-
-// packetGuildJoinRequest is C1 05 50 idxHi idxLo (FUN_00483580): someone
-// asks the master to join.
-func packetGuildJoinRequest(index int) []byte {
-	p := newPacket(frame.C1, 0x50, -1, 5)
-	p[3], p[4] = byte(index>>8), byte(index)
-	return p
-}
-
-// packetGuildResult is C1 04 51 result (FUN_00485640).
-func packetGuildResult(result byte) []byte {
-	p := newPacket(frame.C1, 0x51, -1, 4)
-	p[3] = result
-	return p
-}
-
-// packetGuildLeaveResult is C1 04 53 result (FUN_004856e0).
-func packetGuildLeaveResult(result byte) []byte {
-	p := newPacket(frame.C1, 0x53, -1, 4)
-	p[3] = result
-	return p
-}
-
-// packetGuildMasterQuestion is C1 03 54 (FUN_004da9a0), sent by the Guild
-// Master NPC.
-func packetGuildMasterQuestion() []byte { return newPacket(frame.C1, 0x54, -1, 3) }
-
-// packetGuildCreateWindow is C1 03 55 (FUN_00484210): open the creation window.
-func packetGuildCreateWindow() []byte { return newPacket(frame.C1, 0x55, -1, 3) }
-
-// packetGuildCreateResult is C1 05 56 result type (FUN_00485780).
-func packetGuildCreateResult(result, typ byte) []byte {
-	p := newPacket(frame.C1, 0x56, -1, 5)
-	p[3], p[4] = result, typ
-	return p
-}
-
-// packetGuildViewportDel is C1 05 5D idxHi idxLo (FUN_005145e0): the
-// player's guild is gone.
-func packetGuildViewportDel(index int) []byte {
-	p := newPacket(frame.C1, 0x5D, -1, 5)
-	p[3], p[4] = byte(index>>8), byte(index)
-	return p
-}
-
-// guildListMember is one 13-byte entry of C2 52.
-type guildListMember struct {
-	Name   string
-	Server int
-	Status int
-}
-
-// packetGuildList is C2 size 52 result count pad[2] totalScore(u32)
-// warScore rival[9] pad[2] + 13 bytes per member {name[10], server byte,
-// 0x80|server&0x7f (online) or server&0x7f, status} (FUN_00483a30).
-func packetGuildList(score int, warScore byte, rival string, members []guildListMember) []byte {
-	p := newPacket(frame.C2, 0x52, -1, 24+13*len(members))
-	p[4], p[5] = 1, byte(len(members))
-	u32le(p[8:], uint32(score))
-	p[12] = warScore
-	copy(p[13:21], rival)
-	for i, m := range members {
-		e := p[24+13*i:]
-		putName(e, m.Name)
-		e[10] = byte(m.Server)
-		e[11] = byte(m.Server) & 0x7F
-		if m.Server != -1 {
-			e[11] |= 0x80
-		}
-		e[12] = byte(m.Status)
-	}
-	return p
-}
-
-// guildViewEntry is one 12-byte C2 65 entry.
-type guildViewEntry struct {
-	Number   int
-	Status   int
-	Type     int
-	Relation int
-	Index    int
-}
-
-func (e guildViewEntry) put(b []byte) {
-	u32le(b, uint32(e.Number))
-	b[4], b[5], b[6] = byte(e.Status), byte(e.Type), byte(e.Relation)
-	b[7], b[8] = byte(e.Index>>8), byte(e.Index)
-	if e.Status == store.GuildMasterStatus {
-		b[7] |= 0x80
-	}
-}
-
-// packetGuildViewport is C2 size 65 count + 12 bytes per player {number u32,
-// status, type, relation, idxHi | 0x80 for the master, idxLo, pad[3]}
-// (FUN_005160a0; FUN_00516f60 sends one entry with relation 0).
-func packetGuildViewport(entries []guildViewEntry) []byte {
-	p := newPacket(frame.C2, 0x65, -1, 5+12*len(entries))
-	p[4] = byte(len(entries))
-	for i, e := range entries {
-		e.put(p[5+12*i:])
-	}
-	return p
-}
-
-// unionViewEntry is one 20-byte C2 67 entry.
-type unionViewEntry struct {
-	Index    int
-	Number   int
-	Relation int
-	Union    string
-}
-
-// packetUnionViewport is C2 size 67 count + 20 bytes per player {idxHi,
-// idxLo, pad[2], guild number u32, relation u32 (low byte), union master
-// guild name[8]} (FUN_005162f0 / FUN_00517080).
-func packetUnionViewport(entries []unionViewEntry) []byte {
-	p := newPacket(frame.C2, 0x67, -1, 5+20*len(entries))
-	p[4] = byte(len(entries))
-	for i, e := range entries {
-		b := p[5+20*i:]
-		b[0], b[1] = byte(e.Index>>8), byte(e.Index)
-		u32le(b[4:], uint32(e.Number))
-		b[8] = byte(e.Relation)
-		putName8(b[9:], e.Union)
-	}
-	return p
-}
-
-// packetGuildInfo is C1 3C 66 pad number(u32) type union[8] name[8] mark[32]
-// pad[3] (FUN_00484890).
-func packetGuildInfo(g *guildRecord, union string) []byte {
-	p := newPacket(frame.C1, 0x66, -1, 0x3C)
-	u32le(p[4:], uint32(g.Number))
-	p[8] = byte(g.Type)
-	putName8(p[9:], union)
-	putName8(p[17:], g.Name)
-	copy(p[25:57], g.Mark[:])
-	return p
-}
-
-// packetGuildAssignResult is C1 0F E1 type result name[10] (FUN_00485ba0).
-func packetGuildAssignResult(typ, result byte, name string) []byte {
-	p := newPacket(frame.C1, 0xE1, -1, 0x0F)
-	p[3], p[4] = typ, result
-	putName(p[5:], name)
-	return p
-}
-
-// packetGuildTypeResult is C1 05 E2 type result (FUN_00485c70).
-func packetGuildTypeResult(typ, result byte) []byte {
-	p := newPacket(frame.C1, 0xE2, -1, 5)
-	p[3], p[4] = typ, result
-	return p
-}
-
-// packetRelationRequest is C1 07 E5 rel req idxHi idxLo (FUN_00485d10).
-func packetRelationRequest(rel, req byte, index int) []byte {
-	p := newPacket(frame.C1, 0xE5, -1, 7)
-	p[3], p[4], p[5], p[6] = rel, req, byte(index>>8), byte(index)
-	return p
-}
-
-// packetRelationResult is C1 08 E6 rel req result idxHi idxLo (FUN_00485de0).
-func packetRelationResult(rel, req, result byte, index int) []byte {
-	p := newPacket(frame.C1, 0xE6, -1, 8)
-	p[3], p[4], p[5], p[6], p[7] = rel, req, result, byte(index>>8), byte(index)
-	return p
-}
-
-// packetUnionList is C2 size E9 count result unionCount rivalCount + 41
-// bytes per guild {members, mark[32], name[8]} (FUN_00482c40).
-func packetUnionList(result, unions, rivals byte, guilds []guildRecord) []byte {
-	p := newPacket(frame.C2, 0xE9, -1, 8+41*len(guilds))
-	p[4], p[5], p[6], p[7] = byte(len(guilds)), result, unions, rivals
-	for i := range guilds {
-		e := p[8+41*i:]
-		e[0] = byte(guilds[i].count())
-		copy(e[1:33], guilds[i].Mark[:])
-		putName8(e[33:], guilds[i].Name)
-	}
-	return p
-}
-
-// packetUnionKickResult is C1 07 EB 01 result 02 01 (FUN_004831f0).
-func packetUnionKickResult(result byte) []byte {
-	p := newPacket(frame.C1, 0xEB, 0x01, 7)
-	p[4], p[5], p[6] = result, 2, 1
-	return p
-}
-
 // --- views ------------------------------------------------------------------------
 
 // guildEntry builds o's C2 65 entry as seen by viewer (nil = itself).
-func (w *World) guildEntry(o, viewer *Object) (guildViewEntry, bool) {
+func (w *World) guildEntry(o, viewer *Object) (guild.ViewEntry, bool) {
 	gs := o.P.Guild
 	if gs == nil || gs.Number == 0 {
-		return guildViewEntry{}, false
+		return guild.ViewEntry{}, false
 	}
-	g, ok := w.guildMgr().byNumber(gs.Number)
+	g, ok := w.guildMgr().ByNumber(gs.Number)
 	if !ok {
-		return guildViewEntry{}, false
+		return guild.ViewEntry{}, false
 	}
-	e := guildViewEntry{Number: g.Number, Status: gs.Status, Type: g.Type, Index: o.Index}
+	e := guild.ViewEntry{Number: g.Number, Status: gs.Status, Type: g.Type, Index: o.Index}
 	if viewer != nil && guildNumberOf(viewer) != 0 {
-		e.Relation = w.guildMgr().relation(g.Number, guildNumberOf(viewer))
+		e.Relation = w.guildMgr().Relation(g.Number, guildNumberOf(viewer))
 	}
 	return e, true
 }
 
 // unionEntry builds o's C2 67 entry as seen by viewer (nil = itself).
-func (w *World) unionEntry(o, viewer *Object) (unionViewEntry, bool) {
+func (w *World) unionEntry(o, viewer *Object) (guild.UnionViewEntry, bool) {
 	n := guildNumberOf(o)
-	g, ok := w.guildMgr().byNumber(n)
+	g, ok := w.guildMgr().ByNumber(n)
 	if !ok {
-		return unionViewEntry{}, false
+		return guild.UnionViewEntry{}, false
 	}
-	e := unionViewEntry{Index: o.Index, Number: g.Number, Union: w.guildMgr().unionName(g.Union)}
+	e := guild.UnionViewEntry{Index: o.Index, Number: g.Number, Union: w.guildMgr().UnionName(g.Union)}
 	if viewer != nil && guildNumberOf(viewer) != 0 {
-		e.Relation = w.guildMgr().relation(g.Number, guildNumberOf(viewer))
+		e.Relation = w.guildMgr().Relation(g.Number, guildNumberOf(viewer))
 	}
 	return e, true
 }
@@ -317,7 +127,7 @@ func (w *World) showGuild(o *Object) {
 	if !ok {
 		return
 	}
-	p := packetGuildViewport([]guildViewEntry{e})
+	p := guild.PacketViewport([]guild.ViewEntry{e})
 	w.send(o, p)
 	w.broadcast(o, p)
 }
@@ -332,7 +142,7 @@ func (w *World) showUnion(o *Object) {
 	if !ok {
 		return
 	}
-	w.send(o, packetUnionViewport([]unionViewEntry{e}))
+	w.send(o, guild.PacketUnionViewport([]guild.UnionViewEntry{e}))
 	for _, v := range o.VP2 {
 		if v.State == VPEmpty || v.Type != byte(TypePlayer) || v.Index < 0 || v.Index >= MaxObjects {
 			continue
@@ -342,7 +152,7 @@ func (w *World) showUnion(o *Object) {
 			continue
 		}
 		e2, _ := w.unionEntry(o, t)
-		w.send(t, packetUnionViewport([]unionViewEntry{e2}))
+		w.send(t, guild.PacketUnionViewport([]guild.UnionViewEntry{e2}))
 	}
 }
 
@@ -350,8 +160,8 @@ func (w *World) showUnion(o *Object) {
 // players in the viewport (FUN_005160a0) and C2 67 for the visible ones
 // (FUN_005162f0).
 func (w *World) guildViewportSend(o *Object) {
-	var news []guildViewEntry
-	var unions []unionViewEntry
+	var news []guild.ViewEntry
+	var unions []guild.UnionViewEntry
 	for _, e := range o.VP {
 		if e.Type != byte(TypePlayer) || e.Index < 0 || e.Index >= MaxObjects {
 			continue
@@ -372,10 +182,10 @@ func (w *World) guildViewportSend(o *Object) {
 		}
 	}
 	if len(news) > 0 {
-		w.send(o, packetGuildViewport(news))
+		w.send(o, guild.PacketViewport(news))
 	}
 	if len(unions) > 0 {
-		w.send(o, packetUnionViewport(unions))
+		w.send(o, guild.PacketUnionViewport(unions))
 	}
 }
 
@@ -444,7 +254,7 @@ func (w *World) guildSendAll(n int, p []byte) {
 }
 
 // setGuild fills the guild fields of a player (obj+0x2f8..0x30c).
-func (w *World) setGuild(o *Object, g *guildRecord, status int) {
+func (w *World) setGuild(o *Object, g *guild.Record, status int) {
 	gs := guildOf(o)
 	gs.Number, gs.Name, gs.Status = g.Number, g.Name, status
 }
@@ -459,28 +269,28 @@ func clearGuild(o *Object) {
 // guild, with the server of each member.
 func (w *World) sendGuildList(o *Object) {
 	n := guildNumberOf(o)
-	g, ok := w.guildMgr().byNumber(n)
+	g, ok := w.guildMgr().ByNumber(n)
 	if !ok {
 		return
 	}
-	var ms []guildListMember
+	var ms []guild.ListMember
 	for _, m := range g.Members {
 		if m.Name != "" {
-			ms = append(ms, guildListMember{Name: m.Name, Server: m.Server, Status: m.Status})
+			ms = append(ms, guild.ListMember{Name: m.Name, Server: m.Server, Status: m.Status})
 		}
 	}
 	rival := ""
 	if g.Rival != 0 {
-		if r, ok := w.guildMgr().byNumber(g.Rival); ok {
+		if r, ok := w.guildMgr().ByNumber(g.Rival); ok {
 			rival = r.Name
 		}
 	}
 	if len(ms) > 0 {
-		w.send(o, packetGuildList(g.Score, w.warScore(n), rival, ms))
+		w.send(o, guild.PacketList(g.Score, w.warScore(n), rival, ms))
 	}
 }
 
-// guildMaxMembers is FUN_00486200: the members a master can have. Dark
+// guild.MaxMembers is FUN_00486200: the members a master can have. Dark
 // Lords: (level + master level) / 10 + leadership / 10; others: (level +
 // master level) / 10; GuildInsertMaxUser2 / GuildInsertMaxUser1 when the
 // master has resets; capped by those values and by 80.
@@ -498,7 +308,7 @@ func (w *World) guildCapacity(master *Object) int {
 		n = limit
 	}
 	n = min(n, limit)
-	return min(n, guildMaxMembers)
+	return min(n, guild.MaxMembers)
 }
 
 func (w *World) castleBattle() bool { return w.hooks.castleBattle != nil && w.hooks.castleBattle(w) }
@@ -511,7 +321,7 @@ func (w *World) castleBattle() bool { return w.hooks.castleBattle != nil && w.ho
 // member's instance applies A0 04 (FUN_00481d50).
 func (w *World) guildEnter(o *Object) {
 	name := charName(o)
-	g, slot, ok := w.guildMgr().setServer(name, w.cfg.ServerCode)
+	g, slot, ok := w.guildMgr().SetServer(name, w.cfg.ServerCode)
 	if !ok {
 		return
 	}
@@ -531,16 +341,16 @@ func (w *World) guildEnter(o *Object) {
 	w.showGuild(o)
 	w.showUnion(o)
 	if war := w.guildWarOf(n); war != nil && war.active {
-		if enemy, ok := w.guildMgr().byNumber(war.enemy); ok {
+		if enemy, ok := w.guildMgr().ByNumber(war.enemy); ok {
 			w.send(o, w.packetWarScoreFor(n))
-			w.send(o, packetGuildWarStart(enemy.Name, war.typ, war.team))
+			w.send(o, guild.PacketWarStart(enemy.Name, war.typ, war.team))
 		}
 	}
 }
 
 // guildLeave is DataServer 0x71 (FUN_00415620(-1)): the member is offline.
 func (w *World) guildLeave(o *Object) {
-	w.guildMgr().setServer(charName(o), -1)
+	w.guildMgr().SetServer(charName(o), -1)
 	if o.P != nil && o.P.Guild != nil {
 		if s := o.P.Guild; s.Partner >= 0 {
 			s.Partner = -1
@@ -553,7 +363,7 @@ func registerGuild(h *hooks) {
 	h.start = append(h.start, func(w *World) error {
 		gst, _ := w.store.(store.GuildStore)
 		w.guilds = &guildWorld{wars: map[int]*guildWar{}}
-		return w.guildMgr().load(context.Background(), gst)
+		return w.guildMgr().Load(context.Background(), gst)
 	})
 	h.enterWorld = append(h.enterWorld, func(w *World, o *Object) {
 		guildOf(o)
@@ -619,7 +429,7 @@ func (w *World) guildMasterTalk(o *Object) {
 		// The interface type 5 the 54/55/57 handlers reset is assumed to
 		// be set here (the setter was not found, U-GUILD-03).
 		setIf(o, ifGuildCreate)
-		w.send(o, packetGuildMasterQuestion())
+		w.send(o, guild.PacketMasterQuestion())
 	}
 }
 
@@ -634,7 +444,7 @@ func (w *World) handleGuildMasterAnswer(o *Object, p []byte) {
 	al := o.P.Account.Level
 	if p[3] == 1 && o.P.Char.Level >= w.cfg.ALInt("Common", "GuildCreateMinLevel", al, 0) &&
 		o.P.Char.Resets >= w.cfg.ALInt("Common", "GuildCreateMinReset", al, 0) {
-		w.send(o, packetGuildCreateWindow())
+		w.send(o, guild.PacketCreateWindow())
 		return
 	}
 	clearIfType(o, ifGuildCreate)
@@ -649,13 +459,13 @@ func (w *World) handleGuildCreate(o *Object, p []byte) {
 	}
 	typ := p[3]
 	name := cString(p[4:12])
-	if !validName(name) {
+	if !character.ValidName(name) {
 		w.log.Info("[CheckNameSyntax] Guild Create error", "account", o.P.Account.Login, "name", o.P.Char.Name, "guild", name)
-		w.send(o, packetGuildCreateResult(5, 0))
+		w.send(o, guild.PacketCreateResult(5, 0))
 		return
 	}
 	if len(name) < 3 || len(name) > 9 {
-		w.send(o, packetGuildCreateResult(2, 0))
+		w.send(o, guild.PacketCreateResult(2, 0))
 		return
 	}
 	var mark [32]byte
@@ -664,7 +474,7 @@ func (w *World) handleGuildCreate(o *Object, p []byte) {
 	master, c, server := o.P.Char.Name, o.conn, w.cfg.ServerCode
 	mgr := w.guildMgr()
 	w.async(func(ctx context.Context) func() {
-		result, _ := mgr.create(ctx, name, master, mark, int(typ), server)
+		result, _ := mgr.Create(ctx, name, master, mark, int(typ), server)
 		return func() {
 			// FUN_00481660: the result goes to the master; on success the
 			// guild is set and shown (A0 00, then A0 04 of FUN_00415620).
@@ -672,7 +482,7 @@ func (w *World) handleGuildCreate(o *Object, p []byte) {
 			if o == nil || o.State != StatePlaying {
 				return
 			}
-			w.send(o, packetGuildCreateResult(result, typ))
+			w.send(o, guild.PacketCreateResult(result, typ))
 			if result != 1 {
 				return
 			}
@@ -713,8 +523,8 @@ func (w *World) handleGuildJoinRequest(o *Object, p []byte) {
 	case o.P.Char.Level < 6:
 		result = 7
 	default:
-		g, _ := w.guildMgr().byNumber(guildNumberOf(t))
-		if g.count() >= w.guildCapacity(t) {
+		g, _ := w.guildMgr().ByNumber(guildNumberOf(t))
+		if g.Count() >= w.guildCapacity(t) {
 			result = 2
 			break
 		}
@@ -723,10 +533,10 @@ func (w *World) handleGuildJoinRequest(o *Object, p []byte) {
 		setIf(t, ifGuildJoin)
 		guildOf(o).Partner, guildOf(o).RequestAt = ti, now
 		guildOf(t).Partner, guildOf(t).RequestAt = o.Index, now
-		w.send(t, packetGuildJoinRequest(o.Index))
+		w.send(t, guild.PacketJoinRequest(o.Index))
 		return
 	}
-	w.send(o, packetGuildResult(result))
+	w.send(o, guild.PacketResult(result))
 }
 
 // handleGuildJoinAnswer is 51 (FUN_00483810): [3] accept, [4..5] the
@@ -754,21 +564,21 @@ func (w *World) handleGuildJoinAnswer(o *Object, p []byte) {
 	}()
 	switch {
 	case p[3] == 0 || !w.acceptsRequests(o):
-		w.send(r, packetGuildResult(0))
+		w.send(r, guild.PacketResult(0))
 	case guildNumberOf(o) == 0 || guildOf(o).Status != store.GuildMasterStatus:
-		w.send(r, packetGuildResult(4))
+		w.send(r, guild.PacketResult(4))
 	case guildNumberOf(r) != 0:
-		w.send(r, packetGuildResult(5))
+		w.send(r, guild.PacketResult(5))
 	case w.guildWarActive(guildNumberOf(o)):
-		w.send(r, packetGuildResult(6))
+		w.send(r, guild.PacketResult(6))
 	case w.castleBattle():
 		w.systemMessage(o, w.messageFor(o, 0x2E4))
 	case r.P.Char.Level < 6:
-		w.send(r, packetGuildResult(7))
+		w.send(r, guild.PacketResult(7))
 	default:
-		g, _ := w.guildMgr().byNumber(guildNumberOf(o))
-		if g.count() >= w.guildCapacity(o) {
-			w.send(r, packetGuildResult(2))
+		g, _ := w.guildMgr().ByNumber(guildNumberOf(o))
+		if g.Count() >= w.guildCapacity(o) {
+			w.send(r, guild.PacketResult(2))
 			return
 		}
 		w.guildAddMember(g.Name, r.P.Char.Name)
@@ -778,14 +588,14 @@ func (w *World) handleGuildJoinAnswer(o *Object, p []byte) {
 // guildAddMember is DataServer A0 02 (FUN_00483380 -> FUN_004141f0) and
 // its reply FUN_00481a60: 51 result to the new member; on success the
 // member is set, shown (C2 65 / C2 67) and every instance learns it.
-func (w *World) guildAddMember(guild, name string) {
+func (w *World) guildAddMember(guildName, name string) {
 	mgr, server := w.guildMgr(), w.cfg.ServerCode
 	w.async(func(ctx context.Context) func() {
-		result := mgr.addMember(ctx, guild, name, server)
+		result := mgr.AddMember(ctx, guildName, name, server)
 		return func() {
 			if result != 1 {
 				if t := w.playerHere(name); t != nil {
-					w.send(t, packetGuildResult(result))
+					w.send(t, guild.PacketResult(result))
 				}
 				return
 			}
@@ -794,8 +604,8 @@ func (w *World) guildAddMember(guild, name string) {
 				if t == nil {
 					return
 				}
-				tw.send(t, packetGuildResult(1))
-				g, slot, ok := tw.guildMgr().of(name)
+				tw.send(t, guild.PacketResult(1))
+				g, slot, ok := tw.guildMgr().Of(name)
 				if !ok {
 					return
 				}
@@ -823,12 +633,12 @@ func (w *World) handleGuildLeave(o *Object, p []byte) {
 	}
 	gs.LastLeave = now
 	if w.cfg.Int("Common", "GuildDeleteSwitch", 0) == 0 || gs.Number == 0 {
-		w.send(o, packetGuildLeaveResult(0))
+		w.send(o, guild.PacketLeaveResult(0))
 		return
 	}
 	if o.P.Account.Lock > 0 { // obj+0x24fc: message 0x6F2 and the failure reply
 		w.systemMessage(o, w.messageFor(o, 0x6f2))
-		w.send(o, packetGuildLeaveResult(0))
+		w.send(o, guild.PacketLeaveResult(0))
 		return
 	}
 	if w.castleBattle() {
@@ -838,14 +648,14 @@ func (w *World) handleGuildLeave(o *Object, p []byte) {
 	name := cString(p[3:13])
 	code := p[13:23]
 	self := o.P.Char.Name
-	g, ok := w.guildMgr().byNumber(gs.Number)
+	g, ok := w.guildMgr().ByNumber(gs.Number)
 	if !ok {
-		w.send(o, packetGuildLeaveResult(0))
+		w.send(o, guild.PacketLeaveResult(0))
 		return
 	}
 	if gs.Status == store.GuildMasterStatus && name == self {
 		if !w.personalCodeOK(o, code) || (w.cfg.Int("Common", "GuildOwnerDestroyLimit", 0) != 0 && w.castleOwner(g.Name)) {
-			w.send(o, packetGuildLeaveResult(0))
+			w.send(o, guild.PacketLeaveResult(0))
 			return
 		}
 		w.guildWarAbandon(o)
@@ -853,42 +663,42 @@ func (w *World) handleGuildLeave(o *Object, p []byte) {
 		return
 	}
 	if gs.Status != store.GuildMasterStatus && name != self {
-		w.send(o, packetGuildLeaveResult(0))
+		w.send(o, guild.PacketLeaveResult(0))
 		return
 	}
 	if !w.personalCodeOK(o, code) {
-		w.send(o, packetGuildLeaveResult(0))
+		w.send(o, guild.PacketLeaveResult(0))
 		return
 	}
 	w.guildDelMember(g.Name, name)
 }
 
-func (w *World) castleOwner(guild string) bool {
-	return w.hooks.castleOwner != nil && w.hooks.castleOwner(w, guild)
+func (w *World) castleOwner(guildName string) bool {
+	return w.hooks.castleOwner != nil && w.hooks.castleOwner(w, guildName)
 }
 
 // guildDelete is DataServer A0 01 and its reply FUN_004817d0: every online
 // member loses the guild (C1 5D) and gets 53 with the result.
-func (w *World) guildDelete(guild, master string) {
+func (w *World) guildDelete(guildName, master string) {
 	mgr := w.guildMgr()
-	g, _ := mgr.find(guild)
+	g, _ := mgr.Find(guildName)
 	n := g.Number
 	w.async(func(ctx context.Context) func() {
-		result, changes := mgr.remove(ctx, guild)
+		result, changes := mgr.Remove(ctx, guildName)
 		return func() {
 			if result != 1 {
 				if t := w.playerHere(master); t != nil {
-					w.send(t, packetGuildLeaveResult(result))
+					w.send(t, guild.PacketLeaveResult(result))
 				}
 				return
 			}
 			w.guildAll(func(tw *World) {
 				for _, m := range tw.guildMembersHere(n) {
 					clearGuild(m)
-					p := packetGuildViewportDel(m.Index)
+					p := guild.PacketViewportDel(m.Index)
 					tw.send(m, p)
 					tw.broadcast(m, p)
-					tw.send(m, packetGuildLeaveResult(result))
+					tw.send(m, guild.PacketLeaveResult(result))
 				}
 				delete(tw.guilds.wars, n)
 				for _, c := range changes {
@@ -901,23 +711,23 @@ func (w *World) guildDelete(guild, master string) {
 
 // guildDelMember is DataServer A0 03 and its reply FUN_00481c20: the member
 // gets 53 and loses the guild; the master gets the new list.
-func (w *World) guildDelMember(guild, name string) {
+func (w *World) guildDelMember(guildName, name string) {
 	mgr := w.guildMgr()
 	w.async(func(ctx context.Context) func() {
-		result := mgr.delMember(ctx, guild, name)
+		result := mgr.DelMember(ctx, guildName, name)
 		return func() {
 			if result != 1 {
 				if t := w.playerHere(name); t != nil {
-					w.send(t, packetGuildLeaveResult(result))
+					w.send(t, guild.PacketLeaveResult(result))
 				}
 				return
 			}
-			g, _ := mgr.find(guild)
+			g, _ := mgr.Find(guildName)
 			w.guildAll(func(tw *World) {
 				if t := tw.playerHere(name); t != nil {
-					tw.send(t, packetGuildLeaveResult(result))
+					tw.send(t, guild.PacketLeaveResult(result))
 					clearGuild(t)
-					p := packetGuildViewportDel(t.Index)
+					p := guild.PacketViewportDel(t.Index)
 					tw.send(t, p)
 					tw.broadcast(t, p)
 				}
@@ -936,11 +746,11 @@ func (w *World) handleGuildInfo(o *Object, p []byte) {
 	if len(p) < 8 {
 		return
 	}
-	g, ok := w.guildMgr().byNumber(int(binary.LittleEndian.Uint32(p[4:])))
+	g, ok := w.guildMgr().ByNumber(int(binary.LittleEndian.Uint32(p[4:])))
 	if !ok {
 		return
 	}
-	w.send(o, packetGuildInfo(&g, w.guildMgr().unionName(g.Union)))
+	w.send(o, guild.PacketInfo(&g, w.guildMgr().UnionName(g.Union)))
 }
 
 // --- E1 / E2: ranks and type ------------------------------------------------------------
@@ -958,45 +768,45 @@ func (w *World) handleGuildAssignStatus(o *Object, p []byte) {
 	name := cString(p[5:15])
 	gs := guildOf(o)
 	if gs.Number == 0 {
-		w.send(o, packetGuildAssignResult(typ, 0x10, name))
+		w.send(o, guild.PacketAssignResult(typ, 0x10, name))
 		return
 	}
-	g, _ := w.guildMgr().byNumber(gs.Number)
-	if name == o.P.Char.Name || g.member(name) < 0 || gs.Status != store.GuildMasterStatus {
-		w.send(o, packetGuildAssignResult(typ, 0x11, name))
+	g, _ := w.guildMgr().ByNumber(gs.Number)
+	if name == o.P.Char.Name || g.Member(name) < 0 || gs.Status != store.GuildMasterStatus {
+		w.send(o, guild.PacketAssignResult(typ, 0x11, name))
 		return
 	}
 	switch status {
 	case store.GuildMemberStatus:
 	case store.GuildBattleMasterStatus:
-		if g.statusCount(store.GuildBattleMasterStatus) >= o.P.Char.Level/200+1 {
-			w.send(o, packetGuildAssignResult(typ, 0x12, name))
+		if g.StatusCount(store.GuildBattleMasterStatus) >= o.P.Char.Level/200+1 {
+			w.send(o, guild.PacketAssignResult(typ, 0x12, name))
 			return
 		}
 	case store.GuildAssistantStatus:
-		if g.statusCount(store.GuildAssistantStatus) > 0 {
-			w.send(o, packetGuildAssignResult(typ, 0x12, name))
+		if g.StatusCount(store.GuildAssistantStatus) > 0 {
+			w.send(o, guild.PacketAssignResult(typ, 0x12, name))
 			return
 		}
 	default:
-		w.send(o, packetGuildAssignResult(typ, 0x12, name))
+		w.send(o, guild.PacketAssignResult(typ, 0x12, name))
 		return
 	}
 	mgr := w.guildMgr()
-	guild, n, master := g.Name, g.Number, o.P.Char.Name
+	guildName, n, master := g.Name, g.Number, o.P.Char.Name
 	w.async(func(ctx context.Context) func() {
-		result := mgr.setStatus(ctx, guild, name, status)
+		result := mgr.SetStatus(ctx, guildName, name, status)
 		return func() {
 			// FUN_00481fe0 (A0 05, to every instance on success).
 			if result != 1 {
 				if m := w.playerHere(master); m != nil {
-					w.send(m, packetGuildAssignResult(typ, result, name))
+					w.send(m, guild.PacketAssignResult(typ, result, name))
 				}
 				return
 			}
 			w.guildAll(func(tw *World) {
 				if m := tw.playerHere(master); m != nil {
-					tw.send(m, packetGuildAssignResult(typ, result, name))
+					tw.send(m, guild.PacketAssignResult(typ, result, name))
 				}
 				if t := tw.playerHere(name); t != nil && guildNumberOf(t) == n {
 					guildOf(t).Status = status
@@ -1026,32 +836,32 @@ func (w *World) handleGuildAssignType(o *Object, p []byte) {
 	typ := p[3]
 	gs := guildOf(o)
 	if gs.Number == 0 {
-		w.send(o, packetGuildTypeResult(typ, 0x10))
+		w.send(o, guild.PacketTypeResult(typ, 0x10))
 		return
 	}
 	if gs.Status != store.GuildMasterStatus {
-		w.send(o, packetGuildTypeResult(typ, 0x11))
+		w.send(o, guild.PacketTypeResult(typ, 0x11))
 		return
 	}
 	mgr := w.guildMgr()
-	g, _ := mgr.byNumber(gs.Number)
-	guild, n, master := g.Name, g.Number, o.P.Char.Name
+	g, _ := mgr.ByNumber(gs.Number)
+	guildName, n, master := g.Name, g.Number, o.P.Char.Name
 	w.async(func(ctx context.Context) func() {
-		result := mgr.update(ctx, guild, func(s store.GuildStore) error { return s.SetGuildType(ctx, guild, int(typ)) },
-			func(r *guildRecord) { r.Type = int(typ) })
+		result := mgr.Update(ctx, guildName, func(s store.GuildStore) error { return s.SetGuildType(ctx, guildName, int(typ)) },
+			func(r *guild.Record) { r.Type = int(typ) })
 		return func() {
 			// FUN_00482140 (A0 06).
 			if result != 1 {
 				if m := w.playerHere(master); m != nil {
-					w.send(m, packetGuildTypeResult(typ, result))
+					w.send(m, guild.PacketTypeResult(typ, result))
 				}
 				return
 			}
 			w.guildAll(func(tw *World) {
 				if m := tw.playerHere(master); m != nil {
-					tw.send(m, packetGuildTypeResult(typ, result))
+					tw.send(m, guild.PacketTypeResult(typ, result))
 				}
-				tw.guildMessage(n, NoticeGold, 0xC1, guild, int(typ))
+				tw.guildMessage(n, NoticeGold, 0xC1, guildName, int(typ))
 				for _, m := range tw.guildMembersHere(n) {
 					tw.showGuild(m)
 				}
@@ -1075,7 +885,7 @@ func (w *World) guildChat(o *Object, kind int, msg []byte) {
 	if gs.Number == 0 {
 		return
 	}
-	g, ok := w.guildMgr().byNumber(gs.Number)
+	g, ok := w.guildMgr().ByNumber(gs.Number)
 	if !ok {
 		return
 	}
@@ -1091,8 +901,8 @@ func (w *World) guildChat(o *Object, kind int, msg []byte) {
 		}
 		mgr := w.guildMgr()
 		w.async(func(ctx context.Context) func() {
-			if mgr.update(ctx, g.Name, func(s store.GuildStore) error { return s.SetGuildNotice(ctx, g.Name, text) },
-				func(r *guildRecord) { r.Notice = text }) != 1 {
+			if mgr.Update(ctx, g.Name, func(s store.GuildStore) error { return s.SetGuildNotice(ctx, g.Name, text) },
+				func(r *guild.Record) { r.Notice = text }) != 1 {
 				return nil
 			}
 			return func() {
@@ -1117,7 +927,7 @@ func (w *World) guildChat(o *Object, kind int, msg []byte) {
 	targets := []int{n}
 	if kind == 1 {
 		targets = nil
-		for _, u := range w.guildMgr().unionList(g.Union) {
+		for _, u := range w.guildMgr().UnionList(g.Union) {
 			targets = append(targets, u.Number)
 		}
 	}

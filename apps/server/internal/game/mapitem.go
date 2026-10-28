@@ -6,64 +6,20 @@ import (
 	"time"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/mapitem"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
 // Map items (CMapItem): 300 slots per map (stride 0x104 inside the CMap at
 // 0x87d1c8 + map*0x130d8; the next-slot cursor is CMap+0x130d4).
 
-const (
-	MaxMapItems = 300
-	MoneyIndex  = 0x1c0f // GET_ITEM(14,15) Zen
-)
-
-// Map item states (CMapItem+0xe8).
-const (
-	mapItemNew     = 1
-	mapItemNormal  = 2
-	mapItemRemoved = 8
-)
-
-// mapItem is one CMapItem.
-type mapItem struct {
-	Item       item.Item // CItem at +4 (Index < 0 = free)
-	Money      int64     // CItem+0x7c (+0x80 of the slot) for zen
-	X, Y       int       // +0xe4 / +0xe5
-	Live       bool      // +0xe6
-	State      int       // +0xe8
-	Expire     time.Time // +0xec
-	Owner      int       // +0xf0
-	Dropper    int       // +0xf4 (ItemLoot owner)
-	OwnerUntil time.Time // +0xf8
-	Created    time.Time // +0xfc
-	Looting    bool      // +0x100 (serial request pending)
-}
-
-func (m *mapItem) valid() bool { return !m.Item.IsEmpty() }
-
-// mapItemTable is the item part of one CMap.
-type mapItemTable struct {
-	items [MaxMapItems]mapItem
-	next  int
-}
-
-func newMapItemTable() *mapItemTable {
-	t := &mapItemTable{}
-	for i := range t.items {
-		t.items[i].Item = item.Empty()
-		t.items[i].Owner, t.items[i].Dropper = -1, -1
-	}
-	return t
-}
-
 // mapItems returns the table of a map (allocated on first use).
-func (w *World) mapItems(mp int) *mapItemTable {
+func (w *World) mapItems(mp int) *mapitem.Table {
 	if w.itemData == nil || mp < 0 || mp >= gamedata.MaxMaps {
 		return nil
 	}
 	if w.itemData.maps[mp] == nil {
-		w.itemData.maps[mp] = newMapItemTable()
+		w.itemData.maps[mp] = mapitem.NewTable()
 	}
 	return w.itemData.maps[mp]
 }
@@ -112,28 +68,6 @@ func (w *World) cellDroppable(mp, x, y int) bool {
 	return a&gamedata.AttrBlock == 0 && a&gamedata.AttrNoGround == 0
 }
 
-// freeMapSlot scans 300 slots from the cursor (FUN_004adab0 loop).
-func (t *mapItemTable) freeSlot() int {
-	s := t.next
-	for n := 0; n < MaxMapItems; n++ {
-		if !t.items[s].valid() {
-			return s
-		}
-		s++
-		if s >= MaxMapItems {
-			s = 0
-		}
-	}
-	return -1
-}
-
-func (t *mapItemTable) advance(s int) {
-	t.next = s + 1
-	if t.next >= MaxMapItems {
-		t.next = 0
-	}
-}
-
 // addMapItem is FUN_004adab0 + FUN_004ae1c0: owner and the loot owner are
 // the dropping object; the owner keeps exclusive rights for
 // ItemDropTime*500 ms and the item lives ItemDropTime seconds.
@@ -142,16 +76,16 @@ func (w *World) addMapItem(mp, x, y int, it item.Item, owner int) int {
 	if t == nil || it.IsEmpty() || !w.cellDroppable(mp, x, y) {
 		return -1
 	}
-	s := t.freeSlot()
+	s := t.FreeSlot()
 	if s < 0 {
 		return -1
 	}
 	now := w.now()
 	drop := time.Duration(w.cfg.Int("Common", "ItemDropTime", 0))
-	t.items[s] = mapItem{Item: it, X: x, Y: y, Live: true, State: mapItemNew,
+	t.Items[s] = mapitem.Item{Item: it, X: x, Y: y, Live: true, State: mapitem.StateNew,
 		Expire: now.Add(drop * time.Second), OwnerUntil: now.Add(drop * 500 * time.Millisecond),
 		Created: now, Owner: owner, Dropper: owner}
-	t.advance(s)
+	t.Advance(s)
 	return s
 }
 
@@ -162,17 +96,17 @@ func (w *World) addMapMoney(mp, x, y int, amount int64) int {
 	if t == nil || !w.cellDroppable(mp, x, y) {
 		return -1
 	}
-	s := t.freeSlot()
+	s := t.FreeSlot()
 	if s < 0 {
 		return -1
 	}
 	now := w.now()
 	drop := time.Duration(w.cfg.Int("Common", "MoneyDropTime", 0))
 	it := item.Empty()
-	it.Index = MoneyIndex
-	t.items[s] = mapItem{Item: it, Money: amount, X: x, Y: y, Live: true, State: mapItemNew,
+	it.Index = mapitem.MoneyIndex
+	t.Items[s] = mapitem.Item{Item: it, Money: amount, X: x, Y: y, Live: true, State: mapitem.StateNew,
 		Expire: now.Add(drop * time.Second), Created: now, Owner: -1, Dropper: -1}
-	t.advance(s)
+	t.Advance(s)
 	return s
 }
 
@@ -180,11 +114,11 @@ func (w *World) addMapMoney(mp, x, y int, amount int64) int {
 // map item pass, removed from viewports by FUN_00514470).
 func (w *World) removeMapItem(mp, num int) {
 	t := w.mapItems(mp)
-	if t == nil || num < 0 || num >= MaxMapItems {
+	if t == nil || num < 0 || num >= mapitem.MaxItems {
 		return
 	}
-	t.items[num].Live = false
-	t.items[num].State = mapItemRemoved
+	t.Items[num].Live = false
+	t.Items[num].State = mapitem.StateRemoved
 }
 
 // mapItemProc is FUN_004adea0 for every map: new -> normal, removed ->
@@ -198,23 +132,23 @@ func (w *World) mapItemProc() {
 		if t == nil {
 			continue
 		}
-		for i := range t.items {
-			m := &t.items[i]
-			if !m.valid() {
+		for i := range t.Items {
+			m := &t.Items[i]
+			if !m.Valid() {
 				continue
 			}
 			switch {
-			case m.State == mapItemNew:
+			case m.State == mapitem.StateNew:
 				// The original runs this pass and the viewport cycle in
 				// separate timers; keep the "new" state until one viewport
 				// cycle has sent it (see the final report).
 				if !m.Created.After(w.itemData.lastVP) {
-					m.State = mapItemNormal
+					m.State = mapitem.StateNormal
 				}
-			case m.State == mapItemRemoved:
-				*m = mapItem{Item: item.Empty(), Owner: -1, Dropper: -1}
+			case m.State == mapitem.StateRemoved:
+				*m = mapitem.Item{Item: item.Empty(), Owner: -1, Dropper: -1}
 			case now.After(m.Expire):
-				m.State = mapItemRemoved
+				m.State = mapitem.StateRemoved
 			}
 		}
 	}
@@ -226,15 +160,15 @@ func (w *World) vpItemRemove(o *Object) {
 	r := w.viewRange(o.Map)
 	for i := range o.VPItem {
 		e := &o.VPItem[i]
-		if (e.State != VPNew && e.State != VPVisible) || e.Type != 5 || e.Index < 0 || e.Index >= MaxMapItems {
+		if (e.State != VPNew && e.State != VPVisible) || e.Type != 5 || e.Index < 0 || e.Index >= mapitem.MaxItems {
 			continue
 		}
 		if t == nil {
 			e.State = VPRemove
 			continue
 		}
-		m := &t.items[e.Index]
-		if !m.valid() || m.State == mapItemRemoved || !(o.X >= m.X-r && o.X <= m.X+r && o.Y >= m.Y-r && o.Y <= m.Y+r) {
+		m := &t.Items[e.Index]
+		if !m.Valid() || m.State == mapitem.StateRemoved || !(o.X >= m.X-r && o.X <= m.X+r && o.Y >= m.Y-r && o.Y <= m.Y+r) {
 			e.State = VPRemove
 		}
 	}
@@ -250,9 +184,9 @@ func (w *World) vpItemAdd(o *Object) {
 		return
 	}
 	r := w.viewRange(o.Map)
-	for i := range t.items {
-		m := &t.items[i]
-		if !m.Live || (m.State != mapItemNew && m.State != mapItemNormal) {
+	for i := range t.Items {
+		m := &t.Items[i]
+		if !m.Live || (m.State != mapitem.StateNew && m.State != mapitem.StateNormal) {
 			continue
 		}
 		if m.X-r <= o.X && o.X <= m.X+r && m.Y-r <= o.Y && o.Y <= m.Y+r {
@@ -266,12 +200,12 @@ func (w *World) vpItemAdd(o *Object) {
 func (w *World) vpItemDestroy(o *Object) {
 	var nums []int
 	for _, e := range o.VPItem {
-		if e.State == VPRemove && e.Type == 5 && e.Index >= 0 && e.Index < MaxMapItems {
+		if e.State == VPRemove && e.Type == 5 && e.Index >= 0 && e.Index < mapitem.MaxItems {
 			nums = append(nums, e.Index)
 		}
 	}
 	if len(nums) > 0 {
-		w.send(o, packetMapItemDestroy(nums))
+		w.send(o, mapitem.PacketDestroy(nums))
 	}
 }
 
@@ -284,53 +218,14 @@ func (w *World) vpItemCreate(o *Object) {
 	}
 	var entries [][]byte
 	for _, e := range o.VPItem {
-		if e.State != VPNew || e.Type != 5 || e.Index < 0 || e.Index >= MaxMapItems {
+		if e.State != VPNew || e.Type != 5 || e.Index < 0 || e.Index >= mapitem.MaxItems {
 			continue
 		}
-		entries = append(entries, mapItemEntry(e.Index, &t.items[e.Index]))
+		entries = append(entries, mapitem.Entry(e.Index, &t.Items[e.Index]))
 	}
 	if len(entries) > 0 {
-		w.send(o, packetMapItems(entries))
+		w.send(o, mapitem.PacketItems(entries))
 	}
-}
-
-// mapItemEntry is one C2 20 entry: index BE (bit 7 when the item is new),
-// X, Y, item[7]; zen is encoded as 0F m2 m1 00 m0 E0 m3.
-func mapItemEntry(num int, m *mapItem) []byte {
-	b := make([]byte, 11)
-	b[0], b[1] = byte(num>>8), byte(num)
-	if m.State == mapItemNew {
-		b[0] |= 0x80
-	}
-	b[2], b[3] = byte(m.X), byte(m.Y)
-	if m.Item.Index == MoneyIndex {
-		v := uint32(m.Money)
-		b[4], b[5], b[6], b[7] = byte(MoneyIndex&0xFF), byte(v>>16), byte(v>>8), 0
-		b[8], b[9], b[10] = byte(v), 0xE0, byte(v>>24)
-		return b
-	}
-	m.Item.EncodeWire(b[4:11], false)
-	return b
-}
-
-// packetMapItems is C2 size 20 count + entries (FUN_00515b00).
-func packetMapItems(entries [][]byte) []byte {
-	p := newPacket(frame.C2, 0x20, -1, 5+11*len(entries))
-	p[4] = byte(len(entries))
-	for i, e := range entries {
-		copy(p[5+11*i:], e)
-	}
-	return p
-}
-
-// packetMapItemDestroy is C2 size 21 count + index(BE) (FUN_00514e80).
-func packetMapItemDestroy(nums []int) []byte {
-	p := newPacket(frame.C2, 0x21, -1, 5+2*len(nums))
-	p[4] = byte(len(nums))
-	for i, n := range nums {
-		p[5+2*i], p[6+2*i] = byte(n>>8), byte(n)
-	}
-	return p
 }
 
 // itemLootAllowed is CItemLoot (FUN_00493390): items listed with
@@ -350,11 +245,11 @@ func (w *World) itemLootAllowed(it item.Item) bool {
 // canLoot is FUN_004adcc0. ok=false with msg=true sends message 260.
 func (w *World) canLoot(o *Object, num int) (ok bool, msg bool) {
 	t := w.mapItems(o.Map)
-	if t == nil || num < 0 || num >= MaxMapItems {
+	if t == nil || num < 0 || num >= mapitem.MaxItems {
 		return false, false
 	}
-	m := &t.items[num]
-	if !m.valid() || !m.Live || m.State == mapItemRemoved {
+	m := &t.Items[num]
+	if !m.Valid() || !m.Live || m.State == mapitem.StateRemoved {
 		return false, false
 	}
 	if dx := m.X - o.X + 2; dx < 0 || dx >= 5 {
@@ -397,28 +292,18 @@ func registerMapItemHandlers(h *hooks) {
 	h.worldHandlers[0x23] = func(w *World, o *Object, p []byte) { w.handleDrop(o, p) }
 }
 
-// packetPickupResult is C3 10 22 result item[7] + 5 zero bytes
-// (FUN_004982e0: 0xFF fail, 0xFD merged into a stack, else the slot).
-func packetPickupResult(result byte, it *item.Item) []byte {
-	p := newPacket(frame.C3, 0x22, int(result), 0x10)
-	if it != nil {
-		it.EncodeWire(p[4:11], false)
-	}
-	return p
-}
-
 // handlePickup is FUN_004982e0: 22 [3..4] map item number (BE).
 func (w *World) handlePickup(o *Object, p []byte) {
 	if !playerReady(o) || len(p) < 5 {
 		return
 	}
-	fail := func() { w.send(o, packetPickupResult(0xFF, nil)) }
+	fail := func() { w.send(o, mapitem.PacketPickupResult(0xFF, nil)) }
 	if ifBusyExceptShop(o) {
 		fail()
 		return
 	}
 	num := int(p[3])<<8 | int(p[4])
-	if num >= MaxMapItems {
+	if num >= mapitem.MaxItems {
 		fail()
 		return
 	}
@@ -440,7 +325,7 @@ func (w *World) handlePickup(o *Object, p []byte) {
 		return
 	}
 	t := w.mapItems(o.Map)
-	m := &t.items[num]
+	m := &t.Items[num]
 	idx := m.Item.Index
 	if (idx == 0x1a14 && m.Item.Level == 0) || idx == 0x1a26 {
 		// FUN_004948f0: only one of these per character.
@@ -451,7 +336,7 @@ func (w *World) handlePickup(o *Object, p []byte) {
 			}
 		}
 	}
-	if idx == MoneyIndex {
+	if idx == mapitem.MoneyIndex {
 		// Solo or split among the party (PartyMoneyDistribute, drop.go).
 		amount := m.Money
 		w.removeMapItem(o.Map, num)
@@ -465,7 +350,7 @@ func (w *World) handlePickup(o *Object, p []byte) {
 	it := m.Item
 	if w.stackMergeInto(o, &it) {
 		w.removeMapItem(o.Map, num)
-		w.send(o, packetPickupResult(0xFD, nil))
+		w.send(o, mapitem.PacketPickupResult(0xFD, nil))
 		return
 	}
 	m.Item.Durability = it.Durability
@@ -482,10 +367,10 @@ func (w *World) handlePickup(o *Object, p []byte) {
 			serial, err := w.store.NextItemSerial(ctx)
 			return func() {
 				t := w.mapItems(mp)
-				mi := &t.items[num]
+				mi := &t.Items[num]
 				mi.Looting = false
 				o := w.objectOf(c)
-				if err != nil || o == nil || o.State != StatePlaying || !mi.valid() || mi.State == mapItemRemoved {
+				if err != nil || o == nil || o.State != StatePlaying || !mi.Valid() || mi.State == mapitem.StateRemoved {
 					return
 				}
 				it := mi.Item
@@ -502,11 +387,11 @@ func (w *World) handlePickup(o *Object, p []byte) {
 func (w *World) finishPickup(o *Object, mp, num int, it item.Item) {
 	slot := w.insertInventory(o, it)
 	if slot < 0 {
-		w.send(o, packetPickupResult(0xFF, nil))
+		w.send(o, mapitem.PacketPickupResult(0xFF, nil))
 		return
 	}
 	w.removeMapItem(mp, num)
-	w.send(o, packetPickupResult(byte(slot), &it))
+	w.send(o, mapitem.PacketPickupResult(byte(slot), &it))
 	if it.Flag1 {
 		w.send(o, packetPeriodicItem(0xFFFF, slot, it.Expire)) // FUN_004d3f00
 	}
@@ -515,20 +400,13 @@ func (w *World) finishPickup(o *Object, mp, num int, it item.Item) {
 	}
 }
 
-// packetDropResult is C1 05 23 result slot (FUN_004988f0).
-func packetDropResult(result byte, slot byte) []byte {
-	p := newPacket(frame.C1, 0x23, int(result), 5)
-	p[4] = slot
-	return p
-}
-
 // handleDrop is FUN_004988f0: 23 [3] X [4] Y [5] inventory slot.
 func (w *World) handleDrop(o *Object, p []byte) {
 	if !playerReady(o) || len(p) < 6 {
 		return
 	}
 	x, y, slot := int(p[3]), int(p[4]), int(p[5])
-	fail := func() { w.send(o, packetDropResult(0, byte(slot))) }
+	fail := func() { w.send(o, mapitem.PacketDropResult(0, byte(slot))) }
 	if ifBusyExceptShop(o) || slot >= BagEnd {
 		fail()
 		return
@@ -586,7 +464,7 @@ func (w *World) handleDrop(o *Object, p []byte) {
 	}
 	if consumed {
 		w.deleteInventory(o, slot)
-		w.send(o, packetDropResult(1, byte(slot)))
+		w.send(o, mapitem.PacketDropResult(1, byte(slot)))
 		w.equipmentChanged(o, slot)
 		return
 	}
@@ -596,7 +474,7 @@ func (w *World) handleDrop(o *Object, p []byte) {
 		return
 	}
 	w.deleteInventory(o, slot)
-	w.send(o, packetDropResult(1, byte(slot)))
+	w.send(o, mapitem.PacketDropResult(1, byte(slot)))
 	w.equipmentChanged(o, slot)
 	for _, h := range w.hooks.itemDropped {
 		h(w, o, it, num) // Blood Castle weapon (FUN_004166b0)

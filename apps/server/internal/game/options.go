@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
@@ -23,7 +24,7 @@ func defaultOptions() *store.Options {
 
 // packetOptions is C1 13 F3 30 keys[10] gameOption Q W E chatWindow.
 func packetOptions(o *store.Options) []byte {
-	p := newPacket(frame.C1, 0xF3, 0x30, 0x13)
+	p := packet.New(frame.C1, 0xF3, 0x30, 0x13)
 	copy(p[4:14], o.SkillKeys)
 	p[14], p[15], p[16], p[17], p[18] = o.GameOption, o.QKey, o.WKey, o.EKey, o.ChatWindow
 	return p

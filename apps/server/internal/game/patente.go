@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/castlesiege"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -24,9 +26,9 @@ func registerPatente(h *hooks) {
 
 // packetPatente is C1 0C F3 E5 [4] index (u32) [8] rank (i32).
 func packetPatente(index, rank int) []byte {
-	p := newPacket(frame.C1, 0xF3, 0xE5, 0x0C)
-	u32le(p[4:], uint32(index))
-	u32le(p[8:], uint32(int32(rank)))
+	p := packet.New(frame.C1, 0xF3, 0xE5, 0x0C)
+	packet.PutUint32(p[4:], uint32(index))
+	packet.PutUint32(p[8:], uint32(int32(rank)))
 	return p
 }
 
@@ -46,7 +48,7 @@ func (w *World) patenteRank(o *Object) int {
 	if o.Move != nil && o.Move.Authority > 1 {
 		return -1
 	}
-	if w.castle != nil && w.castle.state == csStart { // CCastleSiege +0x1c
+	if w.castle != nil && w.castle.state == castlesiege.StateStart { // CCastleSiege +0x1c
 		return -1
 	}
 	return rank

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/effect"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
@@ -12,7 +13,7 @@ func TestEffectListEncoding(t *testing.T) {
 	b := newBareWorld(t)
 	o := b.player(PlayerStart, "Buff", 0, 130, 130)
 	// Greater Damage (1, Save 1) is kept; Disable Magic (12, Save 0) is not.
-	b.addEffect(o, effGreaterDamage, 60, [4]int{25, 0x1234}, false)
+	b.addEffect(o, effect.GreaterDamage, 60, [4]int{25, 0x1234}, false)
 	b.addEffect(o, 12, 30, [4]int{}, false)
 	enc := encodeEffectList(o)
 	if len(enc) != store.EffectListSize {
@@ -36,15 +37,15 @@ func TestEffectListLoadAndLogoutSave(t *testing.T) {
 	b := newBareWorld(t)
 	o := b.player(PlayerStart, "Buff", 0, 130, 130)
 	list := bytes.Repeat([]byte{0xFF}, store.EffectListSize)
-	copy(list, []byte{effGreaterDefense, 0, 0, 0, 45, 0, 30, 0, 0, 0, 0, 0, 0})
+	copy(list, []byte{effect.GreaterDefense, 0, 0, 0, 45, 0, 30, 0, 0, 0, 0, 0, 0})
 	copy(list[13:], []byte{0xEE, 0, 0, 0, 10, 0, 1, 0, 0, 0, 0, 0, 0}) // unknown effect: dropped
 	o.P.Char.EffectList = list
 	b.loadEffectList(o)
-	s := effectSlotOf(o, effGreaterDefense)
+	s := effectSlotOf(o, effect.GreaterDefense)
 	if s == nil || s.Count != 45 || s.Value[0] != 30 || effOpt(o).AddDefense != 30 {
 		t.Fatalf("loaded = %+v opt %+v", s, effOpt(o))
 	}
-	if o.ViewSkillState&effectStateBit(effGreaterDefense) == 0 {
+	if o.ViewSkillState&effect.StateBit(effect.GreaterDefense) == 0 {
 		t.Fatal("state bit not set")
 	}
 	if len(b.drain(o)) != 0 {
@@ -63,7 +64,7 @@ func TestEffectListLoadAndLogoutSave(t *testing.T) {
 	var saved *store.Character
 	b.hooks.characterSave = append(b.hooks.characterSave, func(w *World, x *Object, c *store.Character) { saved = c })
 	b.saveCharacter(o, nil)
-	if saved == nil || !bytes.Equal(saved.EffectList[:13], []byte{effGreaterDefense, 0, 0, 0, 44, 0, 30, 0, 0, 0, 0, 0, 0}) {
+	if saved == nil || !bytes.Equal(saved.EffectList[:13], []byte{effect.GreaterDefense, 0, 0, 0, 44, 0, 30, 0, 0, 0, 0, 0, 0}) {
 		t.Fatalf("saved = % X", saved.EffectList[:13])
 	}
 }
@@ -71,7 +72,7 @@ func TestEffectListLoadAndLogoutSave(t *testing.T) {
 func TestEffectType2Expiry(t *testing.T) {
 	b := newBareWorld(t)
 	o := b.player(PlayerStart, "Buff", 0, 130, 130)
-	b.skills.effects[0x70] = effectInfo{Index: 0x70, Group: 0x70, Save: 1, Type: 2, Duration: 100, Power: [4]int{-1, -1, -1, -1}}
+	b.skills.effects[0x70] = effect.Info{Index: 0x70, Group: 0x70, Save: 1, Type: 2, Duration: 100, Power: [4]int{-1, -1, -1, -1}}
 	now := b.now().Unix()
 	if !b.addEffect(o, 0x70, 0, [4]int{}, false) {
 		t.Fatal("type 2 refused")
@@ -100,11 +101,11 @@ func TestEnterWorldLoadsSavedEffects(t *testing.T) {
 	b.occupy(o, false)
 	o.State = StateLogged
 	list := bytes.Repeat([]byte{0xFF}, store.EffectListSize)
-	copy(list, []byte{effGreaterDamage, 0, 0, 0, 30, 0, 12, 0, 0, 0, 0, 0, 0})
+	copy(list, []byte{effect.GreaterDamage, 0, 0, 0, 30, 0, 12, 0, 0, 0, 0, 0, 0})
 	ch := &store.Character{Name: "Buff", Class: 0x40, Level: 10, Map: 0, X: 130, Y: 130, Life: 100, MaxLife: 100,
 		EffectList: list}
 	b.enterWorld(o, ch)
-	if s := effectSlotOf(o, effGreaterDamage); s == nil || s.Count != 30 || s.Value[0] != 12 {
+	if s := effectSlotOf(o, effect.GreaterDamage); s == nil || s.Count != 30 || s.Value[0] != 12 {
 		t.Fatalf("effect after enter world = %+v", s)
 	}
 }

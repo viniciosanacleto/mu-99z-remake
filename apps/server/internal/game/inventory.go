@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/mapitem"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -66,7 +68,7 @@ type itemData struct {
 	move   map[int]gamedata.ItemMoveRule
 	loot   []gamedata.ItemLootRule
 	shops  []*shop
-	maps   [gamedata.MaxMaps]*mapItemTable
+	maps   [gamedata.MaxMaps]*mapitem.Table
 	lastVP time.Time
 
 	shopsSpawned bool
@@ -406,7 +408,7 @@ func (w *World) equipmentChanged(o *Object, slot int) {
 // packetEquipChange is C1 0C 25 index(BE) item[7] with byte 6 replaced by
 // slot<<4 | ((level-1)/2)&0xF (FUN_0049b230), sent to VP2 players.
 func packetEquipChange(index, slot int, it item.Item) []byte {
-	p := newPacket(frame.C1, 0x25, -1, 0x0C)
+	p := packet.New(frame.C1, 0x25, -1, 0x0C)
 	p[3], p[4] = byte(index>>8), byte(index)
 	it.EncodeWire(p[5:12], false)
 	p[6] = byte(slot)<<4 | byte(((it.Level-1)/2)&0xF)
@@ -416,7 +418,7 @@ func packetEquipChange(index, slot int, it item.Item) []byte {
 // packetCharSetUpdate is C1 18 F3 13 index(BE) CharSet[18] (FUN_0049b5a0),
 // sent to VP2 players after an item arrives in the inventory.
 func packetCharSetUpdate(o *Object) []byte {
-	p := newPacket(frame.C1, 0xF3, 0x13, 0x18)
+	p := packet.New(frame.C1, 0xF3, 0x13, 0x18)
 	p[4], p[5] = byte(o.Index>>8), byte(o.Index)
 	copy(p[6:], o.CharSet[:])
 	return p
@@ -424,14 +426,14 @@ func packetCharSetUpdate(o *Object) []byte {
 
 // packetItemDurability is C1 06 2A slot durability flag (FUN_0049b3b0).
 func packetItemDurability(slot int, dur byte, flag byte) []byte {
-	p := newPacket(frame.C1, 0x2A, -1, 6)
+	p := packet.New(frame.C1, 0x2A, -1, 6)
 	p[3], p[4], p[5] = byte(slot), dur, flag
 	return p
 }
 
 // packetItemDelete is C1 05 28 slot flag (FUN_0049b2e0).
 func packetItemDelete(slot int, flag byte) []byte {
-	p := newPacket(frame.C1, 0x28, -1, 5)
+	p := packet.New(frame.C1, 0x28, -1, 5)
 	p[3], p[4] = byte(slot), flag
 	return p
 }
@@ -439,7 +441,7 @@ func packetItemDelete(slot int, flag byte) []byte {
 // packetItemModify is C1 0C F3 14 slot item[7] (FUN_0049b620): an item
 // changed in place (jewel upgrades).
 func packetItemModify(slot int, it item.Item) []byte {
-	p := newPacket(frame.C1, 0xF3, 0x14, 0x0C)
+	p := packet.New(frame.C1, 0xF3, 0x14, 0x0C)
 	p[4] = byte(slot)
 	it.EncodeWire(p[5:12], false)
 	return p

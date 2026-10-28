@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/devilsquare"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
@@ -370,7 +371,7 @@ func TestGMEventForceStart(t *testing.T) {
 	b.runCommand(g, "/ccstart")
 	want := b.clock.Add(time.Minute)
 	if b.bcOn() {
-		if c := b.bc().c[0]; c.State != dsEmpty || !c.Target.Equal(want) {
+		if c := b.bc().c[0]; c.State != devilsquare.StateEmpty || !c.Target.Equal(want) {
 			t.Fatalf("bc %d %v", c.State, c.Target)
 		}
 	}

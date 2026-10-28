@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/chaosmix"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/effect"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 )
 
@@ -31,7 +33,7 @@ func ravenOwner(t *testing.T, b *bareWorld) *Object {
 	t.Helper()
 	o := statsPlayer(b, PlayerStart, 4, 400)
 	o.P.Char.Leadership = 2000
-	o.P.Inventory[1] = item.Item{Index: idxDarkRaven, Durability: 255, PetLevel: 10}
+	o.P.Inventory[1] = item.Item{Index: chaosmix.ItemDarkRaven, Durability: 255, PetLevel: 10}
 	b.calcCharacter(o)
 	b.drain(o)
 	if !pet(o).Owner {
@@ -60,7 +62,7 @@ func TestRavenSyncResetsMode(t *testing.T) {
 	if ps.Owner || ps.Target != -1 {
 		t.Fatalf("no raven: %+v", ps)
 	}
-	o.P.Inventory[1] = item.Item{Index: idxDarkRaven, Durability: 255, PetLevel: 10}
+	o.P.Inventory[1] = item.Item{Index: chaosmix.ItemDarkRaven, Durability: 255, PetLevel: 10}
 	b.calcCharacter(o)
 	if r := find(b.drain(o), 0xA7, -1); !bytes.Equal(r, packetRavenReset()) || ps.Mode != 0 || !ps.Owner {
 		t.Fatalf("reset = % X mode %d", r, ps.Mode)
@@ -185,7 +187,7 @@ func TestRavenHitAndDamage(t *testing.T) {
 	if _, h := func() (bool, bool) { fixRand(t, 30); return ravenHitCheck(100, 30) }(); !h {
 		t.Fatal("rand >= defense rate hits")
 	}
-	if ravenDefense(CombatStats{Defense: 51}, effectOptions{AddDefense: 9}) != 30 {
+	if ravenDefense(CombatStats{Defense: 51}, effect.Options{AddDefense: 9}) != 30 {
 		t.Fatal("defense is halved")
 	}
 
@@ -223,7 +225,7 @@ func TestRavenAttackRules(t *testing.T) {
 	o := ravenOwner(t, b)
 	m := b.monsterNear(0, o, 2)
 	// Physical immunity: miss (D7 with no damage).
-	b.addEffect(m, effMonPhysiImmunity, 0, [4]int{}, false)
+	b.addEffect(m, effect.MonPhysiImmunity, 0, [4]int{}, false)
 	life := m.Mon.Life
 	if !b.ravenAttack(o, m, true, false) || m.Mon.Life != life {
 		t.Fatal("immune monster hit")
@@ -231,7 +233,7 @@ func TestRavenAttackRules(t *testing.T) {
 	if r := find(b.drain(o), 0xD7, -1); r == nil || r[5] != 0 || r[6] != 0 {
 		t.Fatalf("miss = % X", r)
 	}
-	b.removeEffect(m, effMonPhysiImmunity)
+	b.removeEffect(m, effect.MonPhysiImmunity)
 	// The splash hit is 60% of the single one (same rolls).
 	fixRand(t, 99)
 	single := m.Mon.Life
