@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/character"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/charset"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
@@ -123,7 +124,7 @@ func encodeMagicList(skills [MagicSlots]Skill) []byte {
 // enterWorld builds the playing object from the database row
 // (FUN_004cc730) and sends the world entry packets (FUN_00473a10).
 func (w *World) enterWorld(o *Object, ch *store.Character) {
-	if !validDBClass(ch.Class) {
+	if !character.ValidDBClass(ch.Class) {
 		w.closeClient(o, "invalid class")
 		return
 	}
@@ -177,7 +178,7 @@ func (w *World) enterWorld(o *Object, ch *store.Character) {
 	w.occupy(o, true)
 	w.rebuildCharSet(o)
 
-	w.send(o, packetCharInfo(w.charInfo(o)))
+	w.send(o, character.PacketInfo(w.charInfo(o)))
 	w.send(o, packetInventory(p.Inventory[:], nil))
 	w.send(o, packetSkills(p.Skills[:]))
 	o.P.questSent = false // FUN_0050ae50 clears obj+0x5c0 on character load
@@ -195,14 +196,14 @@ func (w *World) enterWorld(o *Object, ch *store.Character) {
 	w.log.Info("AddCharacterInfo", "index", o.Index, "name", ch.Name, "account", p.Account.Login)
 }
 
-func (w *World) charInfo(o *Object) charInfo {
+func (w *World) charInfo(o *Object) character.Info {
 	c := o.P.Char
 	life := int(roundf(c.Life))
 	maxLife := int(roundf(float32(o.P.AddLife) + c.MaxLife))
 	mana := int(roundf(c.Mana))
 	maxMana := int(roundf(float32(o.P.AddMana) + c.MaxMana))
 	fruit := fruitLimit(o.Class, c.Level)
-	return charInfo{
+	return character.Info{
 		X: o.X, Y: o.Y, Map: o.Map, Dir: o.Dir,
 		Exp: uint32(c.Experience), NextExp: o.P.NextExp, LevelUpPoints: c.LevelUpPoints,
 		Str: c.Strength, Agi: c.Dexterity, Vit: c.Vitality, Ene: c.Energy,

@@ -3,6 +3,8 @@ package game
 import (
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/castlesiege"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/chaosmix"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
@@ -74,7 +76,7 @@ func (w *World) pushAllowed(o *Object, knock bool) bool {
 			return false
 		}
 	}
-	if c := w.cs(); c != nil && c.crownUser == o.Index && o.P != nil && o.P.Inventory[8].Index == idxDarkHorse {
+	if c := w.cs(); c != nil && c.crownUser == o.Index && o.P != nil && o.P.Inventory[8].Index == chaosmix.ItemDarkHorse {
 		return false
 	}
 	return true
@@ -95,7 +97,7 @@ func (w *World) pushBack(o, a *Object) bool {
 	}
 	x, y := o.X+pathDirs[d][0], o.Y+pathDirs[d][1]
 	attr := w.terrain(o.Map).Get(x, y)
-	if attr&0x0F != 0 || (o.Map == csMap && attr&0x10 != 0) {
+	if attr&0x0F != 0 || (o.Map == castlesiege.Map && attr&0x10 != 0) {
 		return false
 	}
 	w.pushTo(o, x, y)

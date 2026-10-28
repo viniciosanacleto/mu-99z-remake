@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -53,7 +54,7 @@ func attackActive(o *Object) bool { return o.P != nil && o.P.cust != nil && o.P.
 // packetAttackStatus is C1 08 F3 EB active u32 (FUN_00445940), sent to a
 // playing client.
 func packetAttackStatus(active bool) []byte {
-	p := newPacket(frame.C1, 0xF3, 0xEB, 8)
+	p := packet.New(frame.C1, 0xF3, 0xEB, 8)
 	if active {
 		p[4] = 1
 	}
@@ -62,7 +63,7 @@ func packetAttackStatus(active bool) []byte {
 
 // packetAttackHelperOpen is the C1 04 F3 F6 the hard-coded /attack sends
 // when the auto attack is off (the client answers with F3 0A or F3 0B).
-func packetAttackHelperOpen() []byte { return newPacket(frame.C1, 0xF3, 0xF6, 4) }
+func packetAttackHelperOpen() []byte { return packet.New(frame.C1, 0xF3, 0xF6, 4) }
 
 func (w *World) sendAttackStatus(o *Object) {
 	if o.State == StatePlaying && o.IsPlayer() && o.P.LogoutCountdown < 1 {

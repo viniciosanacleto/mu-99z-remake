@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
@@ -97,32 +98,32 @@ func near2(a, b *Object) bool {
 
 // packetTradeRequest is C3 0D 36 name[10] (FUN_005088e0).
 func packetTradeRequest(name string) []byte {
-	p := newPacket(frame.C3, 0x36, -1, 0x0D)
-	putName(p[3:], name)
+	p := packet.New(frame.C3, 0x36, -1, 0x0D)
+	packet.PutName(p[3:], name)
 	return p
 }
 
 // packetTradeResponse is C1 14 37 result name[10] level(u16) guild(u32)
 // (FUN_005089a0).
-func packetTradeResponse(result byte, name string, level int, guild uint32) []byte {
-	p := newPacket(frame.C1, 0x37, -1, 0x14)
+func packetTradeResponse(result byte, name string, level int, guildNumber uint32) []byte {
+	p := packet.New(frame.C1, 0x37, -1, 0x14)
 	p[3] = result
-	putName(p[4:], name)
+	packet.PutName(p[4:], name)
 	binary.LittleEndian.PutUint16(p[14:], uint16(level))
-	binary.LittleEndian.PutUint32(p[16:], guild)
+	binary.LittleEndian.PutUint32(p[16:], guildNumber)
 	return p
 }
 
 // packetTradeItemDelete is C1 04 38 slot (FUN_00508a80).
 func packetTradeItemDelete(slot int) []byte {
-	p := newPacket(frame.C1, 0x38, -1, 4)
+	p := packet.New(frame.C1, 0x38, -1, 4)
 	p[3] = byte(slot)
 	return p
 }
 
 // packetTradeItemAdd is C1 0B 39 slot item[7] (FUN_00508b20).
 func packetTradeItemAdd(slot int, it item.Item) []byte {
-	p := newPacket(frame.C1, 0x39, -1, 0x0B)
+	p := packet.New(frame.C1, 0x39, -1, 0x0B)
 	p[3] = byte(slot)
 	it.EncodeWire(p[4:11], false)
 	return p
@@ -130,21 +131,21 @@ func packetTradeItemAdd(slot int, it item.Item) []byte {
 
 // packetTradeMoney is C1 08 3B money (FUN_00508bf0).
 func packetTradeMoney(money int64) []byte {
-	p := newPacket(frame.C1, 0x3B, -1, 8)
+	p := packet.New(frame.C1, 0x3B, -1, 8)
 	binary.LittleEndian.PutUint32(p[4:], uint32(money))
 	return p
 }
 
 // packetTradeOK is C1 04 3C flag (FUN_00508c90).
 func packetTradeOK(flag byte) []byte {
-	p := newPacket(frame.C1, 0x3C, -1, 4)
+	p := packet.New(frame.C1, 0x3C, -1, 4)
 	p[3] = flag
 	return p
 }
 
 // packetTradeResult is C1 04 3D result (FUN_00508d30).
 func packetTradeResult(result byte) []byte {
-	p := newPacket(frame.C1, 0x3D, -1, 4)
+	p := packet.New(frame.C1, 0x3D, -1, 4)
 	p[3] = result
 	return p
 }
@@ -252,7 +253,7 @@ func (w *World) handleTradeMoney(o *Object, p []byte) {
 		return
 	}
 	w.send(o, packetMoney(uint32(o.P.Char.Money-amount)))
-	p3a := newPacket(frame.C1, 0x3A, -1, 4)
+	p3a := packet.New(frame.C1, 0x3A, -1, 4)
 	p3a[3] = 1
 	w.send(o, p3a)
 	trade(o).OK = false

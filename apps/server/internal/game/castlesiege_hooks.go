@@ -1,5 +1,11 @@
 package game
 
+import (
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
+
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/castlesiege"
+)
+
 // Wiring of the castle module: client heads, NPC talks and the hooks the
 // other modules call (the castle rules of their original functions).
 
@@ -52,7 +58,7 @@ func (w *World) csGate97(o *Object) bool {
 	if c == nil {
 		return false
 	}
-	if w.csSyncState() == csStart {
+	if w.csSyncState() == castlesiege.StateStart {
 		if csSide(o) != 1 && !c.crownRoom {
 			return false
 		}
@@ -64,9 +70,9 @@ func (w *World) csGate97(o *Object) bool {
 // csMonsterEntry is the castle part of FUN_00515510.
 func (w *World) csMonsterEntry(viewer, t *Object, e []byte) {
 	switch t.Class {
-	case csClassStone:
+	case castlesiege.ClassStone:
 		flags := byte(1)
-		if w.csSyncState() == csStart && csSide(viewer) == csSide(t) {
+		if w.csSyncState() == castlesiege.StateStart && csSide(viewer) == csSide(t) {
 			flags = 0x81
 		}
 		if n := guildNumberOf(viewer); n != 0 {
@@ -78,19 +84,19 @@ func (w *World) csMonsterEntry(viewer, t *Object, e []byte) {
 			flags |= (t.CS.StoneLvl & 7) << 4
 		}
 		e[2] = flags
-	case csClassCrown:
+	case castlesiege.ClassCrown:
 		if c := w.cs(); c != nil && w.hooks.eventEffect != nil {
 			if c.crownOpen != hasEffectIndex(t, csEffCrown) {
 				w.hooks.eventEffect(w, t, csEffCrown, c.crownOpen)
-				u32le(e[4:], t.ViewSkillState)
+				packet.PutUint32(e[4:], t.ViewSkillState)
 			}
 		}
-	case csClassGate:
+	case castlesiege.ClassGate:
 		if t.CS != nil && w.hooks.eventEffect != nil {
 			open := t.CS.GateOpen != 0
 			if open != hasEffectIndex(t, csEffGateOpen) {
 				w.hooks.eventEffect(w, t, csEffGateOpen, open)
-				u32le(e[4:], t.ViewSkillState)
+				packet.PutUint32(e[4:], t.ViewSkillState)
 			}
 		}
 	}
@@ -133,20 +139,20 @@ func registerCastlesiegeHooks(h *hooks) {
 			return true
 		}
 	}
-	h.npcTalk[csClassCrown] = csTalk((*World).csCrownTalk)
-	h.npcTalk[csClassSwitch1] = csTalk((*World).csSwitchTalk)
-	h.npcTalk[csClassSwitch2] = csTalk((*World).csSwitchTalk)
-	h.npcTalk[csClassLever] = csTalk((*World).csLeverTalk)
-	h.npcTalk[csClassKeeper] = csTalk(func(w *World, o, _ *Object) { w.csKeeperTalk(o) })
-	h.npcTalk[csClassSlingA] = func(w *World, o, npc *Object) bool { w.csSlingTalk(o, npc); return true }
-	h.npcTalk[csClassSlingD] = func(w *World, o, npc *Object) bool { w.csSlingTalk(o, npc); return true }
-	h.npcTalk[csClassSenior] = func(w *World, o, npc *Object) bool {
+	h.npcTalk[castlesiege.ClassCrown] = csTalk((*World).csCrownTalk)
+	h.npcTalk[castlesiege.ClassSwitch1] = csTalk((*World).csSwitchTalk)
+	h.npcTalk[castlesiege.ClassSwitch2] = csTalk((*World).csSwitchTalk)
+	h.npcTalk[castlesiege.ClassLever] = csTalk((*World).csLeverTalk)
+	h.npcTalk[castlesiege.ClassKeeper] = csTalk(func(w *World, o, _ *Object) { w.csKeeperTalk(o) })
+	h.npcTalk[castlesiege.ClassSlingA] = func(w *World, o, npc *Object) bool { w.csSlingTalk(o, npc); return true }
+	h.npcTalk[castlesiege.ClassSlingD] = func(w *World, o, npc *Object) bool { w.csSlingTalk(o, npc); return true }
+	h.npcTalk[castlesiege.ClassSenior] = func(w *World, o, npc *Object) bool {
 		if !pshopOpen(o) { // obj+0x2468: personal shop open
 			w.csSeniorTalk(o)
 		}
 		return true
 	}
-	h.npcTalk[csClassGuard] = func(w *World, o, npc *Object) bool { w.csGuardTalk(o, npc); return true }
+	h.npcTalk[castlesiege.ClassGuard] = func(w *World, o, npc *Object) bool { w.csGuardTalk(o, npc); return true }
 
 	h.death = append(h.death, func(w *World, killer, victim *Object) {
 		if w.cs() == nil || victim.Mon == nil || victim.CS == nil {
@@ -155,18 +161,18 @@ func registerCastlesiegeHooks(h *hooks) {
 		switch {
 		case victim.CS.NPCKind == 1:
 			w.csNPCKilled(victim) // FUN_004b70b0 -> FUN_0041e180
-		case victim.Class == csClassStone:
+		case victim.Class == castlesiege.ClassStone:
 			w.csStoneGone(victim)
-		case victim.Class == csClassArcher || victim.Class == csClassSpear:
+		case victim.Class == castlesiege.ClassArcher || victim.Class == castlesiege.ClassSpear:
 			c := w.cs()
 			c.mercenaries = max(c.mercenaries-1, 0) // FUN_004b2e90
 		}
 	})
 
 	h.castleBattle = func(w *World) bool { return w.csBattleOn() }
-	h.castleOwner = func(w *World, guild string) bool {
+	h.castleOwner = func(w *World, guildName string) bool {
 		_, _, _, owner := w.csSyncValues()
-		return guild != "" && guild == owner
+		return guildName != "" && guildName == owner
 	}
 	h.gate97 = (*World).csGate97
 	h.castleAttack = (*World).csAttackAllowed

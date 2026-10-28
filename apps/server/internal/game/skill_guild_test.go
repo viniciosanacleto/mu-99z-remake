@@ -3,15 +3,18 @@ package game
 import (
 	"bytes"
 	"testing"
+
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/castlesiege"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/effect"
 )
 
 // csPair places a caster and another player one cell apart on map 30.
 func csPair(t *testing.T) (*bareWorld, *Object, *Object) {
 	t.Helper()
 	b := newBareWorld(t)
-	x, y := b.openRow(csMap, 4)
-	o := b.player(PlayerStart, "Lord", csMap, x, y)
-	v := b.player(PlayerStart+1, "Mate", csMap, x+1, y)
+	x, y := b.openRow(castlesiege.Map, 4)
+	o := b.player(PlayerStart, "Lord", castlesiege.Map, x, y)
+	v := b.player(PlayerStart+1, "Mate", castlesiege.Map, x+1, y)
 	o.Class, v.Class = 4, 0
 	b.see(o, v)
 	return b, o, v
@@ -62,7 +65,7 @@ func TestSkillStern(t *testing.T) {
 	if !b.guildSkill(o, b.skillRefOf(67, 0), -1, angle) {
 		t.Fatal("stern refused")
 	}
-	if s := effectSlotOf(v, effStern); s == nil || s.Count != b.cfg.Int("Skill", "SternTimeConstA", 0) {
+	if s := effectSlotOf(v, effect.Stern); s == nil || s.Count != b.cfg.Int("Skill", "SternTimeConstA", 0) {
 		t.Fatalf("stern = %+v", s)
 	}
 	out := b.drain(o)
@@ -74,14 +77,14 @@ func TestSkillStern(t *testing.T) {
 	}
 	// Remove Stern (68) clears it for the players within Radio.
 	b.guildSkill(o, b.skillRefOf(68, 0), -1, 0)
-	if hasEffectIndex(v, effStern) {
+	if hasEffectIndex(v, effect.Stern) {
 		t.Fatal("stern not removed")
 	}
 }
 
 func TestSkillGreaterManaGuild(t *testing.T) {
 	b, o, v := csPair(t)
-	other := b.player(PlayerStart+2, "Other", csMap, o.X+2, o.Y)
+	other := b.player(PlayerStart+2, "Other", castlesiege.Map, o.X+2, o.Y)
 	b.see(o, other)
 	guildOf(o).Number, guildOf(v).Number, guildOf(other).Number = 7, 7, 8
 	if !b.guildSkill(o, b.skillRefOf(69, 0), -1, 0) {
@@ -89,11 +92,11 @@ func TestSkillGreaterManaGuild(t *testing.T) {
 	}
 	val, secs := b.cfg.Int("Skill", "GreaterManaConstA", 0), b.cfg.Int("Skill", "GreaterManaTimeConstA", 0)
 	for _, p := range []*Object{o, v} {
-		if s := effectSlotOf(p, effGreaterMana); s == nil || s.Value[0] != val || s.Count != secs {
+		if s := effectSlotOf(p, effect.GreaterMana); s == nil || s.Value[0] != val || s.Count != secs {
 			t.Fatalf("%s greater mana = %+v", p.P.Char.Name, s)
 		}
 	}
-	if hasEffectIndex(other, effGreaterMana) {
+	if hasEffectIndex(other, effect.GreaterMana) {
 		t.Fatal("other guild buffed")
 	}
 }
@@ -103,38 +106,38 @@ func TestSkillInvisibilityParty(t *testing.T) {
 	secs := b.cfg.Int("Skill", "InvisibilityTimeConstA", 0)
 	// Not in the caster's party: the caster gets it.
 	b.guildSkill(o, b.skillRefOf(70, 0), v.Index, 0)
-	if !hasEffectIndex(o, effInvisibility) || hasEffectIndex(v, effInvisibility) {
+	if !hasEffectIndex(o, effect.Invisibility) || hasEffectIndex(v, effect.Invisibility) {
 		t.Fatal("non-party target")
 	}
-	b.removeEffect(o, effInvisibility)
+	b.removeEffect(o, effect.Invisibility)
 	b.partyCreate(o)
 	b.partyAdd(b.partyOf(o), v)
 	b.guildSkill(o, b.skillRefOf(70, 0), v.Index, 0)
-	if s := effectSlotOf(v, effInvisibility); s == nil || s.Count != secs {
+	if s := effectSlotOf(v, effect.Invisibility); s == nil || s.Count != secs {
 		t.Fatalf("party target = %+v", s)
 	}
 	// Remove Invisibility (71).
 	b.guildSkill(o, b.skillRefOf(71, 0), -1, 0)
-	if hasEffectIndex(v, effInvisibility) {
+	if hasEffectIndex(v, effect.Invisibility) {
 		t.Fatal("not removed")
 	}
 }
 
 func TestSkillBrandAndRemoveAll(t *testing.T) {
 	b, o, v := csPair(t)
-	far := b.player(PlayerStart+2, "Far", csMap, o.X+4, o.Y)
+	far := b.player(PlayerStart+2, "Far", castlesiege.Map, o.X+4, o.Y)
 	far.X = o.X + 20
 	b.see(o, far)
 	b.guildSkill(o, b.skillRefOf(75, 0), -1, 0)
-	if s := effectSlotOf(o, effBrand); s == nil || s.Count != 0 {
+	if s := effectSlotOf(o, effect.Brand); s == nil || s.Count != 0 {
 		t.Fatalf("caster brand = %+v", s)
 	}
-	if !hasEffectIndex(v, effBrand) || hasEffectIndex(far, effBrand) {
+	if !hasEffectIndex(v, effect.Brand) || hasEffectIndex(far, effect.Brand) {
 		t.Fatal("brand radio")
 	}
 	// Remove All Effect (72) is FUN_0047a540 on everyone within Radio.
 	b.guildSkill(o, b.skillRefOf(72, 0), -1, 0)
-	if hasEffectIndex(v, effBrand) || !hasEffectIndex(o, effBrand) {
+	if hasEffectIndex(v, effect.Brand) || !hasEffectIndex(o, effect.Brand) {
 		t.Fatal("remove all")
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -23,7 +24,7 @@ const costRate = 100
 // when the requested gate is > 0, else the gate byte, i.e. 0; FUN_004bf340
 // and the magic teleport end send flag 0).
 func packetTeleport(gate int, mp, x, y, dir int) []byte {
-	p := newPacket(frame.C3, 0x1C, -1, 8)
+	p := packet.New(frame.C3, 0x1C, -1, 8)
 	p[3] = 1
 	if gate <= 0 {
 		p[3] = byte(gate)
@@ -36,7 +37,7 @@ func packetTeleport(gate int, mp, x, y, dir int) []byte {
 // every teleport; v is 1 only on map 30 during the Castle Siege battle
 // (state 7), which the castle module reports through hooks.castleBattle.
 func packetCastleStateNotice(v byte) []byte {
-	p := newPacket(frame.C1, 0xB2, 0x17, 5)
+	p := packet.New(frame.C1, 0xB2, 0x17, 5)
 	p[4] = v
 	return p
 }
@@ -49,7 +50,7 @@ func packetMapEventState() []byte { return []byte{0xC1, 0x05, 0x0B, 0x00, 0x00} 
 // packetMagicUse is C3 08 19 skill idxHi idxLo targetHi|ok<<7 targetLo
 // (FUN_00501570).
 func packetMagicUse(skill, index, target int, ok bool) []byte {
-	p := newPacket(frame.C3, 0x19, -1, 8)
+	p := packet.New(frame.C3, 0x19, -1, 8)
 	p[3] = byte(skill)
 	p[4], p[5] = byte(index>>8), byte(index)
 	p[6] = byte(target >> 8)

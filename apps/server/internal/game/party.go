@@ -4,6 +4,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
@@ -102,25 +103,25 @@ func (w *World) mapPartyEnabled(mp int) bool {
 // --- packets ----------------------------------------------------------------
 
 func packetPartyResult(result byte) []byte {
-	b := newPacket(frame.C1, 0x41, -1, 4)
+	b := packet.New(frame.C1, 0x41, -1, 4)
 	b[3] = result
 	return b
 }
 
 func packetPartyRequest(from int) []byte {
-	b := newPacket(frame.C1, 0x40, -1, 5)
+	b := packet.New(frame.C1, 0x40, -1, 5)
 	b[3], b[4] = byte(from>>8), byte(from)
 	return b
 }
 
-func packetPartyLeft() []byte { return newPacket(frame.C1, 0x43, -1, 3) }
+func packetPartyLeft() []byte { return packet.New(frame.C1, 0x43, -1, 3) }
 
 // packetPartyList is C1 size 42 result count + 24-byte entries: name[10],
 // slot, map, x, y, 2 bytes, life u32, max life u32 (FUN_004d32d0 /
 // FUN_004d2e80). Without a party: C1 05 42 00 00.
 func (w *World) packetPartyList(pt *party) []byte {
 	if pt == nil {
-		return newPacket(frame.C1, 0x42, 0, 5)
+		return packet.New(frame.C1, 0x42, 0, 5)
 	}
 	var body []byte
 	n := 0
@@ -131,16 +132,16 @@ func (w *World) packetPartyList(pt *party) []byte {
 		m := w.objects[idx]
 		e := make([]byte, 24)
 		if m.P != nil && m.P.Char != nil {
-			putName(e, m.P.Char.Name)
+			packet.PutName(e, m.P.Char.Name)
 			e[10], e[11] = byte(slot), byte(m.Map)
 			e[12], e[13] = byte(m.X), byte(m.Y)
-			u32le(e[16:], uint32(int32(math.RoundToEven(float64(m.P.Char.Life)))))
-			u32le(e[20:], uint32(int32(math.RoundToEven(float64(float32(m.P.AddLife)+m.P.Char.MaxLife)))))
+			packet.PutUint32(e[16:], uint32(int32(math.RoundToEven(float64(m.P.Char.Life)))))
+			packet.PutUint32(e[20:], uint32(int32(math.RoundToEven(float64(float32(m.P.AddLife)+m.P.Char.MaxLife)))))
 		}
 		body = append(body, e...)
 		n++
 	}
-	b := newPacket(frame.C1, 0x42, 1, 5+len(body))
+	b := packet.New(frame.C1, 0x42, 1, 5+len(body))
 	b[4] = byte(n)
 	copy(b[5:], body)
 	return b
@@ -163,7 +164,7 @@ func (w *World) packetPartyLife(pt *party) []byte {
 		}
 		body = append(body, byte(v)&0xF^byte(slot)<<4)
 	}
-	b := newPacket(frame.C1, 0x44, -1, 4+len(body))
+	b := packet.New(frame.C1, 0x44, -1, 4+len(body))
 	b[3] = byte(len(body))
 	copy(b[4:], body)
 	return b

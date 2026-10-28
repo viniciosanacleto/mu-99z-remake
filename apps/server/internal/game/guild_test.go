@@ -3,7 +3,6 @@ package game
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
 	"testing"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
@@ -24,79 +23,6 @@ func (b *bareWorld) pump() {
 }
 
 func name10(s string) []byte { b := make([]byte, 10); copy(b, s); return b }
-
-func TestGuildPacketLayouts(t *testing.T) {
-	l := packetGuildList(300, 4, "Rivals", []guildListMember{{"Ann", 0, 0x80}, {"Bob", -1, 0x20}})
-	if len(l) != 24+26 || l[0] != 0xC2 || l[3] != 0x52 || l[4] != 1 || l[5] != 2 ||
-		binary.LittleEndian.Uint32(l[8:]) != 300 || l[12] != 4 || string(l[13:19]) != "Rivals" {
-		t.Fatalf("52 = % X", l)
-	}
-	if e := l[24:37]; string(e[:3]) != "Ann" || e[10] != 0 || e[11] != 0x80 || e[12] != 0x80 {
-		t.Fatalf("52 online entry = % X", e)
-	}
-	if e := l[37:50]; e[10] != 0xFF || e[11] != 0x7F || e[12] != 0x20 {
-		t.Fatalf("52 offline entry = % X", e)
-	}
-	v := packetGuildViewport([]guildViewEntry{{Number: 7, Status: 0x80, Type: 1, Relation: 2, Index: 0x53FC}})
-	if !bytes.Equal(v[:5], []byte{0xC2, 0x00, 0x11, 0x65, 1}) ||
-		!bytes.Equal(v[5:14], []byte{7, 0, 0, 0, 0x80, 1, 2, 0x53 | 0x80, 0xFC}) {
-		t.Fatalf("65 = % X", v)
-	}
-	if v := packetGuildViewport([]guildViewEntry{{Number: 7, Index: 0x53FC}}); v[12] != 0x53 {
-		t.Fatalf("65 member = % X", v)
-	}
-	u := packetUnionViewport([]unionViewEntry{{Index: 0x53FD, Number: 9, Relation: 1, Union: "Alpha"}})
-	if !bytes.Equal(u[:5], []byte{0xC2, 0x00, 0x19, 0x67, 1}) || u[5] != 0x53 || u[6] != 0xFD ||
-		binary.LittleEndian.Uint32(u[9:]) != 9 || u[13] != 1 || string(u[14:19]) != "Alpha" {
-		t.Fatalf("67 = % X", u)
-	}
-	g := guildRecord{Number: 5, Name: "Lions", Type: 2}
-	g.Mark[0], g.Mark[31] = 0x11, 0x22
-	i := packetGuildInfo(&g, "Alpha")
-	if len(i) != 0x3C || i[0] != 0xC1 || i[2] != 0x66 || i[4] != 5 || i[8] != 2 ||
-		string(i[9:14]) != "Alpha" || string(i[17:22]) != "Lions" || i[25] != 0x11 || i[56] != 0x22 {
-		t.Fatalf("66 = % X", i)
-	}
-	g.Members[0].Name, g.Members[3].Name = "A", "B"
-	e9 := packetUnionList(1, 2, 0, []guildRecord{g})
-	if len(e9) != 8+41 || e9[0] != 0xC2 || e9[3] != 0xE9 || e9[4] != 1 || e9[5] != 1 || e9[6] != 2 ||
-		e9[8] != 2 || e9[9] != 0x11 || e9[40] != 0x22 || string(e9[41:46]) != "Lions" {
-		t.Fatalf("E9 = % X", e9)
-	}
-	for _, c := range []struct {
-		got, want []byte
-	}{
-		{packetGuildJoinRequest(0x53FC), []byte{0xC1, 5, 0x50, 0x53, 0xFC}},
-		{packetGuildResult(5), []byte{0xC1, 4, 0x51, 5}},
-		{packetGuildLeaveResult(1), []byte{0xC1, 4, 0x53, 1}},
-		{packetGuildMasterQuestion(), []byte{0xC1, 3, 0x54}},
-		{packetGuildCreateWindow(), []byte{0xC1, 3, 0x55}},
-		{packetGuildCreateResult(1, 2), []byte{0xC1, 5, 0x56, 1, 2}},
-		{packetGuildViewportDel(0x53FC), []byte{0xC1, 5, 0x5D, 0x53, 0xFC}},
-		{packetGuildTypeResult(1, 0x11), []byte{0xC1, 5, 0xE2, 1, 0x11}},
-		{packetRelationRequest(1, 2, 0x5400), []byte{0xC1, 7, 0xE5, 1, 2, 0x54, 0}},
-		{packetRelationResult(2, 1, 0x18, 0x5401), []byte{0xC1, 8, 0xE6, 2, 1, 0x18, 0x54, 1}},
-		{packetUnionKickResult(1), []byte{0xC1, 7, 0xEB, 1, 1, 2, 1}},
-		{packetGuildWarRequestResult(6), []byte{0xC1, 4, 0x60, 6}},
-		{packetGuildWarScore(3, 4), []byte{0xC1, 6, 0x64, 3, 4, 0}},
-	} {
-		if !bytes.Equal(c.got, c.want) {
-			t.Errorf("got % X, want % X", c.got, c.want)
-		}
-	}
-	if p := packetGuildAssignResult(1, 1, "Bob"); len(p) != 0x0F || p[2] != 0xE1 || p[3] != 1 || p[4] != 1 || string(p[5:8]) != "Bob" {
-		t.Fatalf("E1 = % X", p)
-	}
-	if p := packetGuildWarRequest("Lions", 1); len(p) != 0x0C || p[2] != 0x61 || string(p[3:8]) != "Lions" || p[11] != 1 {
-		t.Fatalf("61 = % X", p)
-	}
-	if p := packetGuildWarStart("Lions", 0, 1); len(p) != 0x0D || p[2] != 0x62 || p[11] != 0 || p[12] != 1 {
-		t.Fatalf("62 = % X", p)
-	}
-	if p := packetGuildWarEnd(1, "Lions"); len(p) != 0x0C || p[2] != 0x63 || p[3] != 1 || string(p[4:9]) != "Lions" {
-		t.Fatalf("63 = % X", p)
-	}
-}
 
 // guildSetup creates guild name with master m through the 55 handler.
 func guildSetup(t *testing.T, b *bareWorld, m *Object, name string) int {
@@ -208,7 +134,7 @@ func TestGuildCreateJoinListLeave(t *testing.T) {
 	if c := find(b.drain(a), 0x0D, -1); c == nil || c[3] != NoticeGuild || string(c[13:21]) != "it\"s war" {
 		t.Fatalf("notice = % X", c)
 	}
-	if g, _ := w.guildMgr().byNumber(n); g.Notice != "it\"s war" {
+	if g, _ := w.guildMgr().ByNumber(n); g.Notice != "it\"s war" {
 		t.Fatalf("stored notice %q", g.Notice)
 	}
 
@@ -242,7 +168,7 @@ func TestGuildCreateJoinListLeave(t *testing.T) {
 	if r := find(out, 0x53, -1); r == nil || r[3] != 1 || find(out, 0x5D, -1) == nil || guildNumberOf(m) != 0 {
 		t.Fatalf("disband = % X", out)
 	}
-	if _, ok := w.guildMgr().byNumber(n); ok {
+	if _, ok := w.guildMgr().ByNumber(n); ok {
 		t.Fatal("guild still exists")
 	}
 }
@@ -275,9 +201,9 @@ func TestGuildUnionAndRival(t *testing.T) {
 	if r := find(b.drain(m2), 0xE6, -1); r == nil || r[5] != 1 {
 		t.Fatalf("E6 = % X", r)
 	}
-	ga, _ := w.guildMgr().byNumber(g1)
-	gb, _ := w.guildMgr().byNumber(g2)
-	if ga.Union != g1 || gb.Union != g1 || w.guildMgr().relation(g2, g1) != 1 || w.guildMgr().relation(g1, g2) != 1 {
+	ga, _ := w.guildMgr().ByNumber(g1)
+	gb, _ := w.guildMgr().ByNumber(g2)
+	if ga.Union != g1 || gb.Union != g1 || w.guildMgr().Relation(g2, g1) != 1 || w.guildMgr().Relation(g1, g2) != 1 {
 		t.Fatalf("union %d %d", ga.Union, gb.Union)
 	}
 	// C2 67 of Beta's master names the union "Alpha".
@@ -307,8 +233,8 @@ func TestGuildUnionAndRival(t *testing.T) {
 	if r := find(b.drain(m3), 0xE6, -1); r == nil || r[5] != 1 {
 		t.Fatalf("rival = % X", r)
 	}
-	if w.guildMgr().relation(g2, g3) != 2 || w.guildMgr().relation(g3, g2) != 2 {
-		t.Fatalf("rival relation %d %d", w.guildMgr().relation(g2, g3), w.guildMgr().relation(g3, g2))
+	if w.guildMgr().Relation(g2, g3) != 2 || w.guildMgr().Relation(g3, g2) != 2 {
+		t.Fatalf("rival relation %d %d", w.guildMgr().Relation(g2, g3), w.guildMgr().Relation(g3, g2))
 	}
 	// Rival kills give no PK.
 	killer := m3
@@ -323,15 +249,15 @@ func TestGuildUnionAndRival(t *testing.T) {
 	if r := find(b.drain(m1), 0xEB, -1); r == nil || r[4] != 1 {
 		t.Fatalf("EB = % X", r)
 	}
-	ga, _ = w.guildMgr().byNumber(g1)
-	gb, _ = w.guildMgr().byNumber(g2)
+	ga, _ = w.guildMgr().ByNumber(g1)
+	gb, _ = w.guildMgr().ByNumber(g2)
 	if ga.Union != 0 || gb.Union != 0 {
 		t.Fatalf("union after kick %d %d", ga.Union, gb.Union)
 	}
 	// Rivalry broken off by Alpha (E5 2/2, answered by Gamma).
 	ask(m1, m3, 2, 2)
 	answer(m3, m1, 2, 2, 1)
-	ga, _ = w.guildMgr().byNumber(g1)
+	ga, _ = w.guildMgr().ByNumber(g1)
 	if ga.Rival != 0 {
 		t.Fatal("rival not cleared")
 	}
@@ -405,37 +331,13 @@ func TestGuildWar(t *testing.T) {
 	if r := find(b.drain(a2), 0x63, -1); r == nil || r[3] != 0 {
 		t.Fatalf("63 loser = % X", r)
 	}
-	if g, _ := w.guildMgr().byNumber(g1); g.Score != 3 {
+	if g, _ := w.guildMgr().ByNumber(g1); g.Score != 3 {
 		t.Fatalf("G_Score = %d", g.Score)
 	}
 	b.advance(3e9)
 	w.warTick()
 	if w.guildWarOf(g1) != nil || w.guildWarOf(g2) != nil {
 		t.Fatal("war not cleared")
-	}
-}
-
-func TestGuildPersistsAcrossLoad(t *testing.T) {
-	mem, _ := store.NewMemory()
-	ctx := context.Background()
-	acc, _ := mem.CreateAccount(ctx, "a", "x", "")
-	mem.CreateCharacter(ctx, acc.ID, "Mas", 0)
-	mem.CreateCharacter(ctx, acc.ID, "Mem", 0)
-	num, _, _ := mem.GuildCreate(ctx, "Owls", "Mas", nil, store.GuildMasterStatus)
-	mem.GuildMemberAdd(ctx, "Owls", "Mem", store.GuildBattleMasterStatus)
-	m := &guildManager{byNum: map[int]*guildRecord{}, byName: map[string]*guildRecord{}, owner: map[string]*guildRecord{}}
-	if err := m.load(ctx, mem); err != nil {
-		t.Fatal(err)
-	}
-	g, slot, ok := m.of("Mem")
-	if !ok || g.Number != num || slot != 1 || g.Members[1].Status != 0x20 || g.Members[0].Name != "Mas" || g.Members[1].Server != -1 {
-		t.Fatalf("loaded = %+v slot %d", g.Members[:2], slot)
-	}
-	if r := m.addMember(ctx, "Owls", "Mem", 0); r != 3 {
-		t.Fatalf("re-add = %d", r)
-	}
-	if r := m.delMember(ctx, "Owls", "Nobody"); r != 3 {
-		t.Fatalf("del missing = %d", r)
 	}
 }
 
@@ -449,13 +351,14 @@ func TestGuildEndToEnd(t *testing.T) {
 		ch.Level = 200
 		env.store.SaveCharacter(ctx, ch)
 	}
-	env.store.GuildCreate(ctx, "Crew", "Boss", nil, store.GuildMasterStatus)
-	env.store.GuildMemberAdd(ctx, "Crew", "Mate", 0)
-	// The world loaded its guilds at start-up, before these rows: load them.
+	// The world loaded its guilds at start-up: create this one through the
+	// manager, which writes the rows and keeps it in memory.
 	m := env.world.guildMgr()
-	m.loaded = false
-	if err := m.load(ctx, env.store); err != nil {
-		t.Fatal(err)
+	if r, _ := m.Create(ctx, "Crew", "Boss", [32]byte{}, 0, -1); r != 1 {
+		t.Fatalf("create = %d", r)
+	}
+	if r := m.AddMember(ctx, "Crew", "Mate", -1); r != 1 {
+		t.Fatalf("add member = %d", r)
 	}
 
 	c := env.dial(t)
@@ -503,7 +406,7 @@ func TestGuildAcrossInstances(t *testing.T) {
 	b1.hub.register(b2.World)
 	m := b1.player(PlayerStart, "Master", 0, 130, 130)
 	n := guildSetup(t, b1, m, "Lions")
-	b1.guildMgr().addMember(context.Background(), "Lions", "Far", -1)
+	b1.guildMgr().AddMember(context.Background(), "Lions", "Far", -1)
 	far := b2.player(PlayerStart, "Far", 0, 130, 130)
 	b2.guildEnter(far)
 	b1.pump()
@@ -522,7 +425,7 @@ func TestGuildAcrossInstances(t *testing.T) {
 		t.Fatalf("remote chat = % X", c)
 	}
 	b2.guildLeave(far)
-	if g, _ := b1.guildMgr().byNumber(n); g.Members[1].Server != -1 {
+	if g, _ := b1.guildMgr().ByNumber(n); g.Members[1].Server != -1 {
 		t.Fatal("still online")
 	}
 }

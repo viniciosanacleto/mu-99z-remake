@@ -1,16 +1,13 @@
 package game
 
 import (
-	"bytes"
 	"encoding/binary"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/xshop"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
 // XShop recharge (CCustomXShop, 0x404a60 / 0x405030 / 0x405350): the PIX
@@ -29,62 +26,11 @@ func registerXshopRecharge(h *hooks) {
 	h.faHandlers[0x10] = sized(0xC6, (*World).xshopRechargeUpload)
 }
 
-// Layout of the 0x23f3-byte recharge block sent by FA 0F and received by
-// FA 10.
-const (
-	rechargeSize    = 0x23f3
-	rcActive        = 0x0000 // Ativo == 1
-	rcHolder        = 0x0001 // Titular (0x60)
-	rcKey           = 0x0061 // ChavePix (0x80)
-	rcCopy          = 0x00e1 // CopiaECola (0x200)
-	rcQRSize        = 0x02e1 // u16 matrix side (0..256)
-	rcQRBits        = 0x02e3 // side*side bits, row major (0x2000)
-	rcURL           = 0x22e3 // ImagemURL (0x100)
-	rcValue         = 0x23e3 // Valor (0x10), from the EMV tag 54 of CopiaECola
-	rechargeChunk   = 0xC0
-	rechargeMaxSide = 0x100
-)
-
-const (
-	rechargeInterval  = 3000 * time.Millisecond  // FA 0E and the first FA 10
-	rechargeUploadTTL = 10000 * time.Millisecond // 0x2711 > tick difference
-)
-
-// rechargeUpload is a GM upload in progress (the 0x2408-byte record of
-// CCustomXShop +0x04).
-type rechargeUpload struct {
-	Account string
-	At      time.Time
-	Data    [rechargeSize]byte
-	Filled  int
-}
-
-// packetRechargeChunk is C1 C6 FA 0F offset(u16) data[0xC0] (FUN_00404a60);
-// the last chunk is zero padded.
-func packetRechargeChunk(off int, d *[rechargeSize]byte) []byte {
-	p := newPacket(frame.C1, 0xFA, 0x0F, 0xC6)
-	u16le(p[4:], off)
-	copy(p[6:], d[off:min(off+rechargeChunk, rechargeSize)])
-	return p
-}
-
-// packetRechargeAck is C1 05 FA 11 (FUN_00404f90; the fifth byte is
-// never written).
-func packetRechargeAck() []byte { return newPacket(frame.C1, 0xFA, 0x11, 5) }
-
 // rechargePath is the xshop.toml holding the CustomXShopRecharge table.
 func (w *World) rechargePath() string { return w.cw2().xshopPath }
 
 // rechargeImageDir is the folder of the QR images (bare ImagemBMP names).
 func (w *World) rechargeImageDir() string { return filepath.Join(w.dataDir, "Custom") }
-
-// fieldText returns the NUL-terminated text of a fixed field.
-func fieldText(b []byte) string {
-	if i := bytes.IndexByte(b, 0); i >= 0 {
-		return string(b[:i])
-	}
-	return string(b)
-}
 
 // xshopRecharge is FUN_00404a60: at most every 3 s, the block is built from
 // the CustomXShopRecharge table and sent in 48 chunks.
@@ -93,7 +39,7 @@ func (w *World) xshopRecharge(o *Object, p []byte) {
 		return
 	}
 	s, now := cash(o), w.now()
-	if !s.RechargeAt.IsZero() && now.Sub(s.RechargeAt) < rechargeInterval {
+	if !s.RechargeAt.IsZero() && now.Sub(s.RechargeAt) < xshop.RechargeInterval {
 		return
 	}
 	s.RechargeAt = now
@@ -102,8 +48,8 @@ func (w *World) xshopRecharge(o *Object, p []byte) {
 		return
 	}
 	d := w.rechargeBlock(path)
-	for off := 0; off < rechargeSize; off += rechargeChunk {
-		w.send(o, packetRechargeChunk(off, d))
+	for off := 0; off < xshop.RechargeSize; off += xshop.RechargeChunk {
+		w.send(o, xshop.PacketRechargeChunk(off, d))
 	}
 }
 
@@ -112,224 +58,40 @@ func (w *World) xshopRecharge(o *Object, p []byte) {
 // a bare file name being taken from data/Data/Custom), converts the image
 // (FUN_00401bf0) and validates the result (FUN_00401140): an invalid block
 // is sent with Ativo 0.
-func (w *World) rechargeBlock(path string) *[rechargeSize]byte {
-	d := new([rechargeSize]byte)
+func (w *World) rechargeBlock(path string) *[xshop.RechargeSize]byte {
+	d := new([xshop.RechargeSize]byte)
 	var r gamedata.XShopRechargeFile
 	if f, err := gamedata.LoadXShopConfig(path); err == nil {
 		r = f.CustomXShopRecharge
 	}
 	if r.Ativo == 1 {
-		d[rcActive] = 1
+		d[xshop.RechargeActive] = 1
 	}
-	copy(d[rcHolder:], cutField(r.Titular, 0x60))
-	copy(d[rcKey:], cutField(r.ChavePix, 0x80))
-	copy(d[rcCopy:], cutField(r.CopiaECola, 0x200))
-	url := cutField(r.ImagemURL, 0x100)
-	copy(d[rcURL:], url)
-	img := cutField(r.ImagemBMP, 0x104)
+	copy(d[xshop.RechargeHolder:], xshop.CutField(r.Titular, 0x60))
+	copy(d[xshop.RechargeKey:], xshop.CutField(r.ChavePix, 0x80))
+	copy(d[xshop.RechargeCopy:], xshop.CutField(r.CopiaECola, 0x200))
+	url := xshop.CutField(r.ImagemURL, 0x100)
+	copy(d[xshop.RechargeURL:], url)
+	img := xshop.CutField(r.ImagemBMP, 0x104)
 	loaded := false
 	if img != "" {
 		if !strings.ContainsAny(img, `\/`) {
 			img = filepath.Join(w.rechargeImageDir(), img)
 		}
-		if loaded = loadRechargeImage(img, d); !loaded {
+		if loaded = xshop.LoadRechargeImage(img, d); !loaded {
 			w.log.Warn("[CustomXShop][RECHARGE] Cache local invalido/ausente", "file", img)
 		}
 	}
-	if !loaded && isHTTPURL(url) {
+	if !loaded && xshop.IsHTTPURL(url) {
 		w.log.Warn("[CustomXShop][RECHARGE] ImagemURL not downloaded (no network requests)", "url", url)
 	}
-	if !rechargeValid(d) {
-		d[rcActive] = 0
+	if !xshop.RechargeValid(d) {
+		d[xshop.RechargeActive] = 0
 	}
 	return d
 }
 
-// isHTTPURL is FUN_00401500.
-func isHTTPURL(s string) bool {
-	l := strings.ToLower(s)
-	return strings.HasPrefix(l, "http://") || strings.HasPrefix(l, "https://")
-}
-
-// rechargeValid is FUN_00401140: Ativo 0 or 1; Titular, ChavePix,
-// CopiaECola and ImagemURL NUL-terminated inside their fields without
-// control characters or '"'; a matrix side of at most 256. Valor is then
-// rebuilt from the EMV tag 54 of CopiaECola when it reads "digits.dd".
-func rechargeValid(d *[rechargeSize]byte) bool {
-	if d[rcActive] >= 2 {
-		return false
-	}
-	for _, f := range [][2]int{{rcHolder, 0x60}, {rcKey, 0x80}, {rcCopy, 0x200}, {rcURL, 0x100}} {
-		b := d[f[0] : f[0]+f[1]]
-		end := bytes.IndexByte(b, 0)
-		if end < 0 {
-			return false
-		}
-		for _, c := range b[:end] {
-			if c < 0x20 || c == '"' {
-				return false
-			}
-		}
-	}
-	if binary.LittleEndian.Uint16(d[rcQRSize:]) > rechargeMaxSide {
-		return false
-	}
-	d[rcValue] = 0
-	if v, ok := emvAmount(fieldText(d[rcCopy : rcCopy+0x200])); ok && amountText(v) {
-		clear(d[rcValue : rcValue+0x10])
-		copy(d[rcValue:], v)
-	}
-	return true
-}
-
-// emvAmount is FUN_00401080: walk the "tag(2) length(2 digits) value"
-// fields of the PIX copy-and-paste text and return the value of tag 54. A
-// malformed field, a second tag 54 or a value of 16 bytes or more fail.
-func emvAmount(s string) (string, bool) {
-	var out string
-	found := false
-	for pos := 0; pos < len(s); {
-		if pos+4 > len(s) {
-			return "", false
-		}
-		c1, c2 := s[pos+2], s[pos+3]
-		if c1 < '0' || c1 > '9' || c2 < '0' || c2 > '9' {
-			return "", false
-		}
-		n := int(c1-'0')*10 + int(c2-'0')
-		next := pos + 4 + n
-		if next > len(s) {
-			return "", false
-		}
-		if s[pos] == '5' && s[pos+1] == '4' {
-			if found || n >= 16 {
-				return "", false
-			}
-			out, found = s[pos+4:next], true
-		}
-		pos = next
-	}
-	return out, found
-}
-
-// amountText is the Valor test of FUN_00401140: at least 4 characters,
-// '.' third from the end, digits elsewhere.
-func amountText(v string) bool {
-	if len(v) < 4 || v[len(v)-3] != '.' {
-		return false
-	}
-	for i := 0; i < len(v); i++ {
-		if i != len(v)-3 && (v[i] < '0' || v[i] > '9') {
-			return false
-		}
-	}
-	return true
-}
-
 // --- image -> bit matrix ------------------------------------------------------------
-
-// bmpImage is an uncompressed 24/32-bit Windows bitmap.
-type bmpImage struct {
-	W, H    int
-	bpp     int
-	topDown bool
-	stride  int
-	pix     []byte
-}
-
-// decodeBMP reads BI_RGB (and 32-bit BI_BITFIELDS) bitmaps of 24 or 32
-// bits; the original goes through GDI+, which also reads other formats
-// (U-XSHOP-04). Alpha is ignored, as GDI+ does for these formats.
-func decodeBMP(b []byte) (*bmpImage, error) {
-	if len(b) < 54 || b[0] != 'B' || b[1] != 'M' {
-		return nil, fmt.Errorf("not a BMP")
-	}
-	off := int(binary.LittleEndian.Uint32(b[10:]))
-	w := int(int32(binary.LittleEndian.Uint32(b[18:])))
-	h := int(int32(binary.LittleEndian.Uint32(b[22:])))
-	bpp := int(binary.LittleEndian.Uint16(b[28:]))
-	comp := binary.LittleEndian.Uint32(b[30:])
-	if (bpp != 24 && bpp != 32) || (comp != 0 && !(comp == 3 && bpp == 32)) || w <= 0 || h == 0 {
-		return nil, fmt.Errorf("unsupported BMP (%d bpp, compression %d)", bpp, comp)
-	}
-	img := &bmpImage{W: w, H: h, bpp: bpp}
-	if h < 0 {
-		img.H, img.topDown = -h, true
-	}
-	img.stride = (w*bpp + 31) / 32 * 4
-	if off < 0 || off+img.stride*img.H > len(b) {
-		return nil, fmt.Errorf("truncated BMP")
-	}
-	img.pix = b[off:]
-	return img, nil
-}
-
-// at returns the RGB of (x, y), y counted from the top.
-func (m *bmpImage) at(x, y int) (r, g, bl uint32) {
-	row := y
-	if !m.topDown {
-		row = m.H - 1 - y
-	}
-	p := m.pix[row*m.stride+x*m.bpp/8:]
-	return uint32(p[2]), uint32(p[1]), uint32(p[0])
-}
-
-// loadRechargeImage is FUN_00401bf0: the image (at most 8192x8192) is
-// scaled into a side of min(max(width, height), 256), centred; a pixel is
-// set when its colour over white sums to less than 0x180.
-func loadRechargeImage(path string, d *[rechargeSize]byte) bool {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return false
-	}
-	img, err := decodeBMP(b)
-	if err != nil || img.W > 0x2000 || img.H > 0x2000 {
-		return false
-	}
-	big := max(img.W, img.H)
-	side := min(big, rechargeMaxSide)
-	dw, dh := max(img.W*side/big, 1), max(img.H*side/big, 1)
-	clear(d[rcQRBits : rcQRBits+0x2000])
-	binary.LittleEndian.PutUint16(d[rcQRSize:], uint16(side))
-	base := (side-dh)/2*side + (side-dw)/2
-	const a = 0xff // GDI+ reads these formats as opaque
-	over := func(c uint32) uint32 { return ((c-0xff)*a + 0xfe01) / 0xff }
-	for y := 0; y < dh; y++ {
-		sy := y * img.H / dh
-		for x := 0; x < dw; x++ {
-			r, g, bl := img.at(x*img.W/dw, sy)
-			if over(r)+over(g)+over(bl) < 0x180 {
-				bit := base + y*side + x
-				d[rcQRBits+bit>>3] |= 1 << (bit & 7)
-			}
-		}
-	}
-	return true
-}
-
-// encodeRechargeBMP is the image part of FUN_00405350: a top-down 32-bit
-// bitmap of the matrix, black (0x00000000) for set bits, 0x00FFFFFF
-// otherwise.
-func encodeRechargeBMP(d *[rechargeSize]byte) []byte {
-	n := int(binary.LittleEndian.Uint16(d[rcQRSize:]))
-	b := make([]byte, 0x36+n*n*4)
-	b[0], b[1] = 'B', 'M'
-	binary.LittleEndian.PutUint32(b[2:], uint32(len(b)))
-	binary.LittleEndian.PutUint32(b[10:], 0x36)
-	binary.LittleEndian.PutUint32(b[14:], 0x28)
-	binary.LittleEndian.PutUint32(b[18:], uint32(n))
-	binary.LittleEndian.PutUint32(b[22:], uint32(-int32(n)))
-	binary.LittleEndian.PutUint16(b[26:], 1)
-	binary.LittleEndian.PutUint16(b[28:], 32)
-	for i := 0; i < n*n; i++ {
-		v := uint32(0xffffff)
-		if d[rcQRBits+i>>3]&(1<<(i&7)) != 0 {
-			v = 0
-		}
-		binary.LittleEndian.PutUint32(b[0x36+i*4:], v)
-	}
-	return b
-}
 
 // --- FA 10: GM upload ---------------------------------------------------------------
 
@@ -343,46 +105,46 @@ func (w *World) xshopRechargeUpload(o *Object, p []byte) {
 		return
 	}
 	if !gmFull(o) {
-		w.send(o, packetRechargeAck())
+		w.send(o, xshop.PacketRechargeAck())
 		return
 	}
 	c, s, now := w.cw2(), cash(o), w.now()
 	login := o.P.Account.Login
 	off := int(binary.LittleEndian.Uint16(p[4:]))
 	if off == 0 {
-		if !s.UploadAt.IsZero() && now.Sub(s.UploadAt) < rechargeInterval {
-			w.send(o, packetRechargeAck())
+		if !s.UploadAt.IsZero() && now.Sub(s.UploadAt) < xshop.RechargeInterval {
+			w.send(o, xshop.PacketRechargeAck())
 			return
 		}
 		s.UploadAt = now
-		c.uploads[o.Index] = &rechargeUpload{Account: login, At: now}
+		c.uploads[o.Index] = &xshop.RechargeUpload{Account: login, At: now}
 	}
 	u := c.uploads[o.Index]
 	if u == nil {
 		return
 	}
-	if now.Sub(u.At) > rechargeUploadTTL || u.Account != login || off != u.Filled || off >= rechargeSize {
+	if now.Sub(u.At) > xshop.RechargeUploadTTL || u.Account != login || off != u.Filled || off >= xshop.RechargeSize {
 		delete(c.uploads, o.Index)
-		w.send(o, packetRechargeAck())
+		w.send(o, xshop.PacketRechargeAck())
 		return
 	}
-	n := min(rechargeChunk, rechargeSize-off)
+	n := min(xshop.RechargeChunk, xshop.RechargeSize-off)
 	copy(u.Data[off:off+n], p[6:6+n])
 	u.Filled += n
-	if u.Filled != rechargeSize {
+	if u.Filled != xshop.RechargeSize {
 		return
 	}
 	delete(c.uploads, o.Index)
-	if rechargeValid(&u.Data) && w.rechargeSave(&u.Data) {
+	if xshop.RechargeValid(&u.Data) && w.rechargeSave(&u.Data) {
 		w.log.Info("[CustomXShop][RECHARGE][SAVED]", "account", login, "name", o.P.Char.Name)
 	}
-	w.send(o, packetRechargeAck())
+	w.send(o, xshop.PacketRechargeAck())
 }
 
 // rechargeSave is FUN_00405350: the matrix goes to a new "pix*.tmp.bmp" in
 // data/Data/Custom (when it has a side) and the CustomXShopRecharge table
 // is rewritten (gamedata.WriteXShopRecharge). Old images are not removed.
-func (w *World) rechargeSave(d *[rechargeSize]byte) bool {
+func (w *World) rechargeSave(d *[xshop.RechargeSize]byte) bool {
 	c := w.cw2()
 	path := w.rechargePath()
 	if c.saving || path == "" {
@@ -392,13 +154,13 @@ func (w *World) rechargeSave(d *[rechargeSize]byte) bool {
 	defer func() { c.saving = false }()
 	dir := w.rechargeImageDir()
 	bmpName := ""
-	if binary.LittleEndian.Uint16(d[rcQRSize:]) != 0 {
+	if binary.LittleEndian.Uint16(d[xshop.RechargeQRSize:]) != 0 {
 		f, err := os.CreateTemp(dir, "pix*.tmp")
 		if err != nil {
 			return false
 		}
 		tmp := f.Name()
-		_, err = f.Write(encodeRechargeBMP(d))
+		_, err = f.Write(xshop.EncodeRechargeBMP(d))
 		if cerr := f.Close(); err == nil {
 			err = cerr
 		}
@@ -415,10 +177,10 @@ func (w *World) rechargeSave(d *[rechargeSize]byte) bool {
 	if bmpName != "" {
 		imgBase = filepath.Base(bmpName)
 	}
-	err := gamedata.WriteXShopRecharge(path, gamedata.XShopRechargeFile{Ativo: int(d[rcActive]),
-		Titular: fieldText(d[rcHolder : rcHolder+0x60]), ChavePix: fieldText(d[rcKey : rcKey+0x80]),
-		CopiaECola: fieldText(d[rcCopy : rcCopy+0x200]), ImagemURL: fieldText(d[rcURL : rcURL+0x100]),
-		ImagemBMP: imgBase, Valor: fieldText(d[rcValue : rcValue+0x10])})
+	err := gamedata.WriteXShopRecharge(path, gamedata.XShopRechargeFile{Ativo: int(d[xshop.RechargeActive]),
+		Titular: xshop.FieldText(d[xshop.RechargeHolder : xshop.RechargeHolder+0x60]), ChavePix: xshop.FieldText(d[xshop.RechargeKey : xshop.RechargeKey+0x80]),
+		CopiaECola: xshop.FieldText(d[xshop.RechargeCopy : xshop.RechargeCopy+0x200]), ImagemURL: xshop.FieldText(d[xshop.RechargeURL : xshop.RechargeURL+0x100]),
+		ImagemBMP: imgBase, Valor: xshop.FieldText(d[xshop.RechargeValue : xshop.RechargeValue+0x10])})
 	if err != nil {
 		if bmpName != "" {
 			os.Remove(bmpName)
@@ -426,12 +188,4 @@ func (w *World) rechargeSave(d *[rechargeSize]byte) bool {
 		return false
 	}
 	return true
-}
-
-// cutField is GetPrivateProfileStringA into a buffer of size bytes.
-func cutField(s string, size int) string {
-	if len(s) > size-1 {
-		return s[:size-1]
-	}
-	return s
 }

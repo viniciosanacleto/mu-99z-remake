@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
@@ -326,7 +327,7 @@ func packetPostChat(name string, msg []byte) []byte {
 // packetCustomNotice is the custom C1 86 F3 E4 type color text[128]
 // (FUN_004dc890).
 func packetCustomNotice(typ, color byte, text string) []byte {
-	p := newPacket(0xC1, 0xF3, 0xE4, 0x86)
+	p := packet.New(0xC1, 0xF3, 0xE4, 0x86)
 	p[4], p[5] = typ, color
 	if len(text) > 0x7F {
 		text = text[:0x7F]

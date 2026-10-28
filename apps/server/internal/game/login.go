@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/auth"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/character"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/crypto"
 )
 
@@ -68,7 +69,7 @@ func (w *World) handleLogin(o *Object, p []byte) {
 	var serial [16]byte
 	copy(serial[:], w.cfg.ServerSerial)
 	if !bytes.Equal(p[0x1c:0x21], w.cfg.ServerVersion[:]) || !bytes.Equal(p[0x21:0x31], serial[:]) {
-		w.send(o, packetLoginResult(6))
+		w.send(o, character.PacketLoginResult(6))
 		return
 	}
 	if o.P.LoginPending {
@@ -125,7 +126,7 @@ func (w *World) loginReply(c *conn, req auth.LoginRequest, result byte, sess *au
 	}
 	if !w.connectMemberAllowed(req.Account) && w.cfg.ConnectMemberCheck {
 		logout()
-		w.send(o, packetLoginResult(2))
+		w.send(o, character.PacketLoginResult(2))
 		return
 	}
 	if result != auth.ResultOK {
@@ -133,17 +134,17 @@ func (w *World) loginReply(c *conn, req auth.LoginRequest, result byte, sess *au
 		if o.P.LoginAttempts >= 3 {
 			code = 8
 		}
-		w.send(o, packetLoginResult(code))
+		w.send(o, character.PacketLoginResult(code))
 		return
 	}
 	if sess.Account.BlockCode != 0 {
 		logout()
-		w.send(o, packetLoginResult(5))
+		w.send(o, character.PacketLoginResult(5))
 		return
 	}
 	if sess.Account.Level < w.cfg.ServerLock {
 		logout()
-		w.send(o, packetLoginResult(10))
+		w.send(o, character.PacketLoginResult(10))
 		return
 	}
 	if !w.connectionAllowed(o, sess) {
@@ -154,7 +155,7 @@ func (w *World) loginReply(c *conn, req auth.LoginRequest, result byte, sess *au
 	o.State = StateLogged
 	o.P.Session = sess
 	o.P.Account = sess.Account
-	w.send(o, packetLoginResult(1))
+	w.send(o, character.PacketLoginResult(1))
 	w.log.Info("AddAccountInfo", "index", o.Index, "account", sess.Account.Login, "ip", o.P.IP)
 }
 

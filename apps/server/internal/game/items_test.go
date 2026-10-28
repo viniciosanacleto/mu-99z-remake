@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/mapitem"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
@@ -149,19 +150,19 @@ func TestGridPlacement(t *testing.T) {
 }
 
 func TestPacketLayouts(t *testing.T) {
-	m := &mapItem{X: 130, Y: 131, State: mapItemNew, Money: 0x01020304}
+	m := &mapitem.Item{X: 130, Y: 131, State: mapitem.StateNew, Money: 0x01020304}
 	m.Item = item.Empty()
-	m.Item.Index = MoneyIndex
-	e := mapItemEntry(0x123, m)
+	m.Item.Index = mapitem.MoneyIndex
+	e := mapitem.Entry(0x123, m)
 	want := []byte{0x81, 0x23, 130, 131, 0x0F, 0x02, 0x03, 0x00, 0x04, 0xE0, 0x01}
 	if !bytes.Equal(e, want) {
 		t.Fatalf("money entry = % X", e)
 	}
-	p := packetMapItems([][]byte{e})
+	p := mapitem.PacketItems([][]byte{e})
 	if p[0] != 0xC2 || int(p[1])<<8|int(p[2]) != 16 || p[3] != 0x20 || p[4] != 1 {
 		t.Fatalf("C2 20 = % X", p)
 	}
-	d := packetMapItemDestroy([]int{5, 0x101})
+	d := mapitem.PacketDestroy([]int{5, 0x101})
 	if !bytes.Equal(d, []byte{0xC2, 0, 9, 0x21, 2, 0, 5, 1, 1}) {
 		t.Fatalf("C2 21 = % X", d)
 	}
@@ -431,8 +432,8 @@ func TestMoneyPickupAndExpiry(t *testing.T) {
 	b.mapItemProc() // new -> normal
 	b.mapItemProc() // expired -> removed
 	found := false
-	for _, m := range tbl.items {
-		if m.valid() && m.Item.Index == item.Make(14, 0) && m.State == mapItemRemoved {
+	for _, m := range tbl.Items {
+		if m.Valid() && m.Item.Index == item.Make(14, 0) && m.State == mapitem.StateRemoved {
 			found = true
 		}
 	}

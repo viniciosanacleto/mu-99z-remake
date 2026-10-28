@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/chaosmix"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 )
 
@@ -73,8 +74,8 @@ func TestChaosAnnounceAfterPlus13Mix(t *testing.T) {
 	}
 	plusBox(o, 12, false)
 	for i := 0; i < 3; i++ {
-		c.Box[4+2*i] = item.Item{Index: idxBless, Durability: 1}
-		c.Box[5+2*i] = item.Item{Index: idxSoul, Durability: 1}
+		c.Box[4+2*i] = item.Item{Index: chaosmix.ItemBless, Durability: 1}
+		c.Box[5+2*i] = item.Item{Index: chaosmix.ItemSoul, Durability: 1}
 	}
 	c.Box[3].Index = item.Make(5, 0)
 	b.handleChaosMix(o, []byte{0xC1, 4, 0x86, 0x17})

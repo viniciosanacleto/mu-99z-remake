@@ -5,13 +5,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/chaoscastle"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/devilsquare"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
 func TestCCPacketLayouts(t *testing.T) {
-	r := packetCCResult(1, "Hero", ccUser{UserKills: 0x01020304, MonsterKills: 7, Exp: 7000})
+	r := chaoscastle.PacketResult(1, "Hero", chaoscastle.User{UserKills: 0x01020304, MonsterKills: 7, Exp: 7000})
 	want := make([]byte, 0x1D)
 	copy(want, []byte{0xC1, 0x1D, 0x93, 1, 0xFE, 'H', 'e', 'r', 'o'})
 	copy(want[17:], []byte{7, 0, 0, 0, 0x58, 0x1B, 0, 0, 4, 3, 2, 1})
@@ -21,14 +23,14 @@ func TestCCPacketLayouts(t *testing.T) {
 	if s := packetCCStatus(0x0258, 100, 41); !bytes.Equal(s, []byte{0xC1, 0x0E, 0x9B, 6, 0x58, 0x02, 100, 0, 41, 0, 0, 0, 0xFF, 0}) {
 		t.Fatalf("9B 06 = % X", s)
 	}
-	if p := packetCCEnterResult(7); !bytes.Equal(p, []byte{0xC1, 0x05, 0xAF, 0x01, 7}) {
+	if p := chaoscastle.PacketEnterResult(7); !bytes.Equal(p, []byte{0xC1, 0x05, 0xAF, 0x01, 7}) {
 		t.Fatalf("AF 01 = % X", p)
 	}
 	// FUN_00432570 (CL = 0) and FUN_00432640 (CL = 1), DL = 1 rectangle.
-	if p := packetMapAttr(1, false, ccSafeRect); !bytes.Equal(p, []byte{0xC1, 0x0B, 0x46, 0, 1, 0, 1, 23, 75, 44, 108}) {
+	if p := packetMapAttr(1, false, chaoscastle.SafeRect); !bytes.Equal(p, []byte{0xC1, 0x0B, 0x46, 0, 1, 0, 1, 23, 75, 44, 108}) {
 		t.Fatalf("46 set = % X", p)
 	}
-	if p := packetMapAttr(1, true, ccSafeRect); !bytes.Equal(p, []byte{0xC1, 0x0B, 0x46, 0, 1, 1, 1, 23, 75, 44, 108}) {
+	if p := packetMapAttr(1, true, chaoscastle.SafeRect); !bytes.Equal(p, []byte{0xC1, 0x0B, 0x46, 0, 1, 1, 1, 23, 75, 44, 108}) {
 		t.Fatalf("46 clear = % X", p)
 	}
 }
@@ -39,7 +41,7 @@ func ccWorld(t *testing.T) *bareWorld {
 	b := newBareWorld(t)
 	b.clock = time.Date(2026, 10, 22, 0, 54, 0, 0, time.UTC)
 	for i := range b.cc().c {
-		b.cc().c[i].State = dsEmpty
+		b.cc().c[i].State = devilsquare.StateEmpty
 		b.ccEnterEmpty(&b.cc().c[i])
 	}
 	return b
@@ -48,7 +50,7 @@ func ccWorld(t *testing.T) *bareWorld {
 func ccEnterPacket(slot int) []byte { return []byte{0xC1, 0x06, 0xAF, 0x01, 0x00, byte(slot)} }
 
 func ccArmor(b *bareWorld, o *Object) int {
-	return b.insertInventory(o, item.Item{Index: itemCCArmor, Durability: 1})
+	return b.insertInventory(o, item.Item{Index: chaoscastle.ItemArmor, Durability: 1})
 }
 
 func TestChaosCastleRun(t *testing.T) {
@@ -67,7 +69,7 @@ func TestChaosCastleRun(t *testing.T) {
 		b.ccTick()
 	}
 	tick(6 * time.Minute)
-	if c.State != dsReady || !c.Open {
+	if c.State != devilsquare.StateReady || !c.Open {
 		t.Fatalf("ready: state %d", c.State)
 	}
 	// 91 type 4 while READY: users of the castle.
@@ -79,7 +81,7 @@ func TestChaosCastleRun(t *testing.T) {
 		b.drain(o)
 		b.handleCCEnter(o, ccEnterPacket(slot))
 		pk := b.drain(o)
-		if p := find(pk, 0xAF, 1); !bytes.Equal(p, packetCCEnterResult(0)) || o.Map != 19 || o.P.Char.Money != 120000 ||
+		if p := find(pk, 0xAF, 1); !bytes.Equal(p, chaoscastle.PacketEnterResult(0)) || o.Map != 19 || o.P.Char.Money != 120000 ||
 			!o.P.Inventory[slot].IsEmpty() || find(pk, 0x28, -1) == nil || find(pk, 0x22, -1) == nil || o.P.entries.CC != 1 {
 			t.Fatalf("enter = % X map %d money %d", p, o.Map, o.P.Char.Money)
 		}
@@ -101,16 +103,16 @@ func TestChaosCastleRun(t *testing.T) {
 		t.Fatalf("92 0A = % X", p)
 	}
 	tick(30 * time.Second)
-	if c.State != dsStand || a.P.Char.Money+d.P.Char.Money != 240000+128000 {
+	if c.State != devilsquare.StateStand || a.P.Char.Money+d.P.Char.Money != 240000+128000 {
 		t.Fatalf("stand: state %d jackpot %d", c.State, a.P.Char.Money+d.P.Char.Money)
 	}
 	b.drain(a)
 	tick(time.Minute)
 	pk := b.drain(a)
-	if c.State != dsStart || c.mobCount() != 98 || c.Total != 100 || tr.Get(30, 80)&gamedata.AttrSafeZone != 0 {
+	if c.State != devilsquare.StateStart || c.mobCount() != 98 || c.Total != 100 || tr.Get(30, 80)&gamedata.AttrSafeZone != 0 {
 		t.Fatalf("start: state %d mobs %d total %d", c.State, c.mobCount(), c.Total)
 	}
-	if p := find(pk, 0x46, -1); !bytes.Equal(p, packetMapAttr(1, true, ccSafeRect)) || find(pk, 0x9B, -1)[3] != 5 {
+	if p := find(pk, 0x46, -1); !bytes.Equal(p, packetMapAttr(1, true, chaoscastle.SafeRect)) || find(pk, 0x9B, -1)[3] != 5 {
 		t.Fatalf("start packets 46 % X 9B % X", p, find(pk, 0x9B, -1))
 	}
 	// Step 1 when users + monsters < 41.
@@ -174,7 +176,7 @@ func TestChaosCastleRun(t *testing.T) {
 	tick(time.Second)
 	pk = b.drain(a)
 	r := find(pk, 0x93, -1)
-	if c.State != dsClean || c.Winner != a.Index || r == nil || r[3] != 1 || r[4] != 0xFE || r[17] != 1 ||
+	if c.State != devilsquare.StateClean || c.Winner != a.Index || r == nil || r[3] != 1 || r[4] != 0xFE || r[17] != 1 ||
 		r[21] != byte(7000&0xFF) || r[22] != byte(7000>>8) {
 		t.Fatalf("clean: state %d winner %d result % X", c.State, c.Winner, r)
 	}
@@ -186,7 +188,7 @@ func TestChaosCastleRun(t *testing.T) {
 		t.Fatalf("drops %+v", drops)
 	}
 	tick(4 * time.Minute)
-	if c.State != dsEmpty || c.userCount() != 0 || a.Map == 19 || c.Step != 0 || tr.Get(23, 75)&gamedata.AttrNoGround != 0 {
+	if c.State != devilsquare.StateEmpty || c.userCount() != 0 || a.Map == 19 || c.Step != 0 || tr.Get(23, 75)&gamedata.AttrNoGround != 0 {
 		t.Fatalf("empty: state %d users %d map %d", c.State, c.userCount(), a.Map)
 	}
 }
@@ -194,17 +196,17 @@ func TestChaosCastleRun(t *testing.T) {
 func TestChaosCastleStandCancel(t *testing.T) {
 	b := ccWorld(t)
 	c := &b.cc().c[1]
-	c.State, c.Open = dsReady, true
+	c.State, c.Open = devilsquare.StateReady, true
 	c.setRemain(b.now(), 1)
 	b.advance(2 * time.Second)
 	b.ccTick()
-	if c.State != dsStand {
+	if c.State != devilsquare.StateStand {
 		t.Fatalf("state %d", c.State)
 	}
 	// ChaosCastleMinUser = 1 and no user: back to EMPTY.
 	b.advance(time.Second)
 	b.ccTick()
-	if c.State != dsEmpty {
+	if c.State != devilsquare.StateEmpty {
 		t.Fatalf("state %d", c.State)
 	}
 }
@@ -219,7 +221,7 @@ func TestChaosCastleEntryChecks(t *testing.T) {
 		b.drain(o)
 		slot := -1
 		for s, it := range o.P.Inventory {
-			if !it.IsEmpty() && it.Index == itemCCArmor {
+			if !it.IsEmpty() && it.Index == chaoscastle.ItemArmor {
 				slot = s
 			}
 		}
@@ -235,7 +237,7 @@ func TestChaosCastleEntryChecks(t *testing.T) {
 	}
 	expect := func(name string, r byte) {
 		t.Helper()
-		if p := try(); !bytes.Equal(p, packetCCEnterResult(r)) {
+		if p := try(); !bytes.Equal(p, chaoscastle.PacketEnterResult(r)) {
 			t.Fatalf("%s: % X", name, p)
 		}
 	}
@@ -273,7 +275,7 @@ func TestChaosCastleEntryChecks(t *testing.T) {
 	}
 	expect("full", 5)
 	for i := range c.Users {
-		c.Users[i] = ccUser{Index: -1}
+		c.Users[i] = chaoscastle.User{Index: -1}
 	}
 	o.P.Char.Level = 10
 	notice("level")
@@ -287,12 +289,12 @@ func TestChaosCastleEntryChecks(t *testing.T) {
 func TestChaosCastlePushAndKills(t *testing.T) {
 	b := ccWorld(t)
 	c := &b.cc().c[0]
-	c.State = dsStart
+	c.State = devilsquare.StateStart
 	a := questPlayer(b, PlayerStart, 1, 20)
 	v := questPlayer(b, PlayerStart+1, 1, 20)
 	for i, o := range []*Object{a, v} {
 		o.Map = 18
-		c.Users[i] = ccUser{Index: o.Index}
+		c.Users[i] = chaoscastle.User{Index: o.Index}
 	}
 	set := func(o *Object, x, y int) { o.X, o.Y, o.TX, o.TY = x, y, x, y; mv(o).OldX, mv(o).OldY = x, y }
 	// Same cell: random directions (0 = +1), distance 0 -> 4 cells.
@@ -329,7 +331,7 @@ func TestChaosCastlePushAndKills(t *testing.T) {
 		t.Fatalf("experience %+v want %d", *u, want)
 	}
 	// The PvP / walk rules see START.
-	if b.hooks.chaosCastleState(b.World, 0) != dsStart || b.hooks.chaosCastleState(b.World, 6) != 0 {
+	if b.hooks.chaosCastleState(b.World, 0) != devilsquare.StateStart || b.hooks.chaosCastleState(b.World, 6) != 0 {
 		t.Fatal("state hook")
 	}
 }

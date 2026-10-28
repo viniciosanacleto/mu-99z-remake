@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
@@ -24,8 +25,8 @@ func registerItemuse(h *hooks) {
 // packetLife is C1 0C 26 type life(BE u16, 65000 max) 00 00 life(u32)
 // (FUN_004da3e0; type in CL: 0xFF current, 0xFE maximum, 0xFD unlock).
 func packetLife(typ byte, life int) []byte {
-	p := newPacket(frame.C1, 0x26, int(typ), 0x0C)
-	v := clamp65000(life)
+	p := packet.New(frame.C1, 0x26, int(typ), 0x0C)
+	v := packet.Clamp65000(life)
 	p[4], p[5] = byte(v>>8), byte(v)
 	binary.LittleEndian.PutUint32(p[8:], uint32(life))
 	return p
@@ -34,8 +35,8 @@ func packetLife(typ byte, life int) []byte {
 // packetMana is C1 10 27 FF mana(BE u16) bp(BE u16) mana(u32) bp(u32)
 // (FUN_004da4c0).
 func packetMana(mana, bp int) []byte {
-	p := newPacket(frame.C1, 0x27, 0xFF, 0x10)
-	m, b := clamp65000(mana), clamp65000(bp)
+	p := packet.New(frame.C1, 0x27, 0xFF, 0x10)
+	m, b := packet.Clamp65000(mana), packet.Clamp65000(bp)
 	p[4], p[5] = byte(m>>8), byte(m)
 	p[6], p[7] = byte(b>>8), byte(b)
 	binary.LittleEndian.PutUint32(p[8:], uint32(mana))

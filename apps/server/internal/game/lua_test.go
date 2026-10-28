@@ -12,6 +12,7 @@ import (
 
 	lua "github.com/Shopify/go-lua"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/mapitem"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
@@ -379,7 +380,7 @@ func TestLuaPermissionBlocksDrop(t *testing.T) {
 	if o.P.Inventory[12].IsEmpty() {
 		t.Fatal("drop allowed with permission 5")
 	}
-	if p := find(b.drain(o), 0x23, -1); !bytes.Equal(p, packetDropResult(0, 12)) {
+	if p := find(b.drain(o), 0x23, -1); !bytes.Equal(p, mapitem.PacketDropResult(0, 12)) {
 		t.Fatalf("drop result % X", p)
 	}
 	if got := luaGet(t, b, fmt.Sprintf(`PermissionCheck(%d, 5)`, o.Index)); got != "1" {

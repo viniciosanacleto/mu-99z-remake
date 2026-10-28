@@ -11,6 +11,8 @@ import (
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/auth"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/gsconfig"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/chaosmix"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/character"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/charset"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/crypto"
@@ -106,7 +108,7 @@ type World struct {
 	du       *dataUses                // datauses.go: freebies, CommandRequirement, MonsterMove/Schedule, BlackList...
 	lua      *luaScripts              // lua.go: ScriptMain.lua / CalcCharacter.lua states and the bridge
 
-	chaos      *chaosData                   // chaos.go: EventItemBag, ItemOptionRate, ExcellentOptionRate, SetItemType
+	chaos      *chaosmix.Data               // chaos.go: EventItemBag, ItemOptionRate, ExcellentOptionRate, SetItemType
 	petExp     [petMaxTableLevel + 1]uint32 // pet.go: DAT_00770de8
 	petExpOnce sync.Once
 	csLocal    *castleSync // castlesiege_tax.go: castle sync of a World without hub
@@ -347,13 +349,13 @@ func (w *World) accept(c *conn) {
 		return
 	}
 	if w.closing {
-		c.sendAndClose(packetLoginResult(2))
+		c.sendAndClose(character.PacketLoginResult(2))
 		go c.writer()
 		return
 	}
 	limit := min(w.cfg.MaxUsers, 1000)
 	if w.users >= limit {
-		c.sendAndClose(packetLoginResult(4))
+		c.sendAndClose(character.PacketLoginResult(4))
 		go c.writer()
 		return
 	}
@@ -388,7 +390,7 @@ func (w *World) accept(c *conn) {
 		func(p gscodec.Packet) { w.post(func() { w.handlePacket(c, p) }) },
 		func() { w.post(func() { w.disconnected(c) }) },
 	)
-	c.send(packetJoinResult(idx, w.cfg.ServerVersion, w.cfg.ServerCode))
+	c.send(character.PacketJoinResult(idx, w.cfg.ServerVersion, w.cfg.ServerCode))
 }
 
 // disconnected runs when the socket is gone (FUN_00505150 / gObjDel).

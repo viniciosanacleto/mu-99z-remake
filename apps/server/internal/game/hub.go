@@ -3,6 +3,8 @@ package game
 import (
 	"strings"
 	"sync"
+
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/guild"
 )
 
 // Hub connects the game instances of the process. It replaces the
@@ -14,8 +16,8 @@ type Hub struct {
 	worlds map[int]*World
 	online map[string]OnlineChar // lower(name)
 
-	castle *castleSync   // castlesiege_tax.go: CCastleSiegeSync
-	guilds *guildManager // guild_ds.go: DataServer guild manager
+	castle *castleSync    // castlesiege_tax.go: CCastleSiegeSync
+	guilds *guild.Manager // guild_ds.go: DataServer guild manager
 }
 
 // OnlineChar is an entry of the online map.
@@ -28,7 +30,7 @@ type OnlineChar struct {
 
 func NewHub() *Hub {
 	return &Hub{worlds: map[int]*World{}, online: map[string]OnlineChar{},
-		castle: newCastleSync(), guilds: newGuildManager()}
+		castle: newCastleSync(), guilds: guild.NewManager()}
 }
 
 func (h *Hub) register(w *World) {

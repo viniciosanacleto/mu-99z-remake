@@ -5,49 +5,10 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/character"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/charset"
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
-
-// classByte is the CharSet byte 0 formula applied to a DB class
-// (FUN_00473770 / FUN_00472d00).
-func classByte(dbClass byte) byte {
-	return (dbClass>>4)*32 - (dbClass&0xF)>>1 + dbClass*16
-}
-
-// summaryPieces converts the DataServer 5-byte equipment records (DB item
-// bytes 0, 1, 7, 8, 9) into CharSet pieces.
-func summaryPieces(inv []byte) [charset.Slots]charset.Piece {
-	var ps [charset.Slots]charset.Piece
-	for k := 0; k < charset.Slots; k++ {
-		b := inv[k*store.ItemDBSize:]
-		it, ok := item.DecodeDB(b)
-		if !ok {
-			ps[k] = charset.Piece{Index: -1}
-			continue
-		}
-		ps[k] = charset.Piece{Index: it.Index, Level: it.Level, Excellent: it.Excellent, SetOption: it.SetOption}
-	}
-	return ps
-}
-
-// summaryRecords builds the 9x5-byte block of C1 32 F3 F9.
-func summaryRecords(inv []byte) []byte {
-	out := make([]byte, 45)
-	for k := 0; k < 9; k++ {
-		b := inv[k*store.ItemDBSize:]
-		r := out[k*5:]
-		if b[0] == 0xFF && b[7]&0x80 != 0 && b[9]&0xF0 == 0xF0 {
-			for i := 0; i < 5; i++ {
-				r[i] = 0xFF
-			}
-			continue
-		}
-		r[0], r[1], r[2], r[3], r[4] = b[0], b[1], b[7], b[8], b[9]
-	}
-	return out
-}
 
 // handleCharList is F3 00 (FUN_00475120 -> DataServer 0x01 ->
 // FUN_00472d00).
@@ -76,11 +37,11 @@ func (w *World) handleCharList(o *Object) {
 
 func (w *World) sendCharList(o *Object, list []store.CharacterSummary) {
 	maxLevel := 0
-	entries := make([]charListEntry, 0, len(list))
+	entries := make([]character.ListEntry, 0, len(list))
 	for _, s := range list {
 		maxLevel = max(maxLevel, s.Level)
-		cs := charset.Build(charset.Input{DBClass: s.Class, Items: summaryPieces(s.Inventory)}, w.data.Custom)
-		entries = append(entries, charListEntry{Slot: byte(s.Slot), Name: s.Name, Level: s.Level,
+		cs := charset.Build(charset.Input{DBClass: s.Class, Items: character.SummaryPieces(s.Inventory)}, w.data.Custom)
+		entries = append(entries, character.ListEntry{Slot: byte(s.Slot), Name: s.Name, Level: s.Level,
 			CtlCode: s.CtlCode, CharSet: cs, GuildStatus: s.GuildStatus})
 	}
 	al := o.P.Account.Level
@@ -98,23 +59,18 @@ func (w *World) sendCharList(o *Object, list []store.CharacterSummary) {
 		flag = 4
 	}
 	o.P.ClassFlag = flag
-	w.send(o, packetCharList(flag, byte(o.P.Account.MoveCount), entries))
+	w.send(o, character.PacketList(flag, byte(o.P.Account.MoveCount), entries))
 	for i, s := range list {
 		if i > 4 {
 			break
 		}
 		if s.Slot < 5 {
-			w.send(o, packetCharEquipment(byte(s.Slot), summaryRecords(s.Inventory)))
+			w.send(o, character.PacketEquipment(byte(s.Slot), character.SummaryRecords(s.Inventory)))
 		}
 	}
-	w.send(o, packetCharListInfo(flag, w.cfg.Int("Common", "ExperienceMultiplierConstA", 0),
+	w.send(o, character.PacketListInfo(flag, w.cfg.Int("Common", "ExperienceMultiplierConstA", 0),
 		w.cfg.Int("Common", "ExperienceMultiplierConstB", 0), w.cfg.Int("Common", "MaxLevel", 0),
 		w.cfg.CharDeleteMaxLevel))
-}
-
-// validName is CheckTextSymbol (FUN_00513850).
-func validName(name string) bool {
-	return name != "" && !strings.ContainsAny(name, " \"%'/\\_")
 }
 
 // handleCharCreate is F3 01 (FUN_004d95c0): [4..13] name, [14] class.
@@ -123,8 +79,8 @@ func (w *World) handleCharCreate(o *Object, p []byte) {
 		return
 	}
 	name := cString(p[4:14])
-	fail := func() { w.send(o, packetCreateResult(0, name, 0, 0, 0)) }
-	if !w.cfg.CharCreateSwitch || !validName(name) {
+	fail := func() { w.send(o, character.PacketCreateResult(0, name, 0, 0, 0)) }
+	if !w.cfg.CharCreateSwitch || !character.ValidName(name) {
 		fail()
 		return
 	}
@@ -174,10 +130,10 @@ func (w *World) handleCharCreate(o *Object, p []byte) {
 				result = store.CreateError
 			}
 			if result != store.CreateOK {
-				w.send(o, packetCreateResult(byte(result), name, 0, 0, 0))
+				w.send(o, character.PacketCreateResult(byte(result), name, 0, 0, 0))
 				return
 			}
-			w.send(o, packetCreateResult(1, name, byte(slot), 1, classByte(cls)))
+			w.send(o, character.PacketCreateResult(1, name, byte(slot), 1, character.ClassByte(cls)))
 		}
 	})
 }
@@ -199,7 +155,7 @@ func (w *World) handleCharDelete(o *Object, p []byte) {
 		return
 	}
 	if !w.cfg.CharDeleteSwitch {
-		w.send(o, packetDeleteResult(2))
+		w.send(o, character.PacketDeleteResult(2))
 		return
 	}
 	if w.cfg.PersonalCodeCheck {
@@ -214,13 +170,13 @@ func (w *World) handleCharDelete(o *Object, p []byte) {
 			pid = ""
 		}
 		if len(code) < 7 || len(pid) < 7 || code[:7] != pid[:7] {
-			w.send(o, packetDeleteResult(2))
+			w.send(o, character.PacketDeleteResult(2))
 			return
 		}
 	}
 	if o.P.Account.Lock > 0 {
 		w.systemMessage(o, w.messageFor(o, 0x6F2))
-		w.send(o, packetDeleteResult(2))
+		w.send(o, character.PacketDeleteResult(2))
 		return
 	}
 	name := cString(p[4:14])
@@ -237,9 +193,9 @@ func (w *World) handleCharDelete(o *Object, p []byte) {
 				w.log.Error("delete character", "err", err)
 			}
 			if ok && err == nil {
-				w.send(o, packetDeleteResult(1))
+				w.send(o, character.PacketDeleteResult(1))
 			} else {
-				w.send(o, packetDeleteResult(0))
+				w.send(o, character.PacketDeleteResult(0))
 			}
 		}
 	})
@@ -274,14 +230,4 @@ func (w *World) handleCharSelect(o *Object, p []byte) {
 			w.enterWorld(o, ch)
 		}
 	})
-}
-
-// validDBClass is the class whitelist of FUN_004cc730.
-func validDBClass(c byte) bool {
-	switch c {
-	case 0x00, 0x01, 0x02, 0x10, 0x11, 0x12, 0x20, 0x21, 0x22, 0x30, 0x32, 0x40, 0x42,
-		0x50, 0x51, 0x52, 0x60, 0x62:
-		return true
-	}
-	return false
 }

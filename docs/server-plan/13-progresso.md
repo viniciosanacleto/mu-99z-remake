@@ -161,6 +161,7 @@ Já refletidas em [02](02-protocolo-de-rede.md) e [03](03-connect-server.md):
 | `internal/gamedata` | terreno e as tabelas de `config/data` (esquema TOML por grupo em `*_config.go`, cache do arquivo decodificado) |
 | `internal/game` | `World` (goroutine única por instância; `hooks.go`: tabela de hooks e de despacho de cada `World`, montada por `newHooks` com as funções `register<Arquivo>` em ordem fixa, sem `init()`) e os módulos: login/personagens/entrada (`login.go`, `character.go`, `enterworld.go`), viewport, movimento/teleporte/chat/comandos (A), monstros/NPC/combate (B), itens/lojas/baú/trade (C), atributos/level/party/PK (D), amigos, avisos, HackPacketCheck, Hub |
 | `internal/game/item`, `internal/game/charset` | codecs de item (16 bytes DB / 7 bytes wire) e CharSet de 18 bytes |
+| `internal/game/<domínio>` (2026-10-28) | código de cada domínio que não depende do `World`/`Object` (constantes, builders de pacote, funções puras e tipos com lógica própria): `packet` (helpers de montagem), `castlesiege`, `guild` (`guild.Manager`, o DataServer de guild), `devilsquare`, `bloodcastle`, `chaoscastle`, `reconnect`, `effect`, `monsterskill`, `friend`, `mapitem`, `xshop`, `chaosmix`, `move`, `character`. O ator, os handlers e as structs de estado de jogador/mundo ficam em `internal/game` |
 
 Configuração em `apps/server/config/` (TOML gerado pelo `cmd/configconv` a partir dos originais) e binários em `apps/server/data/` com os caminhos originais (`Data/Terrain`, `Data/Script`, `Data/Hack/{Enc2,Dec1}.dat`, `Data/Skill/SkillElect.hit`, `Data/Common/Protect`, `DB/MuOnline.sql`). Chaves do cliente usadas só em teste: `internal/protocol/crypto/testdata/{Enc1,Dec2}.dat`.
 
@@ -183,6 +184,7 @@ Configuração em `apps/server/config/` (TOML gerado pelo `cmd/configconv` a par
 | 2026-10-27 | idem, após o teste de carga (`cmd/muload`, `internal/loadbot`, flags do `muserver`) | Todos `ok` (`internal/game` 286 s; `cmd/muserver` inclui `TestLoadBots`, 3 bots reais contra o servidor em processo) menos `internal/capture` e `cmd/muproxy`, pelo mesmo `Enc1.dat` ausente |
 | 2026-10-27 | idem, após a correção da patente (U-LOAD-01) | Todos `ok` (`internal/game` 283 s) menos `internal/capture` e `cmd/muproxy` (mesmo `Enc1.dat` ausente). `cmd/muload` com 1/10/50/100/200 jogadores: zero desconexões |
 | 2026-10-28 | `gofmt -l . && go vet ./... && go test -count=1 ./...`, mais `go test -race` em `internal/game`, `internal/connect`, `internal/capture`, `internal/auth`, `cmd/muserver` e `cmd/muproxy`, após a revisão de boas práticas Go | Todos `ok`, inclusive `internal/capture` e `cmd/muproxy`, que agora leem as chaves do cliente de `internal/protocol/crypto/testdata` (`internal/game` 64 s; 302 s com `-race`) |
+| 2026-10-28 | `gofmt -l . && go vet ./... && go test -count=1 ./...`, mais `go test -race -count=1 ./internal/game/...`, após dividir `internal/game` em pacotes por domínio | Todos `ok`, inclusive os 15 pacotes novos (`internal/game` 64 s; 299 s com `-race`) |
 
 ## Bugs do original ainda reproduzidos (não corrigidos)
 
@@ -222,4 +224,8 @@ Blocos 1–13 concluídos, mais o teste de carga (2026-10-27, doc [18](18-teste-
    Continuam pendentes:
    - **Incógnita:** o duelo deveria recusar quem está em trade (o original testa os slots de trade `obj+0x2c4..` contra `0xaa`), mas nenhum módulo registra `hooks.tradeOpen`, então `tradeOpen` é sempre falso, como já era antes. Falta confirmar no REA se equivale a `inTrade`.
    - `monsterRand`/`chaosRand` ainda são globais trocados pelos testes (`fixRand`, `fixChaosRand`). Mover para o `World` exige passar o gerador às fórmulas puras (`attackDamage`, `hitCheck`, `chaosRollBag`...).
-   - `internal/game` tem cerca de 50 mil linhas num pacote só. Dividir por domínio é a próxima refatoração estrutural.
+   - ~~`internal/game` tem cerca de 50 mil linhas num pacote só.~~ **Dividido por domínio em 2026-10-28** (escolha do usuário: extrair só a lógica que não depende do ator, sem exportar o estado do `World`). Saíram 15 pacotes (ver o mapa do código); o `game` caiu de 50,4 mil para 47,5 mil linhas sem teste (−5,8%), e os 15 pacotes novos somam 3,2 mil. Ficaram de fora, com o motivo:
+     - `stats.go`/`itemcalc.go`: `statsState` mistura os atributos calculados com estado de runtime do jogador (`lastLevelSave`, `selfDefense`); precisa separar antes de virar pacote.
+     - party (`maxParties` depende de `MaxObjects`), as instâncias de Blood/Chaos Castle (validam índices de objeto) e outros helpers que usam constantes do núcleo: exigiriam um pacote só para as constantes de índice de objeto.
+     - Structs de estado mutadas pelo loop (`tradeState`, `pshopState`, `cashState`, `chaosState`, `dailyState`, `moveState`...) ficam no `game` por decisão de desenho.
+     - `lua.go`/`lua_api.go`, `combat.go`/`pvp.go`, `pet.go`, `inventory.go`, `windowtime.go`, `shop.go`: o fechamento puro depende de tipos do núcleo ou de locais com o mesmo nome do pacote.

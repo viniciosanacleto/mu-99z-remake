@@ -3,6 +3,7 @@ package game
 import (
 	"bytes"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -100,7 +101,7 @@ func chatBuffer(pkt []byte) []byte {
 
 // packetChat is C1 49 00 name[10] msg[60] (FUN_004d7720).
 func packetChat(name []byte, msg []byte) []byte {
-	p := newPacket(frame.C1, 0x00, -1, chatPktSize)
+	p := packet.New(frame.C1, 0x00, -1, chatPktSize)
 	copy(p[3:13], name)
 	copy(p[13:], msg[:min(len(msg), 60)])
 	return p
@@ -113,8 +114,8 @@ func packetWhisper(from string, msg []byte) []byte {
 	if len(msg) > 0x3B {
 		msg = msg[:0x3B]
 	}
-	p := newPacket(frame.C1, 0x02, -1, len(msg)+0x0E)
-	putName(p[3:], from)
+	p := packet.New(frame.C1, 0x02, -1, len(msg)+0x0E)
+	packet.PutName(p[3:], from)
 	copy(p[13:], msg)
 	return p
 }

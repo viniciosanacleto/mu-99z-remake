@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -333,7 +334,7 @@ func (w *World) createInventoryItem(o *Object, it item.Item) {
 // packetQuestList is C1 36 A0 count state[50] (FUN_004dde70): count is
 // one more than the highest quest index < 200 of Quest.txt.
 func packetQuestList(count int, states []byte) []byte {
-	p := newPacket(frame.C1, 0xA0, -1, 0x36)
+	p := packet.New(frame.C1, 0xA0, -1, 0x36)
 	p[3] = byte(count)
 	copy(p[4:], states)
 	return p
@@ -341,7 +342,7 @@ func packetQuestList(count int, states []byte) []byte {
 
 // packetQuestInfo is C1 05 A1 quest stateByte (FUN_004ddfa0).
 func packetQuestInfo(idx int, state byte) []byte {
-	p := newPacket(frame.C1, 0xA1, -1, 5)
+	p := packet.New(frame.C1, 0xA1, -1, 5)
 	p[3], p[4] = byte(idx), state
 	return p
 }
@@ -349,7 +350,7 @@ func packetQuestInfo(idx int, state byte) []byte {
 // packetQuestResult is C1 06 A2 quest result stateByte (FUN_004de060):
 // result 0 ok, 0xFF refused.
 func packetQuestResult(idx int, result, state byte) []byte {
-	p := newPacket(frame.C1, 0xA2, -1, 6)
+	p := packet.New(frame.C1, 0xA2, -1, 6)
 	p[3], p[4], p[5] = byte(idx), result, state
 	return p
 }
@@ -357,10 +358,10 @@ func packetQuestResult(idx int, result, state byte) []byte {
 // packetQuestReward is C1 0C A3 index(BE) reward value 00 LevelUpPoint(u32)
 // (FUN_004de110), sent to the player and its viewers.
 func packetQuestReward(index, reward, value, points int) []byte {
-	p := newPacket(frame.C1, 0xA3, -1, 0x0C)
+	p := packet.New(frame.C1, 0xA3, -1, 0x0C)
 	p[3], p[4] = byte(index>>8), byte(index)
 	p[5], p[6] = byte(reward), byte(value)
-	u32le(p[8:], uint32(points))
+	packet.PutUint32(p[8:], uint32(points))
 	return p
 }
 

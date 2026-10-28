@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/devilsquare"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
@@ -32,7 +33,7 @@ func TestRankingReports(t *testing.T) {
 	}
 	// FUN_004705d0: each Devil Square user's score with the ranking window.
 	s := &b.ds().sq[0]
-	s.Users[0] = dsUser{Index: o.Index, Score: 30}
+	s.Users[0] = devilsquare.User{Index: o.Index, Score: 30}
 	b.dsSendRanking(s)
 	if n := b.eventRank(t, store.RankingDevilSquare, "Ranker"); n != 30 || find(b.drain(o), 0x93, -1) == nil {
 		t.Fatalf("ds %d", n)

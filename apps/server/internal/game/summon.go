@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
@@ -28,7 +29,7 @@ func (w *World) summonClass(skill int) (int, bool) {
 }
 
 func packetSummonLife(pct int) []byte {
-	p := newPacket(frame.C1, 0xF3, 0x20, 5)
+	p := packet.New(frame.C1, 0xF3, 0x20, 5)
 	p[4] = byte(pct)
 	return p
 }
@@ -237,11 +238,11 @@ func (w *World) summonViewportEntry(dst []byte, t *Object) {
 		dst[0] |= 0x80
 	}
 	dst[2], dst[3] = byte(t.Class>>8), byte(t.Class)
-	u32le(dst[4:], t.ViewSkillState)
+	packet.PutUint32(dst[4:], t.ViewSkillState)
 	dst[8], dst[9], dst[10], dst[11] = byte(t.X), byte(t.Y), byte(t.TX), byte(t.TY)
 	dst[12] = byte(t.Dir)<<4 | byte(t.PKLevel)&0x0F
 	if ow := w.objects[t.Mon.Owner]; ow.P != nil && ow.P.Char != nil {
-		putName(dst[13:], ow.P.Char.Name)
+		packet.PutName(dst[13:], ow.P.Char.Name)
 	}
 }
 
@@ -265,7 +266,7 @@ func (w *World) sendSummonViewport(o *Object) {
 	if len(entries) == 0 {
 		return
 	}
-	p := newPacket(frame.C2, 0x1F, -1, 5+24*len(entries))
+	p := packet.New(frame.C2, 0x1F, -1, 5+24*len(entries))
 	p[4] = byte(len(entries))
 	for i, e := range entries {
 		copy(p[5+24*i:], e)

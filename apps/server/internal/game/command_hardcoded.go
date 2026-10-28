@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
@@ -44,7 +45,7 @@ func packetAd(index int, text string) []byte {
 	if len(text) > 0x3B {
 		text = text[:0x3B]
 	}
-	p := newPacket(frame.C1, 0x01, -1, len(text)+6)
+	p := packet.New(frame.C1, 0x01, -1, len(text)+6)
 	p[3], p[4] = byte(index>>8), byte(index)
 	copy(p[5:], text)
 	return p
@@ -186,7 +187,7 @@ func (w *World) myInfoReply(o *Object, info store.AccountInfo, ok bool) {
 
 // packetSuperDrop is C1 05 F3 FA flag (FUN_00434bc0).
 func packetSuperDrop(on bool) []byte {
-	p := newPacket(frame.C1, 0xF3, 0xFA, 5)
+	p := packet.New(frame.C1, 0xF3, 0xFA, 5)
 	if on {
 		p[4] = 1
 	}
@@ -238,7 +239,7 @@ type comboState struct {
 const comboStepTime = 3000 * time.Millisecond
 
 // packetComboOn is C1 04 F3 F8, sent when /combo turns on.
-func packetComboOn() []byte { return newPacket(frame.C1, 0xF3, 0xF8, 4) }
+func packetComboOn() []byte { return packet.New(frame.C1, 0xF3, 0xF8, 4) }
 
 // commandCombo is /combo [off]: a second word, or a first word other than
 // "off", gives "Use apenas /combo ou /combo off."; "off" clears the combo

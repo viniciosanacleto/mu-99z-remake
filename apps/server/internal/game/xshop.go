@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/xshop"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
@@ -55,37 +56,16 @@ func sized(n int, f func(*World, *Object, []byte)) func(*World, *Object, []byte)
 	}
 }
 
-// Limits of the CCustomXShop handlers.
-const (
-	xshopListInterval  = 120 * time.Millisecond   // 0x77 < tick difference
-	xshopBuyInterval   = 500 * time.Millisecond   // 499 < tick difference
-	xshopPendingWindow = 15000 * time.Millisecond // 0x3a98
-	xshopGMInterval    = 300 * time.Millisecond
-	xshopMaxPrice      = 2000000000
-	xshopPageSize      = 8
-)
-
-// Results of FA 04 (FUN_00404720).
-const (
-	xshopOK       = 0
-	xshopNoCredit = 1
-	xshopFailed   = 2 // no room, or the item could not be given (refunded)
-	xshopNoItem   = 3 // unknown item or price 0
-	xshopBusy     = 5
-	xshopBadOpts  = 6
-	xshopBadPrice = 7
-)
-
 // cashWorld is the per-instance state of the block 12 customs.
 type cashWorld struct {
 	xshopPath string // CCustomXShop +0xc4: config/data/xshop.toml (prices and recharge)
 	prices    *gamedata.XShopPrices
 	jewels    *gamedata.CustomJewels
 	wheel     map[int]gamedata.WheelReward
-	pending   map[int]*xshopPurchase  // +0x84, keyed by object index
-	seq       uint32                  // +0x1c8
-	uploads   map[int]*rechargeUpload // +0x04, keyed by object index
-	saving    bool                    // DAT_010bc69c (FUN_00405350)
+	pending   map[int]*xshop.Purchase       // +0x84, keyed by object index
+	seq       uint32                        // +0x1c8
+	uploads   map[int]*xshop.RechargeUpload // +0x04, keyed by object index
+	saving    bool                          // DAT_010bc69c (FUN_00405350)
 }
 
 // cashState is the per-player state: the jewel bank counters and the tick
@@ -107,22 +87,11 @@ func cash(o *Object) *cashState {
 	return o.P.cash
 }
 
-// xshopPurchase is a pending purchase (the 0x2c-byte record of +0x84).
-type xshopPurchase struct {
-	Account string
-	Item    int
-	Price   uint32
-	At      time.Time
-	Seq     uint32
-	Name    string
-	Opts    [5]byte // level, skill, luck, option, excellent
-}
-
 func (w *World) cw2() *cashWorld {
 	if w.cash == nil {
 		w.cash = &cashWorld{prices: &gamedata.XShopPrices{Overrides: map[int]uint32{}},
 			jewels: &gamedata.CustomJewels{}, wheel: map[int]gamedata.WheelReward{},
-			pending: map[int]*xshopPurchase{}, uploads: map[int]*rechargeUpload{}}
+			pending: map[int]*xshop.Purchase{}, uploads: map[int]*xshop.RechargeUpload{}}
 		for i := range w.cash.prices.Category {
 			w.cash.prices.Category[i] = gamedata.XShopDefaultPrice
 		}
@@ -232,22 +201,6 @@ func (w *World) xshopFlags(idx int) byte {
 	return f
 }
 
-// xshopOptsValid is FUN_00401000: level < 16, skill and luck < 2, option
-// < 8, excellent < 0x40; without flag bit 0 everything must be 0, without
-// bit 1 the skill and without bit 2 the excellent byte.
-func xshopOptsValid(o [5]byte, flags byte) bool {
-	if o[0] > 15 || o[1] > 1 || o[2] > 1 || o[3] > 7 || o[4] > 0x3f {
-		return false
-	}
-	if flags&1 == 0 && o != ([5]byte{}) {
-		return false
-	}
-	if flags&2 == 0 && o[1] != 0 {
-		return false
-	}
-	return flags&4 != 0 || o[4] == 0
-}
-
 // xshopHighLevel is FUN_00402b20: items bought at +8..+15 get the
 // CreateItem option byte 0x40 (parameter 14, CItem+0xd2) when they are not
 // jewels and are weapons/armour (0..11), wings (12, Slot 7) or category 13
@@ -273,58 +226,6 @@ func (w *World) xshopHighLevel(level, idx int) bool {
 
 // --- packets -------------------------------------------------------------------------
 
-// packetXShopCredits is C1 08 FA 03 credits(u32) (FUN_00404350).
-func packetXShopCredits(credits uint32) []byte {
-	p := newPacket(frame.C1, 0xFA, 0x03, 8)
-	u32le(p[4:], credits)
-	return p
-}
-
-// packetXShopResult is C1 10 FA 04 result pad[3] credits(u32) item(u16)
-// pad[2] (FUN_00404720; credits in ECX, item in DX, the pads are stack
-// bytes the original never writes).
-func packetXShopResult(result byte, credits uint32, item int) []byte {
-	p := newPacket(frame.C1, 0xFA, 0x04, 0x10)
-	p[4] = result
-	u32le(p[8:], credits)
-	u16le(p[12:], item)
-	return p
-}
-
-// packetXShopGMResult is C1 0C FA 06 result (FUN_00403860; bytes 5..11
-// are not written by the original).
-func packetXShopGMResult(result byte) []byte {
-	p := newPacket(frame.C1, 0xFA, 0x06, 0x0C)
-	p[4] = result
-	return p
-}
-
-// xshopEntry is one item of an FA 09 page.
-type xshopEntry struct {
-	Item  int
-	Price uint32
-	Flags byte
-}
-
-// packetXShopPage is C1 68 FA 09 category page pages count + 8 entries of
-// 12 bytes: item(u16) pad[2] price(u32) flags pad[3] (FUN_00402ed0).
-func packetXShopPage(cat, page, pages int, list []xshopEntry) []byte {
-	p := newPacket(frame.C1, 0xFA, 0x09, 0x68)
-	p[4], p[5] = byte(cat), byte(page)
-	p[6] = 0xFF
-	if pages < 0x100 {
-		p[6] = byte(pages)
-	}
-	p[7] = byte(len(list))
-	for i, e := range list {
-		b := p[8+12*i:]
-		u16le(b, e.Item)
-		u32le(b[4:], e.Price)
-		b[8] = e.Flags
-	}
-	return p
-}
-
 // --- FA 08: price list --------------------------------------------------------------
 
 // xshopList is FUN_00402e20: every 120 ms at most, the page of the items of
@@ -336,7 +237,7 @@ func (w *World) xshopList(o *Object, p []byte) {
 		return
 	}
 	s, now := cash(o), w.now()
-	if !s.ListAt.IsZero() && now.Sub(s.ListAt) < xshopListInterval {
+	if !s.ListAt.IsZero() && now.Sub(s.ListAt) < xshop.ListInterval {
 		return
 	}
 	s.ListAt = now
@@ -353,11 +254,11 @@ func (w *World) xshopList(o *Object, p []byte) {
 	}
 	pages := max((len(items)+7)>>3, 1)
 	page = min(max(page, 0), pages-1)
-	var list []xshopEntry
-	for i := page * xshopPageSize; i < len(items) && len(list) < xshopPageSize; i++ {
-		list = append(list, xshopEntry{items[i], c.prices.Price(items[i]), w.xshopFlags(items[i])})
+	var list []xshop.Entry
+	for i := page * xshop.PageSize; i < len(items) && len(list) < xshop.PageSize; i++ {
+		list = append(list, xshop.Entry{Item: items[i], Price: c.prices.Price(items[i]), Flags: w.xshopFlags(items[i])})
 	}
-	w.send(o, packetXShopPage(cat, page, pages, list))
+	w.send(o, xshop.PacketPage(cat, page, pages, list))
 	w.xshopSendCredits(o)
 }
 
@@ -366,7 +267,7 @@ func (w *World) xshopList(o *Object, p []byte) {
 func (w *World) xshopSendCredits(o *Object) {
 	cs, idx, login := w.creditStore(), o.Index, o.P.Account.Login
 	if cs == nil || !validAccountName(login) {
-		w.send(o, packetXShopCredits(0))
+		w.send(o, xshop.PacketCredits(0))
 		return
 	}
 	w.async(func(ctx context.Context) func() {
@@ -376,7 +277,7 @@ func (w *World) xshopSendCredits(o *Object) {
 				if err != nil {
 					n = 0
 				}
-				w.send(o, packetXShopCredits(uint32(n)))
+				w.send(o, xshop.PacketCredits(uint32(n)))
 			}
 		}
 	})
@@ -400,57 +301,57 @@ func (w *World) xshopBuy(o *Object, p []byte) {
 	idx := int(p[4]) | int(p[5])<<8
 	var opts [5]byte
 	copy(opts[:], p[6:11])
-	fail := func(r byte) { w.send(o, packetXShopResult(r, 0, idx)) }
+	fail := func(r byte) { w.send(o, xshop.PacketResult(r, 0, idx)) }
 	if _, ok := w.itemInfo(idx); !ok {
-		fail(xshopNoItem)
+		fail(xshop.ResultNoItem)
 		return
 	}
 	c := w.cw2()
 	price := c.prices.Price(idx)
 	if price == 0 {
-		fail(xshopNoItem)
+		fail(xshop.ResultNoItem)
 		return
 	}
 	extra := uint32(0)
 	if opts[0] == 15 {
 		extra = 4
 	}
-	if !xshopOptsValid(opts, w.xshopFlags(idx)) || price > xshopMaxPrice || xshopMaxPrice-price < extra {
-		fail(xshopBadOpts)
+	if !xshop.OptionsValid(opts, w.xshopFlags(idx)) || price > xshop.MaxPrice || xshop.MaxPrice-price < extra {
+		fail(xshop.ResultBadOptions)
 		return
 	}
 	total := price + extra
 	if uint32(p[12])|uint32(p[13])<<8|uint32(p[14])<<16|uint32(p[15])<<24 != total {
-		fail(xshopBadPrice)
+		fail(xshop.ResultBadPrice)
 		return
 	}
 	now := w.now()
 	if ifBusy(o) || w.dying(o) {
-		fail(xshopBusy)
+		fail(xshop.ResultBusy)
 		return
 	}
 	if r := c.pending[o.Index]; r != nil {
-		if r.Account == o.P.Account.Login && now.Sub(r.At) <= xshopPendingWindow {
-			fail(xshopBusy)
+		if r.Account == o.P.Account.Login && now.Sub(r.At) <= xshop.PendingWindow {
+			fail(xshop.ResultBusy)
 			return
 		}
 		delete(c.pending, o.Index)
 	}
 	s := cash(o)
-	if !s.BuyAt.IsZero() && now.Sub(s.BuyAt) < xshopBuyInterval {
-		fail(xshopBusy)
+	if !s.BuyAt.IsZero() && now.Sub(s.BuyAt) < xshop.BuyInterval {
+		fail(xshop.ResultBusy)
 		return
 	}
 	s.BuyAt = now
 	if w.findBagSlot(&o.P.Inventory, idx) < 0 {
-		fail(xshopFailed)
+		fail(xshop.ResultFailed)
 		return
 	}
 	c.seq++
 	if c.seq == 0 {
 		c.seq = 1
 	}
-	rec := &xshopPurchase{Account: o.P.Account.Login, Item: idx, Price: total, At: now, Seq: c.seq,
+	rec := &xshop.Purchase{Account: o.P.Account.Login, Item: idx, Price: total, At: now, Seq: c.seq,
 		Name: o.P.Char.Name, Opts: opts}
 	c.pending[o.Index] = rec
 	w.xshopDebit(o.Index, rec)
@@ -459,7 +360,7 @@ func (w *World) xshopBuy(o *Object, p []byte) {
 // xshopDebit sends DS 0x0F 0x21 (C1 1C 0F 21 index account item price
 // seq) and runs the reply FUN_00404400 on the world goroutine. A store
 // without credits or an invalid account name answers "not debited".
-func (w *World) xshopDebit(index int, rec *xshopPurchase) {
+func (w *World) xshopDebit(index int, rec *xshop.Purchase) {
 	cs := w.creditStore()
 	login, item, price, seq := rec.Account, rec.Item, rec.Price, rec.Seq
 	if cs == nil || !validAccountName(login) {
@@ -496,7 +397,7 @@ func (w *World) xshopDebitReply(index int, login string, item int, price, seq ui
 	online := xshopOnline(o)
 	if !ok {
 		if online {
-			w.send(o, packetXShopResult(xshopNoCredit, balance, item))
+			w.send(o, xshop.PacketResult(xshop.ResultNoCredit, balance, item))
 		}
 		return
 	}
@@ -516,12 +417,12 @@ func (w *World) xshopDebitReply(index int, login string, item int, price, seq ui
 		w.createItem(o, 0xEB, 0, 0, dropSpec{Index: item, Level: int(rec.Opts[0]), Dur: dur,
 			Skill: int(rec.Opts[1]), Luck: int(rec.Opts[2]), Option: int(rec.Opts[3]), Exc: rec.Opts[4],
 			OptionEx: optEx, ToInventory: true})
-		w.send(o, packetXShopResult(xshopOK, balance, item))
+		w.send(o, xshop.PacketResult(xshop.ResultOK, balance, item))
 		w.log.Info("[CustomXShop]", "account", login, "name", o.P.Char.Name, "item", item, "price", price)
 		return
 	}
 	refund()
-	w.send(o, packetXShopResult(xshopFailed, balance+price, item))
+	w.send(o, xshop.PacketResult(xshop.ResultFailed, balance+price, item))
 }
 
 // xshopRefund is DS 0x0F 0x22 (C1 14 0F 22 account price; FUN_00401610
@@ -553,31 +454,31 @@ func (w *World) xshopGMPrice(o *Object, p []byte) {
 	idx := int(p[4]) | int(p[5])<<8
 	price := uint32(p[8]) | uint32(p[9])<<8 | uint32(p[10])<<16 | uint32(p[11])<<24
 	if !gmFull(o) {
-		w.send(o, packetXShopGMResult(1))
+		w.send(o, xshop.PacketGMResult(1))
 		w.log.Info("[CustomXShop][GM-PRICE][DENIED]", "account", o.P.Account.Login, "name", o.P.Char.Name,
 			"item", idx, "price", price)
 		return
 	}
 	s, now := cash(o), w.now()
-	if !s.PriceAt.IsZero() && now.Sub(s.PriceAt) < xshopGMInterval {
-		w.send(o, packetXShopGMResult(2))
+	if !s.PriceAt.IsZero() && now.Sub(s.PriceAt) < xshop.GMInterval {
+		w.send(o, xshop.PacketGMResult(2))
 		return
 	}
 	s.PriceAt = now
-	if _, ok := w.itemInfo(idx); !ok || price > xshopMaxPrice {
-		w.send(o, packetXShopGMResult(2))
+	if _, ok := w.itemInfo(idx); !ok || price > xshop.MaxPrice {
+		w.send(o, xshop.PacketGMResult(2))
 		return
 	}
 	c := w.cw2()
 	old := c.prices.Price(idx)
 	if c.xshopPath == "" || gamedata.WriteXShopPrice(c.xshopPath, idx, price) != nil {
-		w.send(o, packetXShopGMResult(3))
+		w.send(o, xshop.PacketGMResult(3))
 		w.log.Warn("[CustomXShop][GM-PRICE][WRITE-FAIL]", "account", o.P.Account.Login, "name", o.P.Char.Name,
 			"item", idx, "old", old, "new", price)
 		return
 	}
 	c.prices.Overrides[idx] = price
-	w.send(o, packetXShopGMResult(0))
+	w.send(o, xshop.PacketGMResult(0))
 	w.log.Info("[CustomXShop][GM-PRICE][OK]", "account", o.P.Account.Login, "name", o.P.Char.Name,
 		"item", idx, "old", old, "new", price)
 }

@@ -1,6 +1,6 @@
 # 09b — Guild, aliança (union), hostilidade (rival) e guerra de guild (achados do REA)
 
-Complementa o [10](10-sistemas-de-jogo.md). Observado no `GameServer.exe` e no `DataServer.exe` (endereços citados). Implementado em `apps/server/internal/game/{guild,guild_ds,guild_union,guild_war}.go` e `internal/store/guild*.go` (migração `0005_guild.sql`).
+Complementa o [10](10-sistemas-de-jogo.md). Observado no `GameServer.exe` e no `DataServer.exe` (endereços citados). Implementado em `apps/server/internal/game/{guild,guild_manager,guild_union,guild_war}.go`, no pacote `apps/server/internal/game/guild` (registro e pacotes) e `internal/store/guild*.go` (migração `0005_guild.sql`).
 
 ## 1. Arquitetura original
 
@@ -10,7 +10,7 @@ Complementa o [10](10-sistemas-de-jogo.md). Observado no `GameServer.exe` e no `
 - Struct do GS: igual até `+0x78`; membros de `0x18` (`name[11]`, `+0xc` índice do objeto, `+0x10` servidor, `+0x14` status); `+0x7f8` guild inimiga, `+0x7fc` pedido de guerra, `+0x7fd` guerra ativa, `+0x7fe` tipo (0 guerra, 1 battle soccer), `+0x7ff` time, `+0x800` placar, `+0x801` tipo da guild, `+0x804` union, `+0x808` rival.
 - Objeto: `obj+0x2fc` nome da guild, `+0x308` número, `+0x30c` status (`0x80` mestre, `0x40` assistente, `0x20` battle master, `0` membro, `−1` sem guild), `+0x318` o outro lado de um pedido, `+0x3d4` interface (tipo 4 = pedido de entrada `0x101`, 5 = janela de criação `0x140`, 14 = pedido de aliança `0x381`).
 
-Na reconstrução, `guildManager` (um por `Hub`, compartilhado pelas instâncias) faz o papel do DataServer; `World.guildAll` substitui o broadcast. A tabela `guilds.id` é o `Number`.
+Na reconstrução, `guild.Manager` (um por `Hub`, compartilhado pelas instâncias) faz o papel do DataServer; `World.guildAll` substitui o broadcast. A tabela `guilds.id` é o `Number`.
 
 ## 2. Protocolo GameServer ↔ DataServer (C1/C2 A0 xx)
 

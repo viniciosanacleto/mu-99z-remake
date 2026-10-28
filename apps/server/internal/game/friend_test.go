@@ -7,12 +7,13 @@ import (
 	"time"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/auth"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/friend"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
 func TestFriendPacketLayouts(t *testing.T) {
-	l := packetFriendList(3, []string{"Ann", "Bob"}, func(n string) byte {
+	l := friend.PacketList(3, []string{"Ann", "Bob"}, func(n string) byte {
 		if n == "Ann" {
 			return 0
 		}
@@ -22,21 +23,21 @@ func TestFriendPacketLayouts(t *testing.T) {
 		string(l[7:10]) != "Ann" || l[17] != 0 || l[28] != 0xFF {
 		t.Fatalf("list = % X", l)
 	}
-	if p := packetFriendAddResult(1, "Bob", 0); !bytes.Equal(p[:4], []byte{0xC1, 0x0F, 0xC1, 1}) || p[14] != 0 {
+	if p := friend.PacketAddResult(1, "Bob", 0); !bytes.Equal(p[:4], []byte{0xC1, 0x0F, 0xC1, 1}) || p[14] != 0 {
 		t.Fatalf("add result = % X", p)
 	}
-	h := packetMailHeader(store.Mail{Index: 11, From: "Ann", Subject: "Hi", Read: true,
+	h := friend.PacketMailHeader(store.Mail{Index: 11, From: "Ann", Subject: "Hi", Read: true,
 		Date: time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)})
 	if len(h) != 0x50 || h[0] != 0xC3 || h[2] != 0xC6 || h[3] != 11 || string(h[5:8]) != "Ann" ||
 		string(h[15:34]) != "2026-01-02 03:04:05" || string(h[45:47]) != "Hi" || h[77] != 1 {
 		t.Fatalf("mail header = % X", h)
 	}
-	r := packetMailRead(&store.Mail{Index: 11, Memo: []byte("hey"), Photo: bytes.Repeat([]byte{7}, 18), Dir: 1, Act: 2})
+	r := friend.PacketMailRead(&store.Mail{Index: 11, Memo: []byte("hey"), Photo: bytes.Repeat([]byte{7}, 18), Dir: 1, Act: 2})
 	if len(r) != 0x1C+3 || r[0] != 0xC4 || r[3] != 0xC7 || r[4] != 11 || r[6] != 3 || r[8] != 7 ||
 		r[26] != 2 || r[27] != 1 || string(r[28:]) != "hey" {
 		t.Fatalf("mail read = % X", r)
 	}
-	if p := packetMailDelResult(1, 11); !bytes.Equal(p, []byte{0xC1, 0x06, 0xC8, 1, 11, 0}) {
+	if p := friend.PacketMailDelResult(1, 11); !bytes.Equal(p, []byte{0xC1, 0x06, 0xC8, 1, 11, 0}) {
 		t.Fatalf("mail del = % X", p)
 	}
 	if p := packetMoney(0x01020304); !bytes.Equal(p[:8], []byte{0xC3, 0x10, 0x22, 0xFE, 1, 2, 3, 4}) || len(p) != 16 {

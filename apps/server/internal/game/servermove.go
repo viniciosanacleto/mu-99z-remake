@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/crypto"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
@@ -19,19 +20,19 @@ import (
 
 // packetServerMove is C3 2C B1 00 ip[16] port u16 serverCode u16 codes[4].
 func packetServerMove(ip string, port, serverCode int, codes [4]uint32) []byte {
-	p := newPacket(frame.C3, 0xB1, 0x00, 0x2C)
+	p := packet.New(frame.C3, 0xB1, 0x00, 0x2C)
 	copy(p[4:19], ip)
-	u16le(p[20:], port)
-	u16le(p[22:], serverCode)
+	packet.PutUint16(p[20:], port)
+	packet.PutUint16(p[22:], serverCode)
 	for i, c := range codes {
-		u32le(p[24+4*i:], c)
+		packet.PutUint32(p[24+4*i:], c)
 	}
 	return p
 }
 
 // packetMoveAuthResult is C1 05 B1 01 result (FUN_004dadc0).
 func packetMoveAuthResult(result byte) []byte {
-	p := newPacket(frame.C1, 0xB1, 0x01, 5)
+	p := packet.New(frame.C1, 0xB1, 0x01, 5)
 	p[4] = result
 	return p
 }

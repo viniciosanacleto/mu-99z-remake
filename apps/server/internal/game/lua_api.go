@@ -21,7 +21,9 @@ import (
 
 	lua "github.com/Shopify/go-lua"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/ini"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/guild"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
@@ -244,16 +246,13 @@ func (w *World) objMaxBP(o *Object) int {
 	return 0
 }
 
-func (w *World) luaGuildRecord(number int) *guildRecord {
+func (w *World) luaGuildRecord(number int) *guild.Record {
 	m := w.guildMgr()
 	if m == nil || number == 0 {
 		return nil
 	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if g := m.byNum[number]; g != nil {
-		c := *g
-		return &c
+	if g, ok := m.ByNumber(number); ok {
+		return &g
 	}
 	return nil
 }
@@ -406,7 +405,7 @@ var luaAPI = []luaAPIEntry{
 		}
 		rel := 0
 		if m := w.guildMgr(); m != nil {
-			rel = m.relation(guildOf(b).Number, guildOf(a).Number)
+			rel = m.Relation(guildOf(b).Number, guildOf(a).Number)
 		}
 		return pushInt(l, rel)
 	}},
@@ -814,10 +813,10 @@ var luaAPI = []luaAPIEntry{
 			return 0
 		}
 		t := w.mapItems(o.Map)
-		if t == nil || n < 0 || n >= len(t.items) {
+		if t == nil || n < 0 || n >= len(t.Items) {
 			return 0
 		}
-		it := t.items[n].Item
+		it := t.Items[n].Item
 		if it.Index < 0 || it.Index >= 0x2000 {
 			return 0
 		}
@@ -1173,7 +1172,7 @@ func packetWindowTitle(text string) []byte {
 	if len(text) > 0x7F {
 		text = text[:0x7F]
 	}
-	p := newPacket(0xC1, 0xF3, 0xE8, 0x84)
+	p := packet.New(0xC1, 0xF3, 0xE8, 0x84)
 	copy(p[4:], text)
 	return p
 }

@@ -11,6 +11,8 @@ import (
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/gsconfig"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/config/servercfg"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/effect"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/monsterskill"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/crypto"
 )
@@ -326,7 +328,7 @@ var configLoaders = map[string][]covLoader{
 		ldg("LoadMonsterMove", "FUN_004eb5f0 -> FUN_004b1110", gamedata.LoadMonsterMove),
 		ldg("LoadMonsterSchedule", "FUN_004eb5f0 -> FUN_004bb0c0", gamedata.LoadMonsterSchedule),
 		ldg("LoadNpcTalk", "FUN_004eb5f0", gamedata.LoadNpcTalk),
-		ld("game.loadMonsterSkills", "FUN_004eb5f0", func(c *covEnv) error { return errOnly(loadMonsterSkills(c.cfg)) }),
+		ld("game.loadMonsterSkills", "FUN_004eb5f0", func(c *covEnv) error { return errOnly(monsterskill.Load(c.cfg)) }),
 	},
 	// FUN_004eba60: Move.
 	"move": {
@@ -342,7 +344,7 @@ var configLoaders = map[string][]covLoader{
 	// FUN_004ec0f0: Skill.
 	"skill": {
 		ldSkillWorld,
-		ld("game.loadEffectList", "FUN_004ec0f0", func(c *covEnv) error { return errOnly(loadEffectList(c.cfg)) }),
+		ld("game.loadEffectList", "FUN_004ec0f0", func(c *covEnv) error { return errOnly(effect.LoadList(c.cfg)) }),
 		ldg("LoadSkills", "FUN_004ec0f0", gamedata.LoadSkills),
 	},
 	// FUN_004bbaa0: Monster\Spawn\NNN - *.txt (map known to MapManager).

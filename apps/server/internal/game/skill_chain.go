@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
@@ -89,12 +90,12 @@ func chainLightningRate(hit int) int {
 // left uninitialised by the original (0 here), then the three target
 // indexes u16 LE.
 func packetChainLightning(skill, caster int, chain [3]int) []byte {
-	p := newPacket(frame.C1, 0xBF, 0x0A, 16)
+	p := packet.New(frame.C1, 0xBF, 0x0A, 16)
 	p[4], p[5] = byte(skill>>8), byte(skill)
-	u16le(p[6:], caster)
+	packet.PutUint16(p[6:], caster)
 	p[8] = 3
 	for i, idx := range chain {
-		u16le(p[10+2*i:], idx)
+		packet.PutUint16(p[10+2*i:], idx)
 	}
 	return p
 }

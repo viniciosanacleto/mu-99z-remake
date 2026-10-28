@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/effect"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -90,7 +91,7 @@ func TestGreaterDefenseCast(t *testing.T) {
 	p := skillPlayer(b, PlayerStart, 2, x, y, 27)
 	b.handleSkillTarget(p, frame.Build(frame.C3, 0x19, 27, byte(p.Index>>8), byte(p.Index)))
 	// (Ene 80 / GreaterDefenseConstB 8 + ConstA 2) * GreaterDefenseRateFE 100 / 100 * 2.
-	s := effectSlotOf(p, effGreaterDefense)
+	s := effectSlotOf(p, effect.GreaterDefense)
 	if s == nil || s.Value[0] != 24 || s.Count != 300 || effOpt(p).AddDefense != 24 {
 		t.Fatalf("slot %+v", s)
 	}
@@ -107,9 +108,9 @@ func TestGreaterDefenseCast(t *testing.T) {
 	}
 	// Not enough mana: nothing happens.
 	p.P.Char.Mana = 10
-	b.removeEffect(p, effGreaterDefense)
+	b.removeEffect(p, effect.GreaterDefense)
 	b.handleSkillTarget(p, frame.Build(frame.C3, 0x19, 27, byte(p.Index>>8), byte(p.Index)))
-	if hasEffectIndex(p, effGreaterDefense) {
+	if hasEffectIndex(p, effect.GreaterDefense) {
 		t.Fatal("cast without mana")
 	}
 }
@@ -122,7 +123,7 @@ func TestManaShieldAndGreaterDamageFormulas(t *testing.T) {
 		t.Fatal("mana shield refused")
 	}
 	// 10 + Dex 20/50 + Ene 80/200 = 10; 60 + 80/40 = 62 s.
-	if s := effectSlotOf(p, effManaShield); s == nil || s.Value[0] != 10 || s.Count != 62 || effOpt(p).DamageReduction != 10 {
+	if s := effectSlotOf(p, effect.ManaShield); s == nil || s.Value[0] != 10 || s.Count != 62 || effOpt(p).DamageReduction != 10 {
 		t.Fatalf("slot %+v", s)
 	}
 	e := skillPlayer(b, PlayerStart+1, 2, x+1, y, 28)
@@ -131,7 +132,7 @@ func TestManaShieldAndGreaterDamageFormulas(t *testing.T) {
 		t.Fatal("greater damage refused")
 	}
 	// Ene 80/7 + 3 = 14 (rate DW 100) for 300 s on the target.
-	if s := effectSlotOf(p, effGreaterDamage); s == nil || s.Value[0] != 14 || s.Count != 300 || effOpt(p).AddPhysiDamage != 14 {
+	if s := effectSlotOf(p, effect.GreaterDamage); s == nil || s.Value[0] != 14 || s.Count != 300 || effOpt(p).AddPhysiDamage != 14 {
 		t.Fatalf("slot %+v", s)
 	}
 }

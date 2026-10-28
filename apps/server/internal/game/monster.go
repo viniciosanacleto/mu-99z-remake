@@ -5,6 +5,8 @@ import (
 	"math/rand/v2"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/monsterskill"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -33,9 +35,9 @@ type monsterWorld struct {
 	spawns []gamedata.SpawnRecord
 	talk   []gamedata.NpcTalkEntry
 	damage [2][]damageRule
-	drops  [150][]int        // CItemDrop level table (FUN_004ba760)
-	tables *dropTables       // drop.go: drop/option/bag/set data files
-	skills *monsterSkillData // monster_skill.go: Monster/Skill/*.txt
+	drops  [150][]int         // CItemDrop level table (FUN_004ba760)
+	tables *dropTables        // drop.go: drop/option/bag/set data files
+	skills *monsterskill.Data // monster_skill.go: Monster/Skill/*.txt
 
 	summonOf   map[int]int // summon.go: player index -> summon (obj+0x310)
 	nextSummon int         // DAT_00772d48: summon round-robin pointer
@@ -343,7 +345,7 @@ func (w *World) setMonster(o *Object, class int) bool {
 	m.Die = 0
 	m.SpecialBag = false
 	w.applyCustomMonster(o) // FUN_00466d40
-	m.Skills = monsterSkillList(class, info.AttackType)
+	m.Skills = monsterskill.List(class, info.AttackType)
 	// The movement module keeps the occupied cell and the walk speed
 	// (obj+0x374 = MoveSpeed).
 	o.Move = nil
@@ -468,14 +470,14 @@ func monsterViewportEntry(dst []byte, t *Object) {
 		}
 	}
 	dst[2], dst[3] = byte(t.Class>>8), byte(t.Class)
-	u32le(dst[4:], t.ViewSkillState)
+	packet.PutUint32(dst[4:], t.ViewSkillState)
 	dst[8], dst[9], dst[10], dst[11] = byte(t.X), byte(t.Y), byte(t.TX), byte(t.TY)
 	dst[12] = byte(t.Dir)<<4 | byte(t.PKLevel)&0x0F
 }
 
 // packetViewportMonsters is C2 size 13 count + 16-byte entries.
 func packetViewportMonsters(entries [][]byte) []byte {
-	p := newPacket(frame.C2, 0x13, -1, 5+16*len(entries))
+	p := packet.New(frame.C2, 0x13, -1, 5+16*len(entries))
 	p[4] = byte(len(entries))
 	for i, e := range entries {
 		copy(p[5+16*i:], e)

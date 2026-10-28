@@ -3,6 +3,10 @@ package game
 import (
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/castlesiege"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/chaosmix"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/effect"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -30,7 +34,7 @@ func packetRavenReset() []byte { return packetPetCommand(0, 0xFFFF) }
 // packetRavenAttack is C1 09 A8 00 splash ownerHi ownerLo targetHi
 // targetLo (FUN_0046afa0).
 func packetRavenAttack(splash bool, owner, target int) []byte {
-	p := newPacket(frame.C1, 0xA8, -1, 9)
+	p := packet.New(frame.C1, 0xA8, -1, 9)
 	if splash {
 		p[4] = 1
 	}
@@ -52,7 +56,7 @@ func (w *World) ravenSync(o *Object, s *statsState) {
 	wasOff := !ps.Owner
 	ps.Owner, ps.Target, ps.Next = false, -1, time.Time{}
 	ps.DamageMin, ps.DamageMax, ps.AttackSpeed, ps.SuccessRate = 0, 0, 0, 0
-	if s.Items[1].Index != idxDarkRaven || !s.Valid[1] {
+	if s.Items[1].Index != chaosmix.ItemDarkRaven || !s.Valid[1] {
 		return
 	}
 	ps.Owner = true
@@ -104,7 +108,7 @@ func (w *World) ravenTick(o *Object) {
 		o.P.LogoutCountdown > 0 || o.P.Moving || o.Class != 4 {
 		return
 	}
-	if r := o.P.Inventory[1]; r.Index != idxDarkRaven || r.Durability == 0 {
+	if r := o.P.Inventory[1]; r.Index != chaosmix.ItemDarkRaven || r.Durability == 0 {
 		return
 	}
 	if w.cellHas(o, gamedata.AttrSafeZone) {
@@ -225,7 +229,7 @@ func ravenHitCheck(rate, defRate int) (reduced, hit bool) {
 
 // ravenDefense is FUN_0046c710: Defense + Greater Defense (obj+0x718),
 // halved for every target.
-func ravenDefense(ts CombatStats, to effectOptions) int {
+func ravenDefense(ts CombatStats, to effect.Options) int {
 	return max((to.AddDefense+ts.Defense)*50/100, 0)
 }
 
@@ -234,7 +238,7 @@ func ravenDefense(ts CombatStats, to effectOptions) int {
 // durability factor, in %), a DarkSpiritCriticalDamageRate roll for the
 // maximum (effect 3) and a DarkSpiritExcellentDamageRate roll for 120% of
 // the maximum (effect 2), minus the defense.
-func (w *World) ravenDamage(o *Object, def int, effect *int) int {
+func (w *World) ravenDamage(o *Object, def int, hitEffect *int) int {
 	ps := o.P.Pet
 	lo, hi := ps.DamageMin, ps.DamageMax
 	if s := w.playerStats(o); s != nil {
@@ -248,11 +252,11 @@ func (w *World) ravenDamage(o *Object, def int, effect *int) int {
 	span := max(hi-lo, 1)
 	dmg := lo + rnd(span)
 	if rnd(100) < w.cfg.Int("Character", "DarkSpiritCriticalDamageRate", 0) {
-		*effect = effectCritical
+		*hitEffect = effectCritical
 		dmg = hi
 	}
 	if rnd(100) < w.cfg.Int("Character", "DarkSpiritExcellentDamageRate", 0) {
-		*effect = effectExcellent
+		*hitEffect = effectExcellent
 		dmg = hi * 120 / 100
 	}
 	return max(dmg-def, 0)
@@ -302,9 +306,9 @@ func (w *World) ravenAttack(a, t *Object, send, splash bool) bool {
 		dl(a).Tick, dl(t).Tick = now, now
 	}
 	if a.Move != nil && a.Move.Authority == 1 {
-		w.removeEffect(a, effInvisibility)
+		w.removeEffect(a, effect.Invisibility)
 	}
-	miss := hasEffectIndex(t, effImmunity34) || hasEffectIndex(t, effPhysiImmunity)
+	miss := hasEffectIndex(t, effect.Immunity34) || hasEffectIndex(t, effect.PhysiImmunity)
 	if !miss && t.Type == TypeMonster {
 		if t.Class == soccerBallClass {
 			// The ball rolls 2 cells away from the owner (message 6 handled
@@ -312,7 +316,7 @@ func (w *World) ravenAttack(a, t *Object, send, splash bool) bool {
 			w.knockBack(t, a, 2)
 			miss = true
 		} else {
-			miss = hasEffectIndex(t, effMonPhysiImmunity)
+			miss = hasEffectIndex(t, effect.MonPhysiImmunity)
 		}
 	}
 	as := w.ravenCombat(a)
@@ -335,9 +339,9 @@ func (w *World) ravenAttack(a, t *Object, send, splash bool) bool {
 func (w *World) ravenCombat(a *Object) *petState { return a.P.Pet }
 
 // ravenHit is the damage part of FUN_0046b5a0 after a successful roll.
-func (w *World) ravenHit(a, t *Object, ts CombatStats, to effectOptions, reduced, splash, duel bool) bool {
-	effect := 0
-	dmg := w.ravenDamage(a, ravenDefense(ts, to), &effect)
+func (w *World) ravenHit(a, t *Object, ts CombatStats, to effect.Options, reduced, splash, duel bool) bool {
+	hitEffect := 0
+	dmg := w.ravenDamage(a, ravenDefense(ts, to), &hitEffect)
 	if reduced {
 		dmg = dmg * 30 / 100
 	}
@@ -387,7 +391,7 @@ func (w *World) ravenHit(a, t *Object, ts CombatStats, to effectOptions, reduced
 		if t.Type == TypeMonster && (t.Class == 0x115 || t.Class == 0x11B) {
 			// Castle gate / guardian statue: Bless Potion +20%, then
 			// CastleSiegeDamageRate3 (the obj+0x990 sum is not kept).
-			if hasEffectIndex(a, effBlessPotion) {
+			if hasEffectIndex(a, effect.BlessPotion) {
 				dmg += dmg * 20 / 100
 			}
 			dmg = w.cfg.Int("Character", "CastleSiegeDamageRate3", 100) * dmg / 100
@@ -423,21 +427,21 @@ func (w *World) ravenHit(a, t *Object, ts CombatStats, to effectOptions, reduced
 		t.Mon.LastAttacker = a.Index
 		w.sendMsg(t, msgAttacked, a.Index, 100, 0)
 	}
-	if dmg > 0 && t.Type == TypePlayer && w.ravenSelfDefense(a, t, effect, duel) {
+	if dmg > 0 && t.Type == TypePlayer && w.ravenSelfDefense(a, t, hitEffect, duel) {
 		w.addSelfDefense(a, t)
 	}
 	if a.Move != nil {
 		a.Move.Flag270 = 0
 	}
 	if dmg < 1 {
-		w.sendDamage(a, t, 0, effect, false)
+		w.sendDamage(a, t, 0, hitEffect, false)
 		return true
 	}
-	w.removeEffect(t, effRemovedOnHit)
+	w.removeEffect(t, effect.RemovedOnHit)
 	stuck := false
 	if t.Type == TypePlayer {
 		ts := w.playerStats(t)
-		if effect != 4 {
+		if hitEffect != 4 {
 			if rnd(100) < ts.Opt109 {
 				w.queueReflect(t, a, dmg)
 			} else if r := ts.DamageReflect + to.DamageReflect; r > 0 {
@@ -449,7 +453,7 @@ func (w *World) ravenHit(a, t *Object, ts CombatStats, to effectOptions, reduced
 			stuck = true
 		}
 	}
-	w.lifeCheckEx(a, t, dmg-sd, effect, 0, stuck)
+	w.lifeCheckEx(a, t, dmg-sd, hitEffect, 0, stuck)
 	return true
 }
 
@@ -457,18 +461,18 @@ func (w *World) ravenHit(a, t *Object, ts CombatStats, to effectOptions, reduced
 // hits): none in a duel, between rival guilds or guilds at war, for a
 // Castle Siege side during the battle, in the custom arena, in Chaos
 // Castle or on a map without PK.
-func (w *World) ravenSelfDefense(a, t *Object, effect int, duel bool) bool {
-	if a == t || effect == 4 || duel {
+func (w *World) ravenSelfDefense(a, t *Object, hitEffect int, duel bool) bool {
+	if a == t || hitEffect == 4 || duel {
 		return false
 	}
 	if kn, vn := guildNumberOf(a), guildNumberOf(t); kn != 0 && vn != 0 && w.guilds != nil &&
-		w.guildMgr().relation(kn, vn) == 2 {
+		w.guildMgr().Relation(kn, vn) == 2 {
 		return false
 	}
 	if w.atWar(a, t) {
 		return false
 	}
-	if a.Map == csMap && w.hooks.castleBattle != nil && w.hooks.castleBattle(w) && csSide(a) != 0 {
+	if a.Map == castlesiege.Map && w.hooks.castleBattle != nil && w.hooks.castleBattle(w) && csSide(a) != 0 {
 		return false
 	}
 	arena := w.cfg.Int("Custom", "CustomArenaMapNumber", -1)
@@ -491,7 +495,7 @@ func (w *World) ravenSelfDefense(a, t *Object, effect int, duel bool) bool {
 // pet info A9 (raven, inventory, slot 1).
 func (w *World) ravenDurability(o *Object, dmg int) {
 	it := &o.P.Inventory[1]
-	if it.Index != idxDarkRaven {
+	if it.Index != chaosmix.ItemDarkRaven {
 		return
 	}
 	ps := o.P.Pet

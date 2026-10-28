@@ -3,7 +3,10 @@ package game
 import (
 	"context"
 	"sort"
+	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/castlesiege"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/guild"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
@@ -29,7 +32,7 @@ func (w *World) csGuildMaster(o *Object) bool {
 		return false
 	}
 	n := guildNumberOf(o)
-	g, ok := w.guildMgr().byNumber(n)
+	g, ok := w.guildMgr().ByNumber(n)
 	if !ok {
 		return false
 	}
@@ -37,12 +40,12 @@ func (w *World) csGuildMaster(o *Object) bool {
 }
 
 // csGuildRecord returns the guild of the player (the GameServer CGuild).
-func (w *World) csGuildRecord(o *Object) (guildRecord, bool) {
+func (w *World) csGuildRecord(o *Object) (guild.Record, bool) {
 	n := guildNumberOf(o)
 	if n == 0 {
-		return guildRecord{}, false
+		return guild.Record{}, false
 	}
-	return w.guildMgr().byNumber(n)
+	return w.guildMgr().ByNumber(n)
 }
 
 // handleCSState is B2 00 (FUN_004203b0 / answer FUN_00423280):
@@ -61,21 +64,21 @@ func (w *World) handleCSState(o *Object, _ []byte) {
 	case c.owner == "":
 		result = 3
 	default:
-		if g, ok := w.guildMgr().find(c.owner); ok {
+		if g, ok := w.guildMgr().Find(c.owner); ok {
 			result, owner, master = 1, g.Name, g.Master
 		} else {
 			result = 4
 		}
 	}
-	s := csStatePacket{Result: result, Owner: owner, Master: master, State: 0xFF}
+	s := castlesiege.StateInfo{Result: result, Owner: owner, Master: master, State: 0xFF}
 	if c.state >= 0 && c.state < 10 && c.running {
 		s.State = byte(c.state)
 		s.Start = c.stateStart
-		s.End = w.now().Add(timeSeconds(c.remain / 1000))
+		s.End = w.now().Add(time.Duration(c.remain/1000) * time.Second)
 		s.Siege = c.leftSiege
 		s.Remain = c.remain / 1000
 	}
-	w.send(o, packetCSState(s))
+	w.send(o, castlesiege.PacketState(s))
 }
 
 // handleCSRegister is B2 01 (FUN_004204a0).
@@ -84,13 +87,13 @@ func (w *World) handleCSRegister(o *Object, _ []byte) {
 		return
 	}
 	c := w.cs()
-	guild := csGuildName(o)
-	fail := func(r byte) { w.send(o, packetCSRegister(r, guild)) }
+	guildName := csGuildName(o)
+	fail := func(r byte) { w.send(o, castlesiege.PacketRegister(r, guildName)) }
 	switch {
-	case c.state != csRegSiege || w.cfg.Int("Event", "CastleSiegeEvent", 0) == 0:
+	case c.state != castlesiege.StateRegSiege || w.cfg.Int("Event", "CastleSiegeEvent", 0) == 0:
 		fail(csRegNotTime)
 		return
-	case guild == "":
+	case guildName == "":
 		fail(csRegNoGuild)
 		return
 	case !w.csGuildMaster(o):
@@ -104,7 +107,7 @@ func (w *World) handleCSRegister(o *Object, _ []byte) {
 		return
 	}
 	g, ok := w.csGuildRecord(o)
-	if !ok || g.count() < w.cfg.Int("Event", "CastleSiegeRegisterMinGuildMember", 0) {
+	if !ok || g.Count() < w.cfg.Int("Event", "CastleSiegeRegisterMinGuildMember", 0) {
 		fail(csRegMembers)
 		return
 	}
@@ -112,14 +115,14 @@ func (w *World) handleCSRegister(o *Object, _ []byte) {
 	if st == nil {
 		return
 	}
-	chk := store.CastleGuildCheck{Exists: true, MasterLevel: o.P.Char.Level, Members: g.count()}
+	chk := store.CastleGuildCheck{Exists: true, MasterLevel: o.P.Char.Level, Members: g.Count()}
 	group, idx := c.group, o.Index
 	w.async(func(ctx context.Context) func() {
-		r, err := st.RegisterSiegeGuild(ctx, group, guild, chk)
+		r, err := st.RegisterSiegeGuild(ctx, group, guildName, chk)
 		if err != nil {
 			r = 0
 		}
-		return func() { w.csReply(idx, packetCSRegister(byte(r), guild)) } // FUN_00424180
+		return func() { w.csReply(idx, castlesiege.PacketRegister(byte(r), guildName)) } // FUN_00424180
 	})
 }
 
@@ -137,12 +140,12 @@ func (w *World) handleCSGiveUp(o *Object, p []byte) {
 		return
 	}
 	c := w.cs()
-	if c.state < csRegSiege || c.state > csRegMark {
-		w.send(o, packetCSGiveUp(3, 0, ""))
+	if c.state < castlesiege.StateRegSiege || c.state > castlesiege.StateRegMark {
+		w.send(o, castlesiege.PacketGiveUp(3, 0, ""))
 		return
 	}
-	guild := csGuildName(o)
-	if guild == "" || !w.csGuildMaster(o) {
+	guildName := csGuildName(o)
+	if guildName == "" || !w.csGuildMaster(o) {
 		return
 	}
 	st := w.csStore()
@@ -152,16 +155,16 @@ func (w *World) handleCSGiveUp(o *Object, p []byte) {
 	giveUp := p[4] != 0
 	group, idx := c.group, o.Index
 	w.async(func(ctx context.Context) func() {
-		r, del, err := st.GiveUpSiegeGuild(ctx, group, guild, giveUp)
+		r, del, err := st.GiveUpSiegeGuild(ctx, group, guildName, giveUp)
 		if err != nil {
 			r, del = 0, 0
 		}
-		return func() { w.csGiveUpDone(idx, r, del, giveUp, guild) }
+		return func() { w.csGiveUpDone(idx, r, del, giveUp, guildName) }
 	})
 }
 
 // csGiveUpDone is FUN_00424510: 3000 zen per deleted mark.
-func (w *World) csGiveUpDone(idx, result, del int, giveUp bool, guild string) {
+func (w *World) csGiveUpDone(idx, result, del int, giveUp bool, guildName string) {
 	o := w.objects[idx]
 	if o.State != StatePlaying || !o.IsPlayer() {
 		return
@@ -174,7 +177,7 @@ func (w *World) csGiveUpDone(idx, result, del int, giveUp bool, guild string) {
 	if giveUp {
 		g = 1
 	}
-	w.send(o, packetCSGiveUp(byte(result), g, guild))
+	w.send(o, castlesiege.PacketGiveUp(byte(result), g, guildName))
 }
 
 // handleCSRegInfo is B2 03 (FUN_00420730 / FUN_00424020):
@@ -183,19 +186,19 @@ func (w *World) handleCSRegInfo(o *Object, _ []byte) {
 	if !w.csEnabled() || !o.IsPlayer() {
 		return
 	}
-	guild := csGuildName(o)
+	guildName := csGuildName(o)
 	st := w.csStore()
-	if guild == "" || st == nil {
+	if guildName == "" || st == nil {
 		return
 	}
 	group, idx := w.cs().group, o.Index
 	w.async(func(ctx context.Context) func() {
-		r, ok, err := st.GuildMarkRegInfo(ctx, group, guild)
+		r, ok, err := st.GuildMarkRegInfo(ctx, group, guildName)
 		result := byte(1)
 		if err != nil || !ok {
 			result, r = 2, store.CastleRegGuild{}
 		}
-		return func() { w.csReply(idx, packetCSRegInfo(result, guild, r.Marks, r.GiveUp, r.Seq)) }
+		return func() { w.csReply(idx, castlesiege.PacketRegInfo(result, guildName, r.Marks, r.GiveUp, r.Seq)) }
 	})
 }
 
@@ -206,12 +209,12 @@ func (w *World) handleCSRegMark(o *Object, _ []byte) {
 		return
 	}
 	c := w.cs()
-	guild := csGuildName(o)
-	if guild == "" || c.state != csRegMark {
+	guildName := csGuildName(o)
+	if guildName == "" || c.state != castlesiege.StateRegMark {
 		return
 	}
 	if w.countItems(o, csSignOfLord, 3) == 0 {
-		w.send(o, packetCSRegMark(3, "", 0))
+		w.send(o, castlesiege.PacketRegMark(3, "", 0))
 		return
 	}
 	cs := csOf(o)
@@ -225,16 +228,16 @@ func (w *World) handleCSRegMark(o *Object, _ []byte) {
 	cs.MarkReq = true
 	group, idx := c.group, o.Index
 	w.async(func(ctx context.Context) func() {
-		r, marks, err := st.RegisterGuildMark(ctx, group, guild)
+		r, marks, err := st.RegisterGuildMark(ctx, group, guildName)
 		if err != nil {
 			r, marks = 0, 0
 		}
-		return func() { w.csRegMarkDone(idx, r, marks, guild) }
+		return func() { w.csRegMarkDone(idx, r, marks, guildName) }
 	})
 }
 
 // csRegMarkDone is FUN_004243a0.
-func (w *World) csRegMarkDone(idx, result, marks int, guild string) {
+func (w *World) csRegMarkDone(idx, result, marks int, guildName string) {
 	o := w.objects[idx]
 	if o.State != StatePlaying || !o.IsPlayer() {
 		return
@@ -243,7 +246,7 @@ func (w *World) csRegMarkDone(idx, result, marks int, guild string) {
 	if result != 0 {
 		w.deleteItems(o, csSignOfLord, 3, 1)
 	}
-	w.send(o, packetCSRegMark(byte(result), guild, marks))
+	w.send(o, castlesiege.PacketRegMark(byte(result), guildName, marks))
 }
 
 // handleCSRegList is B4 (FUN_00421ce0 / FUN_00424d50): the TOP 100
@@ -263,7 +266,7 @@ func (w *World) handleCSRegList(o *Object, _ []byte) {
 		if err != nil {
 			result, list = 0, nil
 		}
-		return func() { w.csReply(idx, packetCSRegList(result, list)) }
+		return func() { w.csReply(idx, castlesiege.PacketRegList(result, list)) }
 	})
 }
 
@@ -348,11 +351,11 @@ func (w *World) csAddAlliances() {
 	}
 	for _, name := range csSortedNames(c.basic) {
 		side := c.basic[name].Side
-		rec, ok := mgr.find(name)
+		rec, ok := mgr.Find(name)
 		if !ok || rec.Union == 0 {
 			continue
 		}
-		for _, member := range mgr.unionList(rec.Union) {
+		for _, member := range mgr.UnionList(rec.Union) {
 			if _, ok := c.all[member.Name]; !ok {
 				c.all[member.Name] = &csGuild{Side: side}
 			}
@@ -406,20 +409,20 @@ func (w *World) handleCSSiegeList(o *Object, _ []byte) {
 		return
 	}
 	c := w.cs()
-	if c.state != csNotify && c.state != csReady {
-		w.send(o, packetCSSiegeList(2, nil))
+	if c.state != castlesiege.StateNotify && c.state != castlesiege.StateReady {
+		w.send(o, castlesiege.PacketSiegeList(2, nil))
 		return
 	}
 	if !c.listLoaded || !c.unionLoaded {
-		w.send(o, packetCSSiegeList(3, nil))
+		w.send(o, castlesiege.PacketSiegeList(3, nil))
 		return
 	}
-	var list []csSiegeEntry
+	var list []castlesiege.SiegeEntry
 	for _, name := range csSortedNames(c.all) {
 		g := c.all[name]
-		list = append(list, csSiegeEntry{Side: g.Side, Involved: g.Involved, Guild: name})
+		list = append(list, castlesiege.SiegeEntry{Side: g.Side, Involved: g.Involved, Guild: name})
 	}
-	w.send(o, packetCSSiegeList(1, list))
+	w.send(o, castlesiege.PacketSiegeList(1, list))
 }
 
 // csRefreshSides is FUN_0041e860: every player of a listed guild gets
@@ -465,7 +468,7 @@ func (w *World) csSideMark(o *Object) {
 	if w.hooks.eventEffect == nil {
 		return
 	}
-	if o.Map == csMap && (c.state == csStart || c.state == csEnd) && side != 0 {
+	if o.Map == castlesiege.Map && (c.state == castlesiege.StateStart || c.state == castlesiege.StateEnd) && side != 0 {
 		if side >= 1 && side <= 4 {
 			w.hooks.eventEffect(w, o, 13+int(side), true)
 		}

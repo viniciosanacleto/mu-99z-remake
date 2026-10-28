@@ -243,7 +243,7 @@ type hooks struct {
 	// guild.go
 	// castleOwner reports whether a guild owns the castle (FUN_00429b00,
 	// Castle Siege module).
-	castleOwner func(w *World, guild string) bool
+	castleOwner func(w *World, guildName string) bool
 
 	// invasion.go
 	// mapEventState builds the C1 05 0B packet sent on map entry (reshow).

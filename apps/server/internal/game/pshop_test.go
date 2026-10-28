@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"testing"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/chaosmix"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -68,9 +69,9 @@ func TestPShopPriceOpenBuy(t *testing.T) {
 	buyer.P.Char.Money = 5000
 
 	// Move a Jewel of Bless into the shop area (24 flag 4, result 0).
-	seller.P.Inventory[BagStart] = item.Item{Index: idxBless, Durability: 1, Serial: 77}
+	seller.P.Inventory[BagStart] = item.Item{Index: chaosmix.ItemBless, Durability: 1, Serial: 77}
 	b.handleItemMove(seller, move24(0, BagStart, 4, 80))
-	if m := find(b.drain(seller), 0x24, -1); m == nil || m[3] != 0 || m[4] != 80 || seller.P.Inventory[80].Index != idxBless {
+	if m := find(b.drain(seller), 0x24, -1); m == nil || m[3] != 0 || m[4] != 80 || seller.P.Inventory[80].Index != chaosmix.ItemBless {
 		t.Fatalf("inventory -> shop = % X", m)
 	}
 	// Opening without a price: 3F 02 00.
@@ -143,7 +144,7 @@ func TestPShopPriceOpenBuy(t *testing.T) {
 	b.handlePShop(buyer, pshopReq(6, append(req, 80)...))
 	pk := b.drain(buyer)
 	r := find(pk, 0x3F, 6)
-	if r == nil || r[4] != 1 || r[14] < BagStart || buyer.P.Inventory[r[14]].Index != idxBless || buyer.P.Char.Money != 2000 {
+	if r == nil || r[4] != 1 || r[14] < BagStart || buyer.P.Inventory[r[14]].Index != chaosmix.ItemBless || buyer.P.Char.Money != 2000 {
 		t.Fatalf("buy = % X money %d", r, buyer.P.Char.Money)
 	}
 	sp := b.drain(seller)
@@ -170,15 +171,15 @@ func TestPShopPriceOpenBuy(t *testing.T) {
 func TestPShopMoveRules(t *testing.T) {
 	b := newBareWorld(t)
 	o := b.player(PlayerStart, "Seller", 0, 130, 130)
-	o.P.Inventory[BagStart] = item.Item{Index: idxBless, Durability: 1}
+	o.P.Inventory[BagStart] = item.Item{Index: chaosmix.ItemBless, Durability: 1}
 	b.handleItemMove(o, move24(0, BagStart, 4, 76))
 	b.drain(o)
 	b.handleItemMove(o, move24(4, 76, 4, 107))
-	if m := find(b.drain(o), 0x24, -1); m == nil || m[3] != 0 || o.P.Inventory[107].Index != idxBless {
+	if m := find(b.drain(o), 0x24, -1); m == nil || m[3] != 0 || o.P.Inventory[107].Index != chaosmix.ItemBless {
 		t.Fatalf("shop -> shop = % X", m)
 	}
 	b.handleItemMove(o, move24(4, 107, 0, BagStart+1))
-	if m := find(b.drain(o), 0x24, -1); m == nil || m[3] != 0 || o.P.Inventory[BagStart+1].Index != idxBless {
+	if m := find(b.drain(o), 0x24, -1); m == nil || m[3] != 0 || o.P.Inventory[BagStart+1].Index != chaosmix.ItemBless {
 		t.Fatalf("shop -> inventory = % X", m)
 	}
 	// Account lock refuses with message 0x6F2.

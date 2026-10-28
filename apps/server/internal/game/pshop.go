@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
@@ -78,14 +79,14 @@ func (w *World) handlePShop(o *Object, p []byte) {
 
 // packetPShopPrice is C1 06 3F 01 result slot (FUN_004d5990).
 func packetPShopPrice(result, slot byte) []byte {
-	p := newPacket(frame.C1, 0x3F, 0x01, 6)
+	p := packet.New(frame.C1, 0x3F, 0x01, 6)
 	p[4], p[5] = result, slot
 	return p
 }
 
 // packetPShopOpen is C1 05 3F 02 result (FUN_004d5a30).
 func packetPShopOpen(result byte) []byte {
-	p := newPacket(frame.C1, 0x3F, 0x02, 5)
+	p := packet.New(frame.C1, 0x3F, 0x02, 5)
 	p[4] = result
 	return p
 }
@@ -93,7 +94,7 @@ func packetPShopOpen(result byte) []byte {
 // packetPShopClose is C1 07 3F 03 01 index(BE) (FUN_004d5ad0), sent to the
 // owner and to VP2.
 func packetPShopClose(index int) []byte {
-	p := newPacket(frame.C1, 0x3F, 0x03, 7)
+	p := packet.New(frame.C1, 0x3F, 0x03, 7)
 	p[4] = 1
 	p[5], p[6] = byte(index>>8), byte(index)
 	return p
@@ -119,11 +120,11 @@ func packetPShopList(sub, result byte, index int, name string, title []byte, lis
 			n++
 		}
 	}
-	p := newPacket(frame.C2, 0x3F, -1, 0x37+len(body))
+	p := packet.New(frame.C2, 0x3F, -1, 0x37+len(body))
 	p[4], p[5] = sub, result
 	p[6], p[7] = byte(index>>8), byte(index)
 	if result == 1 {
-		putName(p[8:18], name)
+		packet.PutName(p[8:18], name)
 		copy(p[18:18+pshopTitleLen], title)
 	}
 	p[54] = byte(n)
@@ -135,7 +136,7 @@ func packetPShopList(sub, result byte, index int, name string, title []byte, lis
 // (FUN_004d5e40): the item is the buyer's inventory item at slot (slot 0
 // on failures).
 func packetPShopBuy(result byte, seller int, it item.Item, slot byte) []byte {
-	p := newPacket(frame.C1, 0x3F, 0x06, 0x0F)
+	p := packet.New(frame.C1, 0x3F, 0x06, 0x0F)
 	p[4] = result
 	p[5], p[6] = byte(seller>>8), byte(seller)
 	it.EncodeWire(p[7:14], false)
@@ -146,26 +147,26 @@ func packetPShopBuy(result byte, seller int, it item.Item, slot byte) []byte {
 // packetPShopSold is C1 0F 3F 08 slot buyerName[10] (FUN_004d5f70), to
 // the seller.
 func packetPShopSold(slot byte, buyer string) []byte {
-	p := newPacket(frame.C1, 0x3F, 0x08, 0x0F)
+	p := packet.New(frame.C1, 0x3F, 0x08, 0x0F)
 	p[4] = slot
-	putName(p[5:15], buyer)
+	packet.PutName(p[5:15], buyer)
 	return p
 }
 
 // packetPShopTitle is C1 34 3F 10 index(BE) title[36] name[10]
 // (FUN_004d6040), to VP2 when an open shop changes its title.
 func packetPShopTitle(index int, title []byte, name string) []byte {
-	p := newPacket(frame.C1, 0x3F, 0x10, 0x34)
+	p := packet.New(frame.C1, 0x3F, 0x10, 0x34)
 	p[4], p[5] = byte(index>>8), byte(index)
 	copy(p[6:6+pshopTitleLen], title)
-	putName(p[42:52], name)
+	packet.PutName(p[42:52], name)
 	return p
 }
 
 // packetPShopGone is C1 06 3F 12 index(BE) (FUN_004d60c0): the shop being
 // viewed closed (index FFFF).
 func packetPShopGone(index int) []byte {
-	p := newPacket(frame.C1, 0x3F, 0x12, 6)
+	p := packet.New(frame.C1, 0x3F, 0x12, 6)
 	p[4], p[5] = byte(index>>8), byte(index)
 	return p
 }
@@ -173,7 +174,7 @@ func packetPShopGone(index int) []byte {
 // packetPShopViewport is C2 size 3F 00 count + {index(BE), title[36]}
 // (FUN_004d5600).
 func packetPShopViewport(entries []*Object) []byte {
-	p := newPacket(frame.C2, 0x3F, 0, 6+len(entries)*0x26)
+	p := packet.New(frame.C2, 0x3F, 0, 6+len(entries)*0x26)
 	p[5] = byte(len(entries))
 	for i, t := range entries {
 		e := p[6+i*0x26:]

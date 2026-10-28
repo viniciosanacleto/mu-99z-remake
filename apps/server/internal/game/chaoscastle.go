@@ -4,7 +4,11 @@ import (
 	"math"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/bloodcastle"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/chaoscastle"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/devilsquare"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
@@ -17,45 +21,6 @@ import (
 // stands on a hole falls. The survivor with the most kills wins when no
 // monster is left.
 
-const (
-	ccCastles   = 6
-	ccMaxUsers  = 70  // 0x46 user slots of 0x14 bytes at record+0x30
-	ccMaxMobs   = 100 // monster list at record+0x5a8
-	ccEntrySec  = 2   // EventEntryLevel.dat section
-	ccStageSec  = 1   // EventStageSpawn.dat section
-	ccKickGate  = 0x16
-	itemCCArmor = 0x1A1D // Armor of Guardsman (13,29)
-)
-
-// ccGates are the entry gates of FUN_004338c0 per castle (case 6 = 0x110
-// is unreachable since the castle is at most 5).
-var ccGates = [ccCastles]int{0x52, 0x53, 0x54, 0x55, 0x56, 0x57}
-
-// ccFee is the entry fee table DAT_00547978.
-var ccFee = [ccCastles]int{25000, 80000, 150000, 250000, 400000, 650000}
-
-// Rectangles (x1, y1, x2, y2) read from 0x547928..0x547977.
-var (
-	// ccSafeRect is DAT_00547928, sent with the safe-zone overlay.
-	ccSafeRect = [4]byte{23, 75, 44, 108}
-	// ccHoleRects are DAT_00547930 + set*16: the holes of steps 1..3 (set
-	// 0 is a copy of set 1 and is never used).
-	ccHoleRects = [4][4][4]byte{
-		{{23, 75, 44, 76}, {43, 77, 44, 108}, {23, 107, 42, 108}, {23, 77, 24, 106}},
-		{{23, 75, 44, 76}, {43, 77, 44, 108}, {23, 107, 42, 108}, {23, 77, 24, 106}},
-		{{25, 77, 42, 78}, {41, 79, 42, 106}, {25, 105, 40, 106}, {25, 79, 26, 104}},
-		{{27, 79, 40, 80}, {39, 81, 40, 104}, {27, 103, 38, 104}, {27, 81, 28, 102}},
-	}
-	// ccCenterRects are DAT_00547970/74 (FUN_00432830).
-	ccCenterRects = [2][4]byte{{32, 84, 35, 87}, {32, 96, 35, 99}}
-)
-
-// ccUser is one 0x14-byte user slot: index, score, users killed, monsters
-// killed, experience.
-type ccUser struct {
-	Index, Score, UserKills, MonsterKills, Exp int
-}
-
 type ccCastle struct {
 	Index, State, Map int
 	Remain            int       // r[3]
@@ -67,14 +32,14 @@ type ccCastle struct {
 	Step              int       // r[9]: hole step 0..3
 	Total             int       // r[10]: users at START + monsters spawned
 	Winner            int       // r[11]
-	Users             [ccMaxUsers]ccUser
-	Mobs              [ccMaxMobs]int
+	Users             [chaoscastle.MaxUsers]chaoscastle.User
+	Mobs              [chaoscastle.MaxMobs]int
 	Delayed           []bcDelayed // record+0x738
 }
 
 type chaosCastle struct {
 	data *gamedata.ChaosCastle
-	c    [ccCastles]ccCastle
+	c    [chaoscastle.Castles]ccCastle
 }
 
 func registerChaoscastle(h *hooks) {
@@ -101,7 +66,7 @@ func registerChaoscastle(h *hooks) {
 		// FUN_004302a0.
 		for i := range cc.c {
 			if w.ccOn() {
-				cc.c[i].State = dsEmpty
+				cc.c[i].State = devilsquare.StateEmpty
 				w.ccEnterEmpty(&cc.c[i])
 			}
 		}
@@ -111,7 +76,7 @@ func registerChaoscastle(h *hooks) {
 	h.worldHandlers[0xAF] = (*World).handleCCPacket
 	h.eventTimeHandlers[4] = (*World).ccRemainTime
 	h.chaosCastleState = func(w *World, room int) int { // FUN_00431420
-		if w.cc() == nil || room < 0 || room >= ccCastles {
+		if w.cc() == nil || room < 0 || room >= chaoscastle.Castles {
 			return 0
 		}
 		return w.cc().c[room].State
@@ -134,41 +99,23 @@ func (w *World) ccOn() bool { return w.cfg.Int("Event", "ChaosCastleEvent", 0) !
 
 // --- packets -----------------------------------------------------------
 
-// packetCCResult is C1 1D 93 success FE name[10] ... (FUN_00433e80, and
-// the delayed copy of FUN_00433fb0 with success 0): bytes 15..16 are not
-// written by the original (0 here), [17] monsters killed, [21]
-// experience, [25] users killed.
-func packetCCResult(success byte, name string, u ccUser) []byte {
-	p := make([]byte, 0x1D)
-	p[0], p[1], p[2], p[3], p[4] = 0xC1, 0x1D, 0x93, success, 0xFE
-	copy(p[5:15], name)
-	u32le(p[17:], uint32(u.MonsterKills))
-	u32le(p[21:], uint32(u.Exp))
-	u32le(p[25:], uint32(u.UserKills))
-	return p
-}
-
 // packetCCStatus is C1 0E 9B 06 remain total current 00 00 FF 00
 // (FUN_00430ab0): the remaining seconds, users + monsters at START and
 // the current users + monsters.
 func packetCCStatus(remain, total, current int) []byte {
-	p := packetBCState(6)
-	u16le(p[4:], remain)
-	u16le(p[6:], total)
-	u16le(p[8:], current)
+	p := bloodcastle.PacketState(6)
+	packet.PutUint16(p[4:], remain)
+	packet.PutUint16(p[6:], total)
+	packet.PutUint16(p[8:], current)
 	return p
 }
-
-// packetCCEnterResult is C1 05 AF 01 result (FUN_004338c0): 0 ok, 1
-// refused, 2 closed, 5 full, 7 not enough zen, 8 PK.
-func packetCCEnterResult(r byte) []byte { return []byte{0xC1, 0x05, 0xAF, 0x01, r} }
 
 // --- users ---------------------------------------------------------------
 
 func ccIndex(i int) bool { return i >= 0 && i < MaxObjects }
 
 // user is FUN_004317f0.
-func (c *ccCastle) user(index int) *ccUser {
+func (c *ccCastle) user(index int) *chaoscastle.User {
 	if !ccIndex(index) {
 		return nil
 	}
@@ -209,7 +156,7 @@ func (w *World) ccAddUser(c *ccCastle, o *Object) bool {
 	}
 	for i := range c.Users {
 		if !ccIndex(c.Users[i].Index) {
-			c.Users[i] = ccUser{Index: o.Index}
+			c.Users[i] = chaoscastle.User{Index: o.Index}
 			o.P.entries.CC++
 			w.saveCharacter(o, nil)
 			return true
@@ -221,7 +168,7 @@ func (w *World) ccAddUser(c *ccCastle, o *Object) bool {
 // removeUser is FUN_00431790.
 func (c *ccCastle) removeUser(index int) {
 	if u := c.user(index); u != nil {
-		*u = ccUser{Index: -1}
+		*u = chaoscastle.User{Index: -1}
 	}
 }
 
@@ -233,7 +180,7 @@ func (w *World) ccCleanUsers(c *ccCastle) {
 			continue
 		}
 		if o := w.objects[u]; o.State != StatePlaying || o.Map != c.Map {
-			c.Users[i] = ccUser{Index: -1}
+			c.Users[i] = chaoscastle.User{Index: -1}
 		}
 	}
 }
@@ -268,20 +215,9 @@ func (w *World) ccAttrRects(c *ccCastle, attr byte, set bool, rects [][4]byte) {
 	for _, r := range rects {
 		for x := int(r[0]); x <= int(r[2]); x++ {
 			for y := int(r[1]); y <= int(r[3]); y++ {
-				ccSetAttr(t, x, y, attr, set)
+				chaoscastle.SetAttr(t, x, y, attr, set)
 			}
 		}
-	}
-}
-
-func ccSetAttr(t *gamedata.Terrain, x, y int, attr byte, set bool) {
-	if x < 0 || y < 0 || x >= t.Width || y >= t.Height {
-		return
-	}
-	if set {
-		t.Set(x, y, t.Get(x, y)|attr)
-	} else {
-		t.Set(x, y, t.Get(x, y)&^attr)
 	}
 }
 
@@ -292,24 +228,24 @@ func (w *World) ccSafeZone(c *ccCastle, set bool) {
 	if t := w.terrain(c.Map); t != nil {
 		for x := 23; x <= 44; x++ {
 			for y := 75; y <= 108; y += 2 {
-				ccSetAttr(t, x, y, gamedata.AttrSafeZone, set)
-				ccSetAttr(t, x, y+1, gamedata.AttrSafeZone, set)
+				chaoscastle.SetAttr(t, x, y, gamedata.AttrSafeZone, set)
+				chaoscastle.SetAttr(t, x, y+1, gamedata.AttrSafeZone, set)
 			}
 		}
 	}
-	w.ccUsersSend(c, packetMapAttr(gamedata.AttrSafeZone, !set, ccSafeRect))
+	w.ccUsersSend(c, packetMapAttr(gamedata.AttrSafeZone, !set, chaoscastle.SafeRect))
 }
 
 // ccHoles is FUN_00432710 (set) / FUN_004327a0 (clear): attribute 8 on the
 // four rectangles of a hole set. No packet: the client opens the holes
 // itself on 9B 08/09/0A.
 func (w *World) ccHoles(c *ccCastle, set int, on bool) {
-	w.ccAttrRects(c, gamedata.AttrNoGround, on, ccHoleRects[set][:])
+	w.ccAttrRects(c, gamedata.AttrNoGround, on, chaoscastle.HoleRects[set][:])
 }
 
 // ccCenterHoles is FUN_00432830.
 func (w *World) ccCenterHoles(c *ccCastle) {
-	w.ccAttrRects(c, gamedata.AttrNoGround, true, ccCenterRects[:])
+	w.ccAttrRects(c, gamedata.AttrNoGround, true, chaoscastle.CenterRects[:])
 }
 
 func (w *World) ccAttrAt(c *ccCastle, x, y int) byte {
@@ -337,15 +273,15 @@ func (w *World) ccTick() {
 		c.Tick = now
 		c.Remain = int(math.Floor(c.Target.Sub(now).Seconds()))
 		switch c.State {
-		case dsEmpty:
+		case devilsquare.StateEmpty:
 			w.ccEmptyProc(c)
-		case dsReady:
+		case devilsquare.StateReady:
 			w.ccReadyProc(c)
-		case dsStand:
+		case devilsquare.StateStand:
 			w.ccStandProc(c)
-		case dsStart:
+		case devilsquare.StateStart:
 			w.ccStartProc(c)
-		case dsClean:
+		case devilsquare.StateClean:
 			w.ccCleanProc(c)
 		}
 		w.ccDelayedProc(c, now)
@@ -379,7 +315,7 @@ func (w *World) ccEmptyProc(c *ccCastle) {
 		}
 	}
 	if c.Remain < 1 && w.ccOn() {
-		c.State = dsReady
+		c.State = devilsquare.StateReady
 		w.ccEnterReady(c)
 	}
 }
@@ -396,7 +332,7 @@ func (w *World) ccReadyProc(c *ccCastle) {
 		}
 	}
 	if c.Remain > 0 && c.Remain < 31 && !c.Warned {
-		w.sendAll(packetDSState(0x0A))
+		w.sendAll(devilsquare.PacketState(0x0A))
 		c.Warned = true
 	}
 	if c.Remain > 0 {
@@ -407,7 +343,7 @@ func (w *World) ccReadyProc(c *ccCastle) {
 	}
 	w.ccUsersMsg(c, NoticeBlue, 0x12, c.Index+1, w.cc().data.StandTime)
 	if w.ccOn() {
-		c.State = dsStand
+		c.State = devilsquare.StateStand
 		w.ccEnterStand(c)
 	}
 }
@@ -419,19 +355,19 @@ func (w *World) ccStandProc(c *ccCastle) {
 	if c.userCount() < w.cfg.Int("Event", "ChaosCastleMinUser", 0) {
 		w.ccUsersMsg(c, NoticeGold, 0x15)
 		if w.ccOn() {
-			c.State = dsEmpty
+			c.State = devilsquare.StateEmpty
 			w.ccEnterEmpty(c)
 		}
 		return
 	}
 	if c.Remain > 0 && c.Remain < 31 && !c.Warned {
-		w.ccUsersSend(c, packetDSState(0x0B))
+		w.ccUsersSend(c, devilsquare.PacketState(0x0B))
 		c.Warned = true
 	}
 	if c.Remain < 1 {
 		w.ccUsersMsg(c, NoticeGold, 0x13)
 		if w.ccOn() {
-			c.State = dsStart
+			c.State = devilsquare.StateStart
 			w.ccEnterStart(c)
 		}
 	}
@@ -445,7 +381,7 @@ func (w *World) ccStartProc(c *ccCastle) {
 	w.ccCleanUsers(c)
 	if c.userCount() == 0 {
 		if w.ccOn() {
-			c.State = dsEmpty
+			c.State = devilsquare.StateEmpty
 			w.ccEnterEmpty(c)
 		}
 		return
@@ -453,7 +389,7 @@ func (w *World) ccStartProc(c *ccCastle) {
 	limits := [3]int{41, 31, 21}
 	if c.Step < 3 && c.userCount()+c.mobCount() < limits[c.Step] {
 		c.Step++
-		w.ccUsersSend(c, packetBCState(byte(7+c.Step))) // 9B 08 / 09 / 0A
+		w.ccUsersSend(c, bloodcastle.PacketState(byte(7+c.Step))) // 9B 08 / 09 / 0A
 		w.ccHoles(c, c.Step, true)
 	}
 	w.ccFallProc(c)
@@ -462,7 +398,7 @@ func (w *World) ccStartProc(c *ccCastle) {
 	w.ccUsersSend(c, packetCCStatus(c.Remain, c.Total, c.userCount()+c.mobCount()))
 	if c.userCount() != 1 || c.mobCount() != 0 {
 		if c.Remain > 0 && c.Remain < 31 && !c.Warned {
-			w.ccUsersSend(c, packetDSState(0x0C))
+			w.ccUsersSend(c, devilsquare.PacketState(0x0C))
 			c.Warned = true
 		}
 		if c.Remain > 0 {
@@ -471,7 +407,7 @@ func (w *World) ccStartProc(c *ccCastle) {
 		w.ccUsersMsg(c, NoticeGold, 0x14)
 	}
 	if w.ccOn() {
-		c.State = dsClean
+		c.State = devilsquare.StateClean
 		w.ccEnterClean(c)
 	}
 }
@@ -480,11 +416,11 @@ func (w *World) ccStartProc(c *ccCastle) {
 func (w *World) ccCleanProc(c *ccCastle) {
 	w.ccCleanUsers(c)
 	if c.Remain > 0 && c.Remain < 31 && !c.Warned {
-		w.ccUsersSend(c, packetDSState(0x0D))
+		w.ccUsersSend(c, devilsquare.PacketState(0x0D))
 		c.Warned = true
 	}
 	if c.Remain < 1 && w.ccOn() {
-		c.State = dsEmpty
+		c.State = devilsquare.StateEmpty
 		w.ccEnterEmpty(c)
 	}
 }
@@ -501,11 +437,11 @@ func (c *ccCastle) setRemain(now time.Time, sec int) {
 func (w *World) ccEnterEmpty(c *ccCastle) {
 	c.LastMin, c.Winner = -1, -1
 	c.Open, c.Warned, c.Step, c.Total = false, false, 0, 0
-	w.ccUsersSend(c, packetBCState(7))
+	w.ccUsersSend(c, bloodcastle.PacketState(7))
 	for i := range c.Users { // FUN_00431820
 		if u := c.Users[i].Index; ccIndex(u) {
-			w.gateMove(w.objects[u], ccKickGate)
-			c.Users[i] = ccUser{Index: -1}
+			w.gateMove(w.objects[u], chaoscastle.KickGate)
+			c.Users[i] = chaoscastle.User{Index: -1}
 		}
 	}
 	w.ccClearMobs(c)
@@ -517,7 +453,7 @@ func (w *World) ccEnterEmpty(c *ccCastle) {
 	now := w.now()
 	next, ok := nextSchedule(w.cc().data.Schedule, now)
 	if !ok {
-		c.State = dsBlank
+		c.State = devilsquare.StateBlank
 		return
 	}
 	c.Target = next
@@ -545,7 +481,7 @@ func (w *World) ccEnterStart(c *ccCastle) {
 	c.Total = c.userCount()
 	w.ccSafeZone(c, false)
 	w.ccSpawn(c)
-	w.ccUsersSend(c, packetBCState(5))
+	w.ccUsersSend(c, bloodcastle.PacketState(5))
 	c.setRemain(w.now(), w.cc().data.EventTime*60)
 }
 
@@ -568,13 +504,13 @@ func (w *World) ccEnterClean(c *ccCastle) {
 		w.ccExperience(c, u)
 		if u.Index == c.Winner {
 			w.ccItemReward(o)
-			w.send(o, packetCCResult(1, bcName(o), *u))
+			w.send(o, chaoscastle.PacketResult(1, bcName(o), *u))
 		} else {
-			w.send(o, packetCCResult(0, bcName(o), *u))
+			w.send(o, chaoscastle.PacketResult(0, bcName(o), *u))
 		}
 		w.reportEventRanking(store.RankingChaosCastle, o, u.Score) // FUN_00476ce0
 	}
-	w.ccUsersSend(c, packetBCState(7))
+	w.ccUsersSend(c, bloodcastle.PacketState(7))
 	c.setRemain(w.now(), w.cc().data.CloseTime*60)
 }
 
@@ -605,7 +541,7 @@ func (w *World) ccJackpot(c *ccCastle) {
 		}
 	}
 	o := w.objects[list[rnd(len(list))]]
-	amount := int64(uint32(rate * ccFee[c.Index] * users / 100))
+	amount := int64(uint32(rate * chaoscastle.Fee[c.Index] * users / 100))
 	if v := o.P.Char.Money + amount; v <= maxZen {
 		o.P.Char.Money = v
 	} else {
@@ -619,7 +555,7 @@ func (w *World) ccJackpot(c *ccCastle) {
 // table2 * monsters killed (capped at 0x7FFFFFFF), score = experience / 5,
 // then times AddEventExperienceRate_AL; nothing under effects 31/42;
 // MaxLevelUpEvent levels at most.
-func (w *World) ccExperience(c *ccCastle, u *ccUser) {
+func (w *World) ccExperience(c *ccCastle, u *chaoscastle.User) {
 	o := w.objects[u.Index]
 	if o.State != StatePlaying || o.P == nil || o.P.Char == nil {
 		return
@@ -665,8 +601,8 @@ func (w *World) ccItemReward(o *Object) {
 
 // queueResult is FUN_00433fb0: the 93 result with success 0, sent 8 s
 // later by FUN_00433500.
-func (w *World) ccQueueResult(c *ccCastle, u ccUser) {
-	c.Delayed = append(c.Delayed, bcDelayed{At: w.now(), Index: u.Index, Pkt: packetCCResult(0, bcName(w.objects[u.Index]), u)})
+func (w *World) ccQueueResult(c *ccCastle, u chaoscastle.User) {
+	c.Delayed = append(c.Delayed, bcDelayed{At: w.now(), Index: u.Index, Pkt: chaoscastle.PacketResult(0, bcName(w.objects[u.Index]), u)})
 }
 
 // --- monsters ------------------------------------------------------------
@@ -676,7 +612,7 @@ func (w *World) ccQueueResult(c *ccCastle, u ccUser) {
 // spawn records while users + monsters stay at most 100 (r[10]).
 func (w *World) ccSpawn(c *ccCastle) {
 	for _, r := range w.ev().stage {
-		if r.Event != ccStageSec || r.Level != c.Index || r.Stage != 0 {
+		if r.Event != chaoscastle.StageSection || r.Level != c.Index || r.Stage != 0 {
 			continue
 		}
 		for i, s := range w.mw().spawns {
@@ -772,7 +708,7 @@ func (w *World) ccFallProc(c *ccCastle) {
 		w.broadcast(o, p)
 		w.ccExperience(c, &c.Users[i])
 		w.ccQueueResult(c, c.Users[i])
-		c.Users[i] = ccUser{Index: -1}
+		c.Users[i] = chaoscastle.User{Index: -1}
 	}
 }
 
@@ -822,9 +758,9 @@ func (w *World) ccItemsProc(c *ccCastle) {
 	if t == nil {
 		return
 	}
-	for i := range t.items {
-		m := &t.items[i]
-		if m.valid() && w.ccAttrAt(c, m.X, m.Y)&gamedata.AttrNoGround != 0 {
+	for i := range t.Items {
+		m := &t.Items[i]
+		if m.Valid() && w.ccAttrAt(c, m.X, m.Y)&gamedata.AttrNoGround != 0 {
 			w.removeMapItem(c.Map, i)
 		}
 	}
@@ -887,7 +823,7 @@ func (w *World) ccCastleOf(o *Object) *ccCastle {
 // hitter (or the killer) scores 2 and one monster kill.
 func (w *World) ccMonsterKilled(killer, mon *Object) {
 	c := w.ccCastleOf(mon)
-	if c == nil || c.State != dsStart {
+	if c == nil || c.State != devilsquare.StateStart {
 		return
 	}
 	if mon.Mon != nil {
@@ -916,7 +852,7 @@ func (w *World) ccMonsterKilled(killer, mon *Object) {
 // one user kill.
 func (w *World) ccPlayerKilled(killer, victim *Object) {
 	c := w.ccCastleOf(victim)
-	if c == nil || c.State != dsStart {
+	if c == nil || c.State != devilsquare.StateStart {
 		return
 	}
 	u := c.user(victim.Index)
@@ -971,7 +907,7 @@ func (w *World) handleCCEnter(o *Object, p []byte) {
 	if len(p) < 6 || !w.ccOn() || !questPlayerOK(o) {
 		return
 	}
-	lv := w.ev().entry.Level(ccEntrySec, o.Class, o.P.Char.Level)
+	lv := w.ev().entry.Level(chaoscastle.EntrySection, o.Class, o.P.Char.Level)
 	if lv < 0 || lv > 5 {
 		w.send(o, packetCustomNotice(0, 0, w.messageFor(o, 0x16)))
 		return
@@ -981,8 +917,8 @@ func (w *World) handleCCEnter(o *Object, p []byte) {
 		return
 	}
 	slot := int(p[5])
-	refuse := func(r byte) { w.send(o, packetCCEnterResult(r)) }
-	if slot > 0x4B || o.P.Inventory[slot].IsEmpty() || o.P.Inventory[slot].Index != itemCCArmor {
+	refuse := func(r byte) { w.send(o, chaoscastle.PacketEnterResult(r)) }
+	if slot > 0x4B || o.P.Inventory[slot].IsEmpty() || o.P.Inventory[slot].Index != chaoscastle.ItemArmor {
 		refuse(1)
 		return
 	}
@@ -1022,7 +958,7 @@ func (w *World) handleCCEnter(o *Object, p []byte) {
 		refuse(2)
 		return
 	}
-	if o.P.Char.Money < int64(ccFee[lv]) {
+	if o.P.Char.Money < int64(chaoscastle.Fee[lv]) {
 		refuse(7)
 		return
 	}
@@ -1034,17 +970,17 @@ func (w *World) handleCCEnter(o *Object, p []byte) {
 		refuse(5)
 		return
 	}
-	o.P.Char.Money -= int64(ccFee[lv])
+	o.P.Char.Money -= int64(chaoscastle.Fee[lv])
 	w.sendMoney(o)
 	w.deleteInventory(o, slot)
 	w.send(o, packetItemDelete(slot, 1))
-	w.send(o, packetCCEnterResult(0))
+	w.send(o, chaoscastle.PacketEnterResult(0))
 	if w.summonOf(o) != nil {
 		w.removeSummon(o)
 		w.send(o, packetSummonLife(0))
 	}
 	items(o).If = ifState{}
-	w.gateMove(o, ccGates[lv])
+	w.gateMove(o, chaoscastle.Gates[lv])
 }
 
 // handleCCMove is AF 02 (FUN_00433d50): a user inside its castle is moved
@@ -1065,13 +1001,13 @@ func (w *World) handleCCMove(o *Object, p []byte) {
 // castle while READY (FUN_00431690), otherwise the minutes to the next
 // start (FUN_00431470).
 func (w *World) ccRemainTime(o *Object, p []byte) []byte {
-	lv := w.ev().entry.Level(ccEntrySec, o.Class, o.P.Char.Level)
+	lv := w.ev().entry.Level(chaoscastle.EntrySection, o.Class, o.P.Char.Level)
 	if lv < 0 || lv > 5 {
 		w.send(o, packetCustomNotice(0, 0, w.messageFor(o, 0x16)))
 		return nil
 	}
 	out := packetEventTime(4)
-	if c := &w.cc().c[lv]; c.State == dsReady {
+	if c := &w.cc().c[lv]; c.State == devilsquare.StateReady {
 		out[5] = byte(c.userCount())
 	} else if next, ok := nextSchedule(w.cc().data.Schedule, w.now()); ok {
 		sec := int(math.Floor(next.Sub(w.now()).Seconds()))

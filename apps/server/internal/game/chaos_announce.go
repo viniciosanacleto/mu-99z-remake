@@ -1,14 +1,10 @@
 package game
 
-import "github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+import (
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 
-// chaosAnnounceMix is the FUN_0042b790 type that announces: 3, the +13
-// mix (86 16 with the +12 item; +10..+12 and +14/+15 never announce).
-const chaosAnnounceMix = 3
-
-// chaosAnnounceLevel is the level FUN_005120b0 pushes as a constant for
-// both the CItemLevel lookup and the "+%d" of the text.
-const chaosAnnounceLevel = 13
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/chaosmix"
+)
 
 // chaosAnnounce is FUN_005120b0, called by FUN_0042b790 after a
 // successful +item mix with EAX = the CItem +4 (the item *index*, read
@@ -30,18 +26,18 @@ const chaosAnnounceLevel = 13
 //     never written: 0);
 //   - any other mode sends nothing.
 func (w *World) chaosAnnounce(o *Object, mixType int, it item.Item) {
-	if mixType != chaosAnnounceMix {
+	if mixType != chaosmix.AnnounceMix {
 		return
 	}
 	mode := w.cfg.Int("Common", "ChaosMixPlusItemAnnounce", 0)
 	if mode == 0 || it.Index < w.cfg.Int("Common", "AnnounceMinLevelChaosMix", 0xd) {
 		return
 	}
-	name := w.itemName(it.Index, chaosAnnounceLevel)
+	name := w.itemName(it.Index, chaosmix.AnnounceLevel)
 	switch mode {
 	case 1:
-		w.noticeAllMsg(NoticeGold, 500, o.P.Char.Name, name, chaosAnnounceLevel)
+		w.noticeAllMsg(NoticeGold, 500, o.P.Char.Name, name, chaosmix.AnnounceLevel)
 	case 2:
-		w.groupNotice(NoticeGold, w.messageFor(nil, 500, o.P.Char.Name, name, chaosAnnounceLevel))
+		w.groupNotice(NoticeGold, w.messageFor(nil, 500, o.P.Char.Name, name, chaosmix.AnnounceLevel))
 	}
 }

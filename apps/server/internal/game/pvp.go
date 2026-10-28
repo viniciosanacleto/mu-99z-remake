@@ -4,6 +4,8 @@ import (
 	"math"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/effect"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -128,14 +130,14 @@ func (w *World) attackFull(a, t *Object, args attackArgs) bool {
 		dl(a).Tick, dl(t).Tick = now, now
 	}
 	if a.Move != nil && a.Move.Authority == 1 {
-		w.removeEffect(a, effInvisibility)
+		w.removeEffect(a, effect.Invisibility)
 	}
 	// Immunities.
-	miss := hasEffectIndex(t, effImmunity34) ||
-		(hasEffectIndex(t, effPhysiImmunity) && skill == 0) ||
-		(hasEffectIndex(t, effMagicImmunity) && skill != 0) ||
-		(t.Type == TypeMonster && ((hasEffectIndex(t, effMonPhysiImmunity) && skill == 0) ||
-			(hasEffectIndex(t, effMonMagicImmunity) && skill != 0)))
+	miss := hasEffectIndex(t, effect.Immunity34) ||
+		(hasEffectIndex(t, effect.PhysiImmunity) && skill == 0) ||
+		(hasEffectIndex(t, effect.MagicImmunity) && skill != 0) ||
+		(t.Type == TypeMonster && ((hasEffectIndex(t, effect.MonPhysiImmunity) && skill == 0) ||
+			(hasEffectIndex(t, effect.MonMagicImmunity) && skill != 0)))
 	if !miss && t.Type == TypeMonster && t.Class == soccerBallClass {
 		// The battle soccer ball rolls 2 cells away (message 6 handled at
 		// once, FUN_004b48f0 -> FUN_005114f0, pushback.go) and the hit
@@ -158,7 +160,7 @@ func (w *World) attackFull(a, t *Object, args attackArgs) bool {
 	}
 	as, ts := w.combatStats(a), w.combatStats(t)
 	ao, to := effOpt(a), effOpt(t)
-	effect := 0
+	hitEffect := 0
 	stuck := false
 	dmg := 0
 	if args.Fixed == 0 {
@@ -167,12 +169,12 @@ func (w *World) attackFull(a, t *Object, args attackArgs) bool {
 			w.sendMiss(a, t, args)
 			return true
 		}
-		def := defenseFull(a, t, ts, as, to, &effect)
+		def := defenseFull(a, t, ts, as, to, &hitEffect)
 		switch {
 		case a.Type == TypePlayer && skill != 0 && (a.Class == 0 || a.Class == 3 || a.Class == 5) && !physicalSkill(skill):
-			dmg = w.magicDamage(a, t, as, ao, args.Ref, skill, &effect, def)
+			dmg = w.magicDamage(a, t, as, ao, args.Ref, skill, &hitEffect, def)
 		default:
-			dmg = w.physicalDamage(a, t, as, ao, args.Ref, skill, &effect, def)
+			dmg = w.physicalDamage(a, t, as, ao, args.Ref, skill, &hitEffect, def)
 		}
 		if reduced {
 			dmg = dmg * 30 / 100
@@ -214,15 +216,15 @@ func (w *World) attackFull(a, t *Object, args attackArgs) bool {
 			}
 		}
 		if rnd(100) < as.DoubleDamageRate {
-			effect |= effectDouble
+			hitEffect |= effectDouble
 			dmg *= 2
 		}
 		if rnd(100) < as.TripleDamageRate {
-			effect |= effectTriple
+			hitEffect |= effectTriple
 			dmg *= 3
 		}
 		if args.Combo && a.Type == TypePlayer && a.Class >= 0 && a.Class < 5 {
-			effect |= effectCombo
+			hitEffect |= effectCombo
 			p := classKeys[a.Class]
 			sum := addStat(a, 0) + addStat(a, 1) + addStat(a, 3)
 			dmg = w.cfg.Int("Character", p+"ComboDamageConstB", 0)*divOr0(sum, w.cfg.Int("Character", p+"ComboDamageConstA", 0)) + dmg*2
@@ -230,7 +232,7 @@ func (w *World) attackFull(a, t *Object, args attackArgs) bool {
 			skill = 59
 		}
 	} else if skill != 79 {
-		effect = 4
+		hitEffect = 4
 		key := "ReflectDamageRatePvM"
 		if a.Type == TypePlayer && t.Type == TypePlayer {
 			key = "ReflectDamageRatePvP"
@@ -274,7 +276,7 @@ func (w *World) attackFull(a, t *Object, args attackArgs) bool {
 	if a.Type == TypePlayer && t.Type == TypeMonster {
 		dmg = w.damageTableRate(1, a, t) * dmg / 100
 	}
-	if a.Type == TypePlayer && effect != 4 {
+	if a.Type == TypePlayer && hitEffect != 4 {
 		w.refillRolls(a, [4]int{0, 0, 0, 0})
 	}
 	if skill != 0 && args.Hits < 2 {
@@ -318,7 +320,7 @@ func (w *World) attackFull(a, t *Object, args attackArgs) bool {
 	}
 	if dmg > 0 && a.Type == TypePlayer && t.Type == TypePlayer {
 		arena := w.cfg.Int("Custom", "CustomArenaMapNumber", -1)
-		self := effect != 4 && !duel && !(a.Map == arena && t.Map == arena) &&
+		self := hitEffect != 4 && !duel && !(a.Map == arena && t.Map == arena) &&
 			!(a.Map > 0x11 && a.Map < 0x18 && t.Map > 0x11 && t.Map < 0x18)
 		if info, ok := w.data.Maps[a.Map]; ok && info.NonPK == 2 {
 			self = false
@@ -334,12 +336,12 @@ func (w *World) attackFull(a, t *Object, args attackArgs) bool {
 		a.Move.Flag270 = 0
 	}
 	if dmg < 1 {
-		w.sendDamage(a, t, 0, effect, false)
+		w.sendDamage(a, t, 0, hitEffect, false)
 		return true
 	}
-	w.removeEffect(t, effRemovedOnHit)
+	w.removeEffect(t, effect.RemovedOnHit)
 	if t.Type == TypePlayer {
-		if effect != 4 {
+		if hitEffect != 4 {
 			ts := w.playerStats(t)
 			if rnd(100) < ts.Opt109 {
 				w.queueReflect(t, a, dmg)
@@ -353,7 +355,7 @@ func (w *World) attackFull(a, t *Object, args attackArgs) bool {
 			stuck = true
 		}
 	}
-	w.lifeCheckEx(a, t, dmg-sd, effect, skill, stuck)
+	w.lifeCheckEx(a, t, dmg-sd, hitEffect, skill, stuck)
 	return true
 }
 
@@ -427,7 +429,7 @@ func (w *World) sendMiss(a, t *Object, args attackArgs) {
 // hitCheckFull is FUN_0040e1c0 with the effect fields: attack rate
 // obj+0x35c + 0x70c, defense rate obj+0x370 + 0x71c (the percent fields
 // are 0).
-func hitCheckFull(as, ts CombatStats, ao, to effectOptions) (reduced, hit bool) {
+func hitCheckFull(as, ts CombatStats, ao, to effect.Options) (reduced, hit bool) {
 	ar := max(as.AttackSuccessRate+ao.AddAttackSuccessRate, 0)
 	dr := max(ts.DefenseSuccessRate+to.AddDefenseSuccessRate, 0)
 	if ar < dr {
@@ -441,20 +443,20 @@ func hitCheckFull(as, ts CombatStats, ao, to effectOptions) (reduced, hit bool) 
 
 // defenseFull is FUN_0040eaa0: Defense + Greater Defense (obj+0x718),
 // halved for players, ignored on the IgnoreDefenseRate roll.
-func defenseFull(a, t *Object, ts, as CombatStats, to effectOptions, effect *int) int {
+func defenseFull(a, t *Object, ts, as CombatStats, to effect.Options, hitEffect *int) int {
 	def := to.AddDefense + ts.Defense
 	if t.Type == TypePlayer {
 		def = def * 50 / 100
 	}
 	if rnd(100) < as.IgnoreDefenseRate {
-		*effect = effectIgnoreDefense
+		*hitEffect = effectIgnoreDefense
 		def = 0
 	}
 	return max(def, 0)
 }
 
 // physicalDamage is FUN_0040ec10.
-func (w *World) physicalDamage(a, t *Object, as CombatStats, ao effectOptions, ref *skillRef, skill int, effect *int, def int) int {
+func (w *World) physicalDamage(a, t *Object, as CombatStats, ao effect.Options, ref *skillRef, skill int, hitEffect *int, def int) int {
 	var dmg int
 	if a.Type != TypePlayer {
 		lo := as.DamageMinRight + ao.AddPhysiDamage
@@ -503,11 +505,11 @@ func (w *World) physicalDamage(a, t *Object, as CombatStats, ao effectOptions, r
 		hi += ao.AddPhysiDamage
 		dmg = rnd(max(hi-lo, 1)) + lo
 		if rnd(100) < as.CriticalDamage {
-			*effect = effectCritical
+			*hitEffect = effectCritical
 			dmg = as.CriticalDamageBonus + ao.AddCriticalDamage + hi
 		}
 		if rnd(100) < as.ExcellentDamage {
-			*effect = effectExcellent
+			*hitEffect = effectExcellent
 			dmg = hi*120/100 + as.ExcellentDamageBonus
 		}
 	}
@@ -516,7 +518,7 @@ func (w *World) physicalDamage(a, t *Object, as CombatStats, ao effectOptions, r
 }
 
 // magicDamage is FUN_0040f380 (DW / MG skills).
-func (w *World) magicDamage(a, t *Object, as CombatStats, ao effectOptions, ref *skillRef, skill int, effect *int, def int) int {
+func (w *World) magicDamage(a, t *Object, as CombatStats, ao effect.Options, ref *skillRef, skill int, hitEffect *int, def int) int {
 	lo, hi := as.MagicDamageMin, as.MagicDamageMax
 	if skill == 0x28 {
 		c := func(k string) int { return w.cfg.Int("Character", k, 0) }
@@ -540,11 +542,11 @@ func (w *World) magicDamage(a, t *Object, as CombatStats, ao effectOptions, ref 
 	}
 	dmg := rnd(max(hi-lo, 1)) + lo
 	if rnd(100) < as.CriticalDamage {
-		*effect = effectCritical
+		*hitEffect = effectCritical
 		dmg = as.CriticalDamageBonus + ao.AddCriticalDamage + hi
 	}
 	if rnd(100) < as.ExcellentDamage {
-		*effect = effectExcellent
+		*hitEffect = effectExcellent
 		dmg = hi*120/100 + as.ExcellentDamageBonus
 	}
 	dmg = max(dmg-def, 0)
@@ -792,13 +794,13 @@ func (w *World) deathPenalty(killer, t *Object) {
 func (w *World) packetCharRefresh(o *Object) []byte {
 	c := o.P.Char
 	s := w.statsOf(o)
-	p := newPacket(frame.C1, 0xF3, 0xE0, 0xA4)
-	u16le(p[4:], c.Level)
-	u16le(p[6:], c.LevelUpPoints)
-	u32le(p[8:], uint32(c.Experience))
-	u32le(p[12:], o.P.NextExp)
+	p := packet.New(frame.C1, 0xF3, 0xE0, 0xA4)
+	packet.PutUint16(p[4:], c.Level)
+	packet.PutUint16(p[6:], c.LevelUpPoints)
+	packet.PutUint32(p[8:], uint32(c.Experience))
+	packet.PutUint32(p[12:], o.P.NextExp)
 	for i, v := range []int{c.Strength, c.Dexterity, c.Vitality, c.Energy, c.Leadership} {
-		u16le(p[16+2*i:], clamp65000(v))
+		packet.PutUint16(p[16+2*i:], packet.Clamp65000(v))
 	}
 	cap16 := func(f float32) int {
 		if f > 65000 {
@@ -808,34 +810,34 @@ func (w *World) packetCharRefresh(o *Object) []byte {
 	}
 	maxLife := float32(o.P.AddLife) + c.MaxLife
 	maxMana := float32(o.P.AddMana) + c.MaxMana
-	u16le(p[26:], cap16(c.Life))
-	u16le(p[28:], cap16(maxLife))
-	u16le(p[30:], cap16(c.Mana))
-	u16le(p[32:], cap16(maxMana))
-	u16le(p[34:], clamp65000(int(c.BP)))
-	u16le(p[36:], clamp65000(s.MaxBP+s.AddBP))
-	u16le(p[38:], c.FruitAddPoints)
-	u16le(p[40:], maxFruit(o.Class, c.Level))
-	u16le(p[42:], c.FruitSubPoints)
-	u16le(p[44:], maxFruit(o.Class, c.Level))
-	u16le(p[46:], o.Class)
-	u32le(p[48:], uint32(c.Resets))
-	u32le(p[52:], uint32(c.MasterResets))
-	u32le(p[56:], uint32(o.P.Account.Level))
+	packet.PutUint16(p[26:], cap16(c.Life))
+	packet.PutUint16(p[28:], cap16(maxLife))
+	packet.PutUint16(p[30:], cap16(c.Mana))
+	packet.PutUint16(p[32:], cap16(maxMana))
+	packet.PutUint16(p[34:], packet.Clamp65000(int(c.BP)))
+	packet.PutUint16(p[36:], packet.Clamp65000(s.MaxBP+s.AddBP))
+	packet.PutUint16(p[38:], c.FruitAddPoints)
+	packet.PutUint16(p[40:], maxFruit(o.Class, c.Level))
+	packet.PutUint16(p[42:], c.FruitSubPoints)
+	packet.PutUint16(p[44:], maxFruit(o.Class, c.Level))
+	packet.PutUint16(p[46:], o.Class)
+	packet.PutUint32(p[48:], uint32(c.Resets))
+	packet.PutUint32(p[52:], uint32(c.MasterResets))
+	packet.PutUint32(p[56:], uint32(o.P.Account.Level))
 	auth := 0
 	if o.Move != nil {
 		auth = o.Move.Authority
 	}
-	u32le(p[112:], uint32(auth))
-	u32le(p[116:], uint32(c.LevelUpPoints))
-	u32le(p[120:], uint32(int32(math.RoundToEven(float64(c.Life)))))
-	u32le(p[124:], uint32(int32(math.RoundToEven(float64(maxLife)))))
-	u32le(p[128:], uint32(int32(math.RoundToEven(float64(c.Mana)))))
-	u32le(p[132:], uint32(int32(math.RoundToEven(float64(maxMana)))))
-	u32le(p[136:], uint32(int32(c.BP)))
-	u32le(p[140:], uint32(s.MaxBP+s.AddBP))
+	packet.PutUint32(p[112:], uint32(auth))
+	packet.PutUint32(p[116:], uint32(c.LevelUpPoints))
+	packet.PutUint32(p[120:], uint32(int32(math.RoundToEven(float64(c.Life)))))
+	packet.PutUint32(p[124:], uint32(int32(math.RoundToEven(float64(maxLife)))))
+	packet.PutUint32(p[128:], uint32(int32(math.RoundToEven(float64(c.Mana)))))
+	packet.PutUint32(p[132:], uint32(int32(math.RoundToEven(float64(maxMana)))))
+	packet.PutUint32(p[136:], uint32(int32(c.BP)))
+	packet.PutUint32(p[140:], uint32(s.MaxBP+s.AddBP))
 	for i, v := range []int{c.Strength, c.Dexterity, c.Vitality, c.Energy, c.Leadership} {
-		u32le(p[144+4*i:], uint32(v))
+		packet.PutUint32(p[144+4*i:], uint32(v))
 	}
 	return p
 }

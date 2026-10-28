@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/devilsquare"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
@@ -41,8 +42,8 @@ func TestDSRankingAndPacket(t *testing.T) {
 	a := b.player(PlayerStart, "Alpha", 9, 130, 90)
 	c := b.player(PlayerStart+1, "Beta", 9, 131, 90)
 	s := &b.ds().sq[0]
-	s.Users[0] = dsUser{Index: a.Index, Score: 10}
-	s.Users[3] = dsUser{Index: c.Index, Score: 30}
+	s.Users[0] = devilsquare.User{Index: a.Index, Score: 10}
+	s.Users[3] = devilsquare.User{Index: c.Index, Score: 30}
 	b.dsRank(s)
 	if s.Users[0].Rank != 1 || s.Users[3].Rank != 0 {
 		t.Fatalf("ranks %+v %+v", s.Users[0], s.Users[3])
@@ -61,7 +62,7 @@ func TestDevilSquareCycle(t *testing.T) {
 	b := newBareWorld(t)
 	b.clock = time.Date(2026, 10, 22, 0, 24, 0, 0, time.UTC)
 	for i := range b.ds().sq {
-		b.ds().sq[i].State = dsEmpty
+		b.ds().sq[i].State = devilsquare.StateEmpty
 		b.dsEnterEmpty(&b.ds().sq[i])
 	}
 	o := questPlayer(b, PlayerStart, 1, 50) // DK 50 -> square 0
@@ -73,7 +74,7 @@ func TestDevilSquareCycle(t *testing.T) {
 		return b.drain(o)
 	}
 	s := &b.ds().sq[0]
-	if s.State != dsEmpty || s.Remain != 360 {
+	if s.State != devilsquare.StateEmpty || s.Remain != 360 {
 		t.Fatalf("empty: state %d remain %d", s.State, s.Remain)
 	}
 	// 5 minutes before the start: "%d minute(s)" (725) with 5.
@@ -82,7 +83,7 @@ func TestDevilSquareCycle(t *testing.T) {
 		t.Fatalf("no 725 notice: % X", pk)
 	}
 	pk = tick(5 * time.Minute)
-	if s.State != dsReady || !s.Open || s.Remain != 300 || find(pk, 0x0D, -1) == nil {
+	if s.State != devilsquare.StateReady || !s.Open || s.Remain != 300 || find(pk, 0x0D, -1) == nil {
 		t.Fatalf("ready: state %d open %v remain %d", s.State, s.Open, s.Remain)
 	}
 
@@ -91,22 +92,22 @@ func TestDevilSquareCycle(t *testing.T) {
 	if p := find(b.drain(o), 0xF3, 0x40); !bytes.Equal(p, []byte{0xC1, 0x07, 0xF3, 0x40, 0x01, 0x02, 0x00}) {
 		t.Fatalf("charon = % X", p)
 	}
-	slot := b.insertInventory(o, item.Item{Index: itemDSInvit, Level: 2, Durability: 1})
+	slot := b.insertInventory(o, item.Item{Index: devilsquare.ItemInvitation, Level: 2, Durability: 1})
 	b.handleDSEnter(o, frame.Build(frame.C1, 0x90, 0, byte(slot+12)))
-	if p := find(b.drain(o), 0x90, -1); !bytes.Equal(p, packetDSResult(1)) {
+	if p := find(b.drain(o), 0x90, -1); !bytes.Equal(p, devilsquare.PacketResult(1)) {
 		t.Fatalf("wrong invitation level = % X", p)
 	}
 	o.P.Inventory[slot].Level = 1
 	b.handleDSEnter(o, frame.Build(frame.C1, 0x90, 1, byte(slot+12)))
-	if p := find(b.drain(o), 0x90, -1); !bytes.Equal(p, packetDSResult(1)) {
+	if p := find(b.drain(o), 0x90, -1); !bytes.Equal(p, devilsquare.PacketResult(1)) {
 		t.Fatalf("level 1 invitation for square 1 = % X", p)
 	}
 	b.handleDSEnter(o, frame.Build(frame.C1, 0x90, 0, byte(slot+12)))
 	pk = b.drain(o)
-	if p := find(pk, 0x90, -1); !bytes.Equal(p, packetDSResult(0)) {
+	if p := find(pk, 0x90, -1); !bytes.Equal(p, devilsquare.PacketResult(0)) {
 		t.Fatalf("enter = % X", p)
 	}
-	if !o.P.Inventory[slot].IsEmpty() || s.user(o.Index) == nil || o.Map != 9 {
+	if !o.P.Inventory[slot].IsEmpty() || s.User(o.Index) == nil || o.Map != 9 {
 		t.Fatalf("not inside: map %d", o.Map)
 	}
 	// 0x91 during READY reports the user count.
@@ -116,15 +117,15 @@ func TestDevilSquareCycle(t *testing.T) {
 	}
 
 	pk = tick(4*time.Minute + 30*time.Second) // 30 s left
-	if p := find(pk, 0x92, -1); !bytes.Equal(p, packetDSState(0)) {
+	if p := find(pk, 0x92, -1); !bytes.Equal(p, devilsquare.PacketState(0)) {
 		t.Fatalf("92 00 missing: % X", pk)
 	}
 	tick(30 * time.Second)
-	if s.State != dsStand || s.Open {
+	if s.State != devilsquare.StateStand || s.Open {
 		t.Fatalf("stand: state %d", s.State)
 	}
 	tick(time.Minute)
-	if s.State != dsStart || len(s.Mobs) == 0 {
+	if s.State != devilsquare.StateStart || len(s.Mobs) == 0 {
 		t.Fatalf("start: state %d mobs %d", s.State, len(s.Mobs))
 	}
 	stage0 := len(s.Mobs)
@@ -137,7 +138,7 @@ func TestDevilSquareCycle(t *testing.T) {
 	o.X, o.Y = m.X, m.Y
 	m.Mon.Hits[0] = damageEntry{Index: o.Index, Damage: 1, Time: b.now()}
 	b.dsMonsterKilled(m)
-	if u := s.user(o.Index); u.Score != m.Mon.Level {
+	if u := s.User(o.Index); u.Score != m.Mon.Level {
 		t.Fatalf("score %d level %d", u.Score, m.Mon.Level)
 	}
 	// 20 % of 20 minutes later: stage 1.
@@ -146,7 +147,7 @@ func TestDevilSquareCycle(t *testing.T) {
 		t.Fatalf("stage %d mobs %d", s.Stage, len(s.Mobs))
 	}
 	pk = tick(16 * time.Minute)
-	if s.State != dsClean || len(s.Mobs) != 0 {
+	if s.State != devilsquare.StateClean || len(s.Mobs) != 0 {
 		t.Fatalf("clean: state %d mobs %d", s.State, len(s.Mobs))
 	}
 	// Rank 0 of square 0: 30000 zen and the ranking window.
@@ -154,7 +155,7 @@ func TestDevilSquareCycle(t *testing.T) {
 		t.Fatalf("money %d ranking % X", o.P.Char.Money, find(pk, 0x93, -1))
 	}
 	tick(4 * time.Minute)
-	if s.State != dsEmpty || s.user(o.Index) != nil {
+	if s.State != devilsquare.StateEmpty || s.User(o.Index) != nil {
 		t.Fatalf("back to empty: state %d", s.State)
 	}
 }

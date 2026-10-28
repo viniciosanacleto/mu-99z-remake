@@ -3,6 +3,7 @@ package game
 import (
 	"math"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
@@ -76,7 +77,7 @@ func (w *World) packetHealthBar(o *Object) []byte {
 		}
 		entries = append(entries, [4]byte{byte(m.Index), byte(m.Index >> 8), byte(m.Type), healthPercent(m)})
 	}
-	p := newPacket(frame.C2, 0xF3, 0xE2, 6+4*len(entries))
+	p := packet.New(frame.C2, 0xF3, 0xE2, 6+4*len(entries))
 	p[5] = byte(len(entries))
 	for i, e := range entries {
 		copy(p[6+4*i:], e[:])

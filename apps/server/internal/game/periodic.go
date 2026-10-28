@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
@@ -24,16 +25,16 @@ func registerPeriodic(h *hooks) {
 // packetPeriodicItem is C1 0C D5 01 from(u16) slot(u16) time(u32)
 // (FUN_004d3f00): from is 0xFFFF for a new item, else the source slot.
 func packetPeriodicItem(from, slot int, expire int64) []byte {
-	p := newPacket(frame.C1, 0xD5, 0x01, 0x0C)
-	u16le(p[4:], from&0xFFFF)
-	u16le(p[6:], slot)
-	u32le(p[8:], uint32(expire))
+	p := packet.New(frame.C1, 0xD5, 0x01, 0x0C)
+	packet.PutUint16(p[4:], from&0xFFFF)
+	packet.PutUint16(p[6:], slot)
+	packet.PutUint32(p[8:], uint32(expire))
 	return p
 }
 
 // packetPeriodicDelete is C1 05 D5 02 slot (FUN_004d3fd0).
 func packetPeriodicDelete(slot int) []byte {
-	p := newPacket(frame.C1, 0xD5, 0x02, 5)
+	p := packet.New(frame.C1, 0xD5, 0x02, 5)
 	p[4] = byte(slot)
 	return p
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/devilsquare"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
@@ -606,7 +607,7 @@ func (w *World) commandMoveAll(o *Object, c command, arg string) {
 func (w *World) commandMoveGuild(o *Object, c command, arg string) {
 	name := commandToken(arg, 0, 9)
 	mp, x, y := cmdInt(arg, 1), cmdInt(arg, 2), cmdInt(arg, 3)
-	g, ok := w.guildMgr().find(name)
+	g, ok := w.guildMgr().Find(name)
 	if !ok {
 		w.msg(o, msgGMGuildNotFound)
 		return
@@ -795,7 +796,7 @@ func (w *World) commandBCStart(o *Object, c command, arg string) {
 		bc.data.Schedule = append(bc.data.Schedule, forceStartRow(w.now()))
 		for i := range bc.c {
 			if w.bcOn() {
-				bc.c[i].State = dsEmpty
+				bc.c[i].State = devilsquare.StateEmpty
 				w.bcEnterEmpty(&bc.c[i])
 			}
 		}
@@ -810,7 +811,7 @@ func (w *World) commandDSStart(o *Object, c command, arg string) {
 		ds.data.Schedule = append(ds.data.Schedule, forceStartRow(w.now()))
 		for i := range ds.sq {
 			if w.dsOn() {
-				ds.sq[i].State = dsEmpty
+				ds.sq[i].State = devilsquare.StateEmpty
 				w.dsEnterEmpty(&ds.sq[i])
 			}
 		}
@@ -825,7 +826,7 @@ func (w *World) commandCCStart(o *Object, c command, arg string) {
 		cc.data.Schedule = append(cc.data.Schedule, forceStartRow(w.now()))
 		for i := range cc.c {
 			if w.ccOn() {
-				cc.c[i].State = dsEmpty
+				cc.c[i].State = devilsquare.StateEmpty
 				w.ccEnterEmpty(&cc.c[i])
 			}
 		}

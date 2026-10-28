@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"math"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/castlesiege"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/effect"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
@@ -36,18 +38,18 @@ func (w *World) guildSkill(o *Object, ref *skillRef, target, angle int) bool {
 	case 70:
 		return w.skillInvisibility(o, ref, target)
 	}
-	if o.Map != csMap && o.Map != csMap+1 {
+	if o.Map != castlesiege.Map && o.Map != castlesiege.Map+1 {
 		return false
 	}
 	switch ref.Num {
 	case 67:
 		return w.skillStern(o, ref, angle)
 	case 68:
-		return w.skillRemoveArea(o, ref, func(t *Object) { w.removeEffect(t, effStern) })
+		return w.skillRemoveArea(o, ref, func(t *Object) { w.removeEffect(t, effect.Stern) })
 	case 69:
 		return w.skillGreaterMana(o, ref)
 	case 71:
-		return w.skillRemoveArea(o, ref, func(t *Object) { w.removeEffect(t, effInvisibility) })
+		return w.skillRemoveArea(o, ref, func(t *Object) { w.removeEffect(t, effect.Invisibility) })
 	case 72:
 		return w.skillRemoveArea(o, ref, func(t *Object) { w.clearEffects(t) })
 	case 75:
@@ -103,7 +105,7 @@ func (w *World) skillStern(o *Object, ref *skillRef, angle int) bool {
 		if hasEffectIndex(t, 0x86) || hasEffectIndex(t, 0xA5) {
 			return
 		}
-		w.addEffect(t, effStern, w.cfg.Int("Skill", "SternTimeConstA", 0), [4]int{}, true)
+		w.addEffect(t, effect.Stern, w.cfg.Int("Skill", "SternTimeConstA", 0), [4]int{}, true)
 		w.resendPosition(t, t.X, t.Y)
 		w.sendSkillTo(o, ref.Num, t.Index, true)
 	})
@@ -152,7 +154,7 @@ func (w *World) skillGreaterMana(o *Object, ref *skillRef) bool {
 // the caster, becomes invisible (effect 18) for InvisibilityTimeConstA
 // seconds.
 func (w *World) skillInvisibility(o *Object, ref *skillRef, target int) bool {
-	if o.Map != csMap && o.Map != csMap+1 {
+	if o.Map != castlesiege.Map && o.Map != castlesiege.Map+1 {
 		return false
 	}
 	if target < 0 || target >= MaxObjects || w.objects[target].Type != TypePlayer {
@@ -169,7 +171,7 @@ func (w *World) skillInvisibility(o *Object, ref *skillRef, target int) bool {
 		return false
 	}
 	w.guildSkillKillReset(o)
-	w.addEffect(t, effInvisibility, w.cfg.Int("Skill", "InvisibilityTimeConstA", 0), [4]int{}, true)
+	w.addEffect(t, effect.Invisibility, w.cfg.Int("Skill", "InvisibilityTimeConstA", 0), [4]int{}, true)
 	w.sendSkillTo(o, ref.Num, t.Index, true)
 	return true
 }
@@ -179,10 +181,10 @@ func (w *World) skillInvisibility(o *Object, ref *skillRef, target int) bool {
 // and on every player within Radio.
 func (w *World) skillBrand(o *Object, ref *skillRef) bool {
 	w.guildSkillKillReset(o)
-	w.addEffect(o, effBrand, 0, [4]int{}, true)
+	w.addEffect(o, effect.Brand, 0, [4]int{}, true)
 	w.sendSkillTo(o, ref.Num, o.Index, true)
 	w.vp2PlayersInRadio(o, ref.Num, func(t *Object) {
-		w.addEffect(t, effBrand, 0, [4]int{}, true)
+		w.addEffect(t, effect.Brand, 0, [4]int{}, true)
 		w.sendSkillTo(o, ref.Num, t.Index, true)
 	})
 	return true
@@ -225,7 +227,7 @@ func (w *World) skillSummonParty(o *Object, ref *skillRef) bool {
 			switch {
 			case !w.moveSummonOK(m, o.Map, o.X, o.Y):
 				w.customMsg(m, 0x110)
-			case o.Map == csMap && w.hooks.castleBattle != nil && w.hooks.castleBattle(w) && csSide(o) != csSide(m):
+			case o.Map == castlesiege.Map && w.hooks.castleBattle != nil && w.hooks.castleBattle(w) && csSide(o) != csSide(m):
 				w.customMsg(m, 0x110)
 			default:
 				x, y, ok := w.randomNearCell(o.Map, o.X, o.Y, 4, 4, 10)
@@ -344,7 +346,7 @@ func (w *World) moveSummonOK(o *Object, mp, x, y int) bool {
 		return false
 	}
 	switch mp {
-	case csMap:
+	case castlesiege.Map:
 		if !(w.hooks.castleBattle != nil && w.hooks.castleBattle(w)) && x >= 0xA1 && x <= 0xBF && y >= 0xBC && y <= 0xD8 {
 			return false
 		}
@@ -463,7 +465,7 @@ func (w *World) handleTeleportAlly(o *Object, p []byte) {
 		tt.Get(t.X, t.Y)&gamedata.AttrSafeZone != 0 || tt.Get(x, y)&gamedata.AttrSafeZone != 0 {
 		return
 	}
-	if o.Map == csMap {
+	if o.Map == castlesiege.Map {
 		if o.Y < 0x90 {
 			y = csTeleportGateY(o.Y, y)
 		}

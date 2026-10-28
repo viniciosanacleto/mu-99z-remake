@@ -3,9 +3,10 @@ package game
 import (
 	"fmt"
 	"math"
+	"slices"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/monsterskill"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 )
 
 // Monster attacks: the attack choice of FUN_004b7d00, the area attack
@@ -14,62 +15,6 @@ import (
 // Monster/Skill/*.txt (FUN_004bdcd0, FUN_004bdd10, FUN_004bde50,
 // FUN_004be5b0 and the elements FUN_004bc500..FUN_004bd4c0) and the traps
 // (FUN_004b5be0).
-
-// monsterSkillList is the MagicList setMonster builds: slot 0 is the
-// AttackType (150 -> 50) and some classes get more skills; nothing when
-// AttackType is 0.
-func monsterSkillList(class, attackType int) []int {
-	if attackType == 0 {
-		return nil
-	}
-	s := []int{attackType}
-	if attackType == 150 {
-		s[0] = 50
-	}
-	in := func(v ...int) bool {
-		for _, c := range v {
-			if c == class {
-				return true
-			}
-		}
-		return false
-	}
-	switch {
-	case in(0x42, 0x49):
-		s = append(s, 0x11)
-	case in(0x4d):
-		s = append(s, 3)
-	case in(0x59, 0x5f, 0x70, 0x76, 0x7c, 0x82, 0x8f, 0x1b1):
-		s = append(s, 3)
-	case in(0x90, 0xae, 0xb6, 0xbe, 0x104, 0x91, 0xaf, 0xb7, 0xbf, 0x105, 0x92, 0xb0, 0xb8, 0xc0, 0x106,
-		0x93, 0xb1, 0xb9, 0xc1, 0x107, 0x94, 0xb2, 0xba, 0xc2, 0x108, 0xa0, 0xb4, 0xbc, 0xc4, 0x10a,
-		0xa3, 0xa5, 0xa7, 0xa9, 0xab, 0xad, 0x1ab):
-		s = append(s, 0x11)
-	case in(0x95, 0xb3, 0xbb, 0xc3, 0x109):
-		s = append(s, 1, 0x11)
-	case in(0xa1, 0xb5, 0xbd, 0xc5, 0x10b):
-		s = append(s, 1, 0x11, 0x37, 200, 0xc9, 0xca)
-	case in(0x211, 0x212):
-		s = append(s, 0x32)
-	case in(0x215):
-		s = append(s, 0xef)
-	case in(0x216):
-		s = append(s, 0xeb)
-	case in(0x217):
-		s = append(s, 0x29)
-	case in(0x218):
-		s = append(s, 0x27)
-	case in(0x219):
-		s = append(s, 0x38)
-	case in(0x21a):
-		s = append(s, 0x3e)
-	case in(0x21b):
-		s = append(s, 0xe6)
-	case in(0x231):
-		s = append(s, 9, 0x26, 0xee)
-	}
-	return s
-}
 
 // skillSlot returns the skill number of a MagicList slot (-1 = empty).
 func (m *monsterState) skillSlot(slot int) int {
@@ -148,20 +93,6 @@ func (w *World) monsterAttackAction(o, t *Object) {
 	}
 }
 
-// packetAreaSkill is C3 09 1E skill user(BE) X Y dir (FUN_00501740).
-func packetAreaSkill(skill, user, x, y, dir int) []byte {
-	p := newPacket(frame.C3, 0x1E, -1, 9)
-	p[3] = byte(skill)
-	p[4], p[5] = byte(user>>8), byte(user)
-	p[6], p[7], p[8] = byte(x), byte(y), byte(dir)
-	return p
-}
-
-// areaSkills are the skill numbers FUN_00500b70 accepts for a
-// multi-target attack.
-var areaSkills = map[int]bool{5: true, 8: true, 9: true, 10: true, 12: true, 13: true, 14: true, 24: true,
-	47: true, 50: true, 52: true, 55: true, 78: true}
-
 // monsterAreaAttack is FUN_004b7a20: the C3 09 1E effect of slot 0 at the
 // monster, then every player of its VP2 closer than 6 cells (up to 20) is
 // hit. The Kalima/Blood Castle bosses (0xa1, 0xb5, 0xbd, 0xc5, 0x10b, 0x113,
@@ -172,7 +103,7 @@ func (w *World) monsterAreaAttack(o *Object) {
 	if skill < 0 {
 		return
 	}
-	w.broadcast(o, packetAreaSkill(skill, o.Index, o.X, o.Y, 0))
+	w.broadcast(o, monsterskill.PacketArea(skill, o.Index, o.X, o.Y, 0))
 	var targets []*Object
 	for _, e := range o.VP2 {
 		if e.State == VPEmpty || e.Index < 0 || e.Index >= MaxObjects || e.Type != byte(TypePlayer) {
@@ -187,8 +118,8 @@ func (w *World) monsterAreaAttack(o *Object) {
 			break
 		}
 	}
-	if !classIn(o.Class, 0xa1, 0xb5, 0xbd, 0xc5, 0x10b, 0x113, 0x152) {
-		if !areaSkills[skill] {
+	if !slices.Contains([]int{0xa1, 0xb5, 0xbd, 0xc5, 0x10b, 0x113, 0x152}, o.Class) {
+		if !monsterskill.AreaSkills[skill] {
 			return
 		}
 		if len(targets) > 5 {
@@ -260,82 +191,12 @@ func gmFull(o *Object) bool { return o.Move != nil && o.Move.Authority >= 8 }
 
 // --- CMonsterSkillManager ------------------------------------------------------
 
-// monsterSkillElement is a MonsterSkillElement.txt row.
-type monsterSkillElement struct {
-	Index       int
-	Name        string
-	Type        int // +0x3c
-	SuccessRate int // +0x40
-	Time        int // +0x44 ContinuanceTime (s)
-	IncDecType  int // +0x48
-	IncDecValue int // +0x4c
-	Nullified   int // +0x50
-}
-
-// monsterSkillUnit is a MonsterSkillUnit.txt row (200 slots of 100 bytes).
-type monsterSkillUnit struct {
-	Index      int // +0x38 (sent in C1 08 69)
-	TargetType int // +0x3c: 1 target, 2 self
-	ScopeType  int // +0x40: -1 single, 0 distance, 1 area table
-	ScopeValue int // +0x44
-	Delay      int // +0x48
-	Elements   [5]*monsterSkillElement
-}
-
-// monsterSkillInfo is a MonsterSkill.txt row (0x58 bytes).
-type monsterSkillInfo struct {
-	Monster int
-	Types   [10]int
-	Units   [10]*monsterSkillUnit
-}
-
-type monsterSkillData struct {
-	byClass map[int]*monsterSkillInfo
-}
-
-// loadMonsterSkills reads the Monster/Skill tables of config/data/monster.toml.
-func loadMonsterSkills(configDir string) (*monsterSkillData, error) {
-	f, err := gamedata.LoadMonsterConfig(configDir)
-	if err != nil {
-		return nil, err
-	}
-	elems := map[int]*monsterSkillElement{}
-	for _, r := range f.MonsterSkillElement.Rows {
-		e := &monsterSkillElement{Index: r.Index, Name: r.Name, Type: r.Type, SuccessRate: r.SuccessRate,
-			Time: r.ContinuanceTime, IncDecType: r.IncAndDecType, IncDecValue: r.IncAndDecValue, Nullified: r.NullifiedMagic}
-		elems[e.Index] = e
-	}
-	units := map[int]*monsterSkillUnit{}
-	for _, r := range f.MonsterSkillUnit.Rows {
-		u := &monsterSkillUnit{Index: r.Index, TargetType: r.TargetType, ScopeType: r.ScopeType, ScopeValue: r.ScopeValue,
-			Delay: r.Delay}
-		for i, slot := range r.Slot {
-			u.Elements[i] = elems[slot]
-		}
-		if u.Index >= 0 && u.Index < 200 {
-			units[u.Index] = u
-		}
-	}
-	d := &monsterSkillData{byClass: map[int]*monsterSkillInfo{}}
-	for _, r := range f.MonsterSkill.Rows {
-		info := &monsterSkillInfo{Monster: r.Monster}
-		for i, p := range r.Skill {
-			info.Types[i] = p[0]
-			info.Units[i] = units[p[1]]
-		}
-		if info.Monster >= 0 && info.Monster < 1000 {
-			d.byClass[info.Monster] = info
-		}
-	}
-	return d, nil
-}
-
 func registerMonsterSkill(h *hooks) {
 	h.start = append(h.start, func(w *World) error {
 		if w.configDir == "" {
 			return nil
 		}
-		d, err := loadMonsterSkills(w.configDir)
+		d, err := monsterskill.Load(w.configDir)
 		if err != nil {
 			return fmt.Errorf("monster skills: %w", err)
 		}
@@ -351,8 +212,8 @@ func (w *World) hasMonsterSkill(o *Object) bool {
 	if d == nil {
 		return false
 	}
-	info := d.byClass[o.Class]
-	if info == nil || info.unitCount() == 0 {
+	info := d.ForClass(o.Class)
+	if info == nil || info.UnitCount() == 0 {
 		return false
 	}
 	for _, t := range info.Types {
@@ -361,26 +222,6 @@ func (w *World) hasMonsterSkill(o *Object) bool {
 		}
 	}
 	return false
-}
-
-func (info *monsterSkillInfo) unitCount() int {
-	n := 0
-	for _, u := range info.Units {
-		if u != nil {
-			n++
-		}
-	}
-	return n
-}
-
-// packetMonsterSkill is C1 08 69 unit monster(LE) target(LE)
-// (FUN_004daa40).
-func packetMonsterSkill(unit, monster, target int) []byte {
-	p := newPacket(frame.C1, 0x69, -1, 8)
-	p[3] = byte(unit)
-	u16le(p[4:], monster)
-	u16le(p[6:], target)
-	return p
 }
 
 // useMonsterSkill is FUN_004bde50: a random unit among the Type 0 slots
@@ -392,8 +233,8 @@ func (w *World) useMonsterSkill(o, t *Object) {
 	if d == nil {
 		return
 	}
-	info := d.byClass[o.Class]
-	if info == nil || info.unitCount() == 0 {
+	info := d.ForClass(o.Class)
+	if info == nil || info.UnitCount() == 0 {
 		return
 	}
 	var slots []int
@@ -412,7 +253,7 @@ func (w *World) useMonsterSkill(o, t *Object) {
 	if u.TargetType == 2 {
 		t = o
 	}
-	w.broadcast(o, packetMonsterSkill(u.Index, o.Index, t.Index))
+	w.broadcast(o, monsterskill.PacketUse(u.Index, o.Index, t.Index))
 	if u.ScopeType == -1 {
 		w.runSkillUnit(u, o, t)
 		if u.TargetType == 1 {
@@ -450,7 +291,7 @@ func (w *World) skillUnitAttack(o, t *Object) {
 
 // runSkillUnit is FUN_004be5b0: each element passes rand % 100 <=
 // SuccessRate (type 0 minus the target's obj+0x868, 0 here).
-func (w *World) runSkillUnit(u *monsterSkillUnit, o, t *Object) {
+func (w *World) runSkillUnit(u *monsterskill.Unit, o, t *Object) {
 	for _, e := range u.Elements {
 		if e == nil {
 			continue
@@ -462,28 +303,8 @@ func (w *World) runSkillUnit(u *monsterSkillUnit, o, t *Object) {
 	}
 }
 
-// elementDelta is the IncAndDecType arithmetic of the life / mana /
-// durability elements: 1/101 add value% of the current amount, 2/102
-// subtract it, 11/111 add value, 12/112 subtract value (truncated).
-func elementDelta(e *monsterSkillElement, cur float32) int {
-	d := 0
-	switch e.IncDecType {
-	case 1, 0x65:
-		d = int(float64(cur) * float64(e.IncDecValue) / 100)
-	case 2, 0x66:
-		d += int(float64(cur) * float64(e.IncDecValue) / -100)
-	}
-	switch e.IncDecType {
-	case 0xb, 0x6f:
-		d += e.IncDecValue
-	case 0xc, 0x70:
-		d -= e.IncDecValue
-	}
-	return d
-}
-
 // applySkillElement runs one element (FUN_004be5b0 switch).
-func (w *World) applySkillElement(e *monsterSkillElement, o, t *Object) {
+func (w *World) applySkillElement(e *monsterskill.Element, o, t *Object) {
 	switch e.Type {
 	case 0: // FUN_004bc500: stun (effect 61) unless the target has effect 134
 		if w.hasEffect(t, 0x86) {
@@ -495,12 +316,12 @@ func (w *World) applySkillElement(e *monsterSkillElement, o, t *Object) {
 	case 2: // FUN_004bc5d0: life, capped at MaxLife + AddLife, C1 26 FF
 		if t.P == nil || t.P.Char == nil {
 			if t.Mon != nil {
-				t.Mon.Life = min(max(t.Mon.Life+float32(elementDelta(e, t.Mon.Life)), 0), t.Mon.MaxLife)
+				t.Mon.Life = min(max(t.Mon.Life+float32(monsterskill.ElementDelta(e, t.Mon.Life)), 0), t.Mon.MaxLife)
 			}
 			return
 		}
 		c := t.P.Char
-		c.Life = min(max(c.Life+float32(elementDelta(e, c.Life)), 0), float32(t.P.AddLife)+c.MaxLife)
+		c.Life = min(max(c.Life+float32(monsterskill.ElementDelta(e, c.Life)), 0), float32(t.P.AddLife)+c.MaxLife)
 		if w.hooks.sendLife != nil {
 			w.hooks.sendLife(w, t)
 		}
@@ -509,7 +330,7 @@ func (w *World) applySkillElement(e *monsterSkillElement, o, t *Object) {
 			return
 		}
 		c := t.P.Char
-		c.Mana = min(max(c.Mana+float32(elementDelta(e, c.Mana)), 0), float32(t.P.AddMana)+c.MaxMana)
+		c.Mana = min(max(c.Mana+float32(monsterskill.ElementDelta(e, c.Mana)), 0), float32(t.P.AddMana)+c.MaxMana)
 		if w.hooks.sendMana != nil {
 			w.hooks.sendMana(w, t)
 		}
@@ -522,7 +343,7 @@ func (w *World) applySkillElement(e *monsterSkillElement, o, t *Object) {
 		if it.IsEmpty() {
 			return
 		}
-		it.Durability = float32(math.Max(float64(it.Durability+float32(elementDelta(e, it.Durability))), 0))
+		it.Durability = float32(math.Max(float64(it.Durability+float32(monsterskill.ElementDelta(e, it.Durability))), 0))
 		w.send(t, packetItemDurability(slot, truncDur(it.Durability), 0))
 	case 14: // FUN_004bd080: removes effect 28 / 27 from a player
 		if t.P != nil && w.hooks.removeEffect != nil && (e.Nullified == 0x1c || e.Nullified == 0x1b) {

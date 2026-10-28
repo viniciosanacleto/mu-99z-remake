@@ -5,6 +5,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/chaosmix"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
@@ -25,7 +26,7 @@ func TestPetExpTable(t *testing.T) {
 
 func TestPetInitAndExperience(t *testing.T) {
 	b := newBareWorld(t)
-	horse := item.Item{Index: idxDarkHorse, Durability: 255}
+	horse := item.Item{Index: chaosmix.ItemDarkHorse, Durability: 255}
 	// FUN_0048d010: level capped by MaxPetLevel (50), experience clamped.
 	b.petInit(&horse, 70, 0)
 	if horse.PetLevel != 50 || horse.PetExp != 7500000 {
@@ -47,19 +48,19 @@ func TestPetInitAndExperience(t *testing.T) {
 		t.Fatalf("level down = %d/%d", horse.PetLevel, horse.PetExp)
 	}
 	// Broken pets and other items gain nothing; uninitialized pets become 1/0.
-	broken := item.Item{Index: idxDarkRaven}
+	broken := item.Item{Index: chaosmix.ItemDarkRaven}
 	if b.petAddExp(&broken, 1000) {
 		t.Fatal("broken pet gained")
 	}
-	fresh := item.Item{Index: idxDarkRaven, Durability: 1}
+	fresh := item.Item{Index: chaosmix.ItemDarkRaven, Durability: 1}
 	if !b.petAddExp(&fresh, 1000) || fresh.PetLevel != 1 || fresh.PetExp != 0 {
 		t.Fatalf("fresh = %+v", fresh)
 	}
 	// FUN_0048cf60 prices.
-	if p, ok := petPrice(item.Item{Index: idxDarkHorse, PetLevel: 3}); !ok || p.Buy != 6000000 || p.Sell != 2000000 {
+	if p, ok := petPrice(item.Item{Index: chaosmix.ItemDarkHorse, PetLevel: 3}); !ok || p.Buy != 6000000 || p.Sell != 2000000 {
 		t.Fatalf("horse price = %+v", p)
 	}
-	if p, _ := petPrice(item.Item{Index: idxDarkRaven, PetLevel: 1}); p.Buy != 1000000 || p.Sell != 333300 {
+	if p, _ := petPrice(item.Item{Index: chaosmix.ItemDarkRaven, PetLevel: 1}); p.Buy != 1000000 || p.Sell != 333300 {
 		t.Fatalf("raven price = %+v", p)
 	}
 }
@@ -67,7 +68,7 @@ func TestPetInitAndExperience(t *testing.T) {
 func TestPetKillExperienceAndInfo(t *testing.T) {
 	b := newBareWorld(t)
 	o := statsPlayer(b, PlayerStart, 4, 400)
-	o.P.Inventory[1] = item.Item{Index: idxDarkRaven, Durability: 255, PetLevel: 3, PetExp: 351}
+	o.P.Inventory[1] = item.Item{Index: chaosmix.ItemDarkRaven, Durability: 255, PetLevel: 3, PetExp: 351}
 	if b.hooks.petExperience == nil {
 		t.Fatal("hooks.petExperience not set")
 	}
@@ -97,7 +98,7 @@ func TestPetKillExperienceAndInfo(t *testing.T) {
 		t.Fatalf("A9 answer = % X", r)
 	}
 	// Chaos box (4) and bad positions.
-	chaos(o).Box[2] = item.Item{Index: idxDarkHorse, PetLevel: 9}
+	chaos(o).Box[2] = item.Item{Index: chaosmix.ItemDarkHorse, PetLevel: 9}
 	b.handlePetInfo(o, []byte{0xC1, 6, 0xA9, 1, 4, 2})
 	if r := find(b.drain(o), 0xA9, -1); r == nil || r[3] != 1 || r[4] != 4 || r[6] != 9 {
 		t.Fatalf("A9 chaos box = % X", r)
@@ -116,8 +117,8 @@ func TestPetPersistence(t *testing.T) {
 		t.Fatal(err)
 	}
 	o := statsPlayer(b, PlayerStart, 4, 400)
-	o.P.Inventory[8] = item.Item{Index: idxDarkHorse, Serial: 900, Durability: 255}
-	o.P.Inventory[BagStart] = item.Item{Index: idxDarkRaven, Serial: 901, Durability: 255}
+	o.P.Inventory[8] = item.Item{Index: chaosmix.ItemDarkHorse, Serial: 900, Durability: 255}
+	o.P.Inventory[BagStart] = item.Item{Index: chaosmix.ItemDarkRaven, Serial: 901, Durability: 255}
 	b.requestPetInfo(o, 0)
 	b.pump()
 	tb := b.petTable()
@@ -147,7 +148,7 @@ func TestDarkRavenCommand(t *testing.T) {
 		t.Fatal("A7 answered without a raven")
 	}
 	o.P.Char.Leadership = 2000
-	o.P.Inventory[1] = item.Item{Index: idxDarkRaven, Durability: 255, PetLevel: 10}
+	o.P.Inventory[1] = item.Item{Index: chaosmix.ItemDarkRaven, Durability: 255, PetLevel: 10}
 	b.calcCharacter(o)
 	b.drain(o)
 	b.handlePetCommand(o, []byte{0xC1, 7, 0xA7, 0, 1, 0, 0})

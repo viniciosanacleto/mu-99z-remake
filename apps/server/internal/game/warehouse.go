@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
@@ -133,7 +134,7 @@ func (w *World) closeWarehouse(o *Object) {
 	st.If = ifState{}
 	st.WarehouseMoney = 0
 	st.WarehouseLoaded = false
-	w.send(o, newPacket(frame.C1, 0x82, -1, 3))
+	w.send(o, packet.New(frame.C1, 0x82, -1, 3))
 }
 
 // saveInventory is DataServer 0x31 (FUN_00476230): inventory only.
@@ -157,7 +158,7 @@ func (w *World) saveInventory(o *Object) {
 // packetWarehouseMoney is C1 0C 81 result whMoney(u32) money(u32)
 // (FUN_00517a00 / FUN_005177c0).
 func packetWarehouseMoney(result byte, wh, money int64) []byte {
-	p := newPacket(frame.C1, 0x81, int(result), 0x0C)
+	p := packet.New(frame.C1, 0x81, int(result), 0x0C)
 	binary.LittleEndian.PutUint32(p[4:], uint32(wh))
 	binary.LittleEndian.PutUint32(p[8:], uint32(money))
 	return p
@@ -166,7 +167,7 @@ func packetWarehouseMoney(result byte, wh, money int64) []byte {
 // packetWarehouseState is C1 08 83 state CommandWareNumber_AL(u32)
 // (FUN_00517ac0).
 func packetWarehouseState(state byte, vaults int) []byte {
-	p := newPacket(frame.C1, 0x83, int(state), 8)
+	p := packet.New(frame.C1, 0x83, int(state), 8)
 	binary.LittleEndian.PutUint32(p[4:], uint32(vaults))
 	return p
 }

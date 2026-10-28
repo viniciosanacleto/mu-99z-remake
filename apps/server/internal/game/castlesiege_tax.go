@@ -5,6 +5,8 @@ import (
 	"encoding/binary"
 	"sync"
 	"time"
+
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/castlesiege"
 )
 
 // Taxes and money of the castle: CCastleSiegeSync (DAT_010d8d48: the
@@ -163,7 +165,7 @@ func (w *World) csSeniorTalk(o *Object) {
 		return
 	}
 	cs := w.cs()
-	if w.csSyncState() == csStart {
+	if w.csSyncState() == castlesiege.StateStart {
 		w.systemMessage(o, w.messageFor(o, 241))
 		return
 	}
@@ -187,7 +189,7 @@ func (w *World) csSeniorTalk(o *Object) {
 // members out of the battle.
 func (w *World) csGuardTalk(o, npc *Object) {
 	switch {
-	case w.csSyncState() == csStart:
+	case w.csSyncState() == castlesiege.StateStart:
 		w.send(o, packetObjectChat(npc.Index, w.messageFor(o, 244)))
 	case csGuildName(o) == "":
 		w.send(o, packetObjectChat(npc.Index, w.messageFor(o, 248)))
@@ -216,7 +218,7 @@ func (w *World) csKeeperTalk(o *Object) {
 		}
 	}
 	_, _, hunt, _ := w.csSyncValues()
-	w.send(o, packetCSHuntInfo(kind, open, hunt))
+	w.send(o, castlesiege.PacketHuntInfo(kind, open, hunt))
 }
 
 // handleCSHuntEnter is B9 05 (FUN_004220b0): into the Land of Trial for
@@ -228,7 +230,7 @@ func (w *World) handleCSHuntEnter(o *Object, _ []byte) {
 		return
 	}
 	if !c.huntOpen && !w.csOwnerGuild(o) && !w.csOwnerAlliance(o) {
-		w.send(o, packetCSHuntEnter(0))
+		w.send(o, castlesiege.PacketHuntEnter(0))
 		return
 	}
 	_, _, tax, _ := w.csSyncValues()
@@ -236,14 +238,14 @@ func (w *World) handleCSHuntEnter(o *Object, _ []byte) {
 		tax = 0
 	}
 	if int64(tax) > o.P.Char.Money {
-		w.send(o, packetCSHuntEnter(0))
+		w.send(o, castlesiege.PacketHuntEnter(0))
 		return
 	}
 	o.P.Char.Money -= int64(tax)
 	w.sendMoney(o)
 	w.castleAddTax(int64(tax))
 	w.gateMove(o, csHuntZoneGate)
-	w.send(o, packetCSHuntEnter(1))
+	w.send(o, castlesiege.PacketHuntEnter(1))
 }
 
 // handleCSOwnerMark is B9 02 (FUN_00421fb0): the owner guild's mark.
@@ -251,8 +253,8 @@ func (w *World) handleCSOwnerMark(o *Object, _ []byte) {
 	if !w.csEnabled() || !o.IsPlayer() {
 		return
 	}
-	if g, ok := w.guildMgr().find(w.cs().owner); ok {
-		w.send(o, packetCSOwnerMark(g.Mark))
+	if g, ok := w.guildMgr().Find(w.cs().owner); ok {
+		w.send(o, castlesiege.PacketOwnerMark(g.Mark))
 	}
 }
 
@@ -282,7 +284,7 @@ func (w *World) handleCSTaxInfo(o *Object, _ []byte) {
 		return func() {
 			c := w.cs()
 			c.money = d.Money
-			w.csReply(idx, packetCSTaxInfo(1, byte(d.TaxChaos), byte(d.TaxStore), d.Money))
+			w.csReply(idx, castlesiege.PacketTaxInfo(1, byte(d.TaxChaos), byte(d.TaxStore), d.Money))
 		}
 	})
 }
@@ -306,7 +308,7 @@ func (w *World) handleCSTaxRate(o *Object, p []byte) {
 	}
 	rate := int(int32(binary.BigEndian.Uint32(p[5:])))
 	if int8(p[5]) < 0 || limit < 0 || rate > limit {
-		w.send(o, packetCSTaxRate(0, 0, 0))
+		w.send(o, castlesiege.PacketTaxRate(0, 0, 0))
 		return
 	}
 	st := w.csStore()
@@ -331,7 +333,7 @@ func (w *World) handleCSTaxRate(o *Object, p []byte) {
 					c.taxHunt = stored
 				}
 			}
-			w.csReply(idx, packetCSTaxRate(byte(r), byte(kind), stored))
+			w.csReply(idx, castlesiege.PacketTaxRate(byte(r), byte(kind), stored))
 		}
 	})
 }
@@ -348,7 +350,7 @@ func (w *World) handleCSMoneyOut(o *Object, p []byte) {
 	c := w.cs()
 	amount := int64(binary.LittleEndian.Uint32(p[4:]))
 	if amount == 0 || int8(p[7]) < 0 || amount > c.money || o.P.Char.Money+amount > csZenMax {
-		w.send(o, packetCSMoneyOut(0, 0))
+		w.send(o, castlesiege.PacketMoneyOut(0, 0))
 		return
 	}
 	st := w.csStore()
@@ -369,7 +371,7 @@ func (w *World) handleCSMoneyOut(o *Object, p []byte) {
 				}
 				w.cs().money = money
 			}
-			w.csReply(idx, packetCSMoneyOut(byte(r), money))
+			w.csReply(idx, castlesiege.PacketMoneyOut(byte(r), money))
 		}
 	})
 }
@@ -382,15 +384,15 @@ func (w *World) handleCSHuntZone(o *Object, p []byte) {
 	}
 	c := w.cs()
 	if !w.csOwnerGuild(o) || csGuildStatus(o) != 0x80 {
-		w.send(o, packetCSHuntZone(2, p[4]))
+		w.send(o, castlesiege.PacketHuntZone(2, p[4]))
 		return
 	}
-	if c.state == csStart {
-		w.send(o, packetCSHuntZone(0, p[4]))
+	if c.state == castlesiege.StateStart {
+		w.send(o, castlesiege.PacketHuntZone(0, p[4]))
 		return
 	}
 	c.huntOpen = p[4] != 0
-	w.send(o, packetCSHuntZone(1, p[4]))
+	w.send(o, castlesiege.PacketHuntZone(1, p[4]))
 }
 
 func registerCastlesiegeTax(h *hooks) {

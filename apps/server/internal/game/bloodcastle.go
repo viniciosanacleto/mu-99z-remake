@@ -5,7 +5,10 @@ import (
 	"math"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/bloodcastle"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/devilsquare"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/mapitem"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
@@ -16,43 +19,6 @@ import (
 // users*40 monsters, the bridge opens (3 s), break the castle gate, kill
 // users*2 magic skeletons, break the crystal statue; whoever brings the
 // Archangel weapon it drops to the Archangel (NPC 0xE8) wins for the party.
-
-const (
-	bcCastles    = 7
-	bcMaxUsers   = 50
-	bcEntrySec   = 0 // EventEntryLevel.dat / EventStageSpawn.dat section
-	bcKickGate   = 0x16
-	bcArchangel  = 0xE8
-	bcMessenger  = 0xE9
-	bcGateClass  = 0x83
-	bcStatueMin  = 0x84
-	itemBCCloak  = 0x1A12 // Invisibility Cloak (13,18), level = castle + 1
-	itemBCFree   = 0x1A2F // free entrance (13,47)
-	itemBCWeapon = 0x1A13 // Archangel weapon (13,19), level 0..2
-)
-
-var bcGates = [bcCastles]int{0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x50}
-
-// Rectangles (x1, y1, x2, y2) of the attribute changes (0x54792c,
-// 0x5479b0, 0x5479b4).
-var (
-	bcEntranceRect = [4]byte{13, 15, 15, 23}
-	bcBridgeRect   = [4]byte{13, 70, 15, 75}
-	bcStatueRects  = [3][4]byte{{13, 76, 15, 79}, {11, 80, 25, 89}, {8, 80, 10, 83}}
-)
-
-// bcMagicSkeleton are the classes counted in step 3 (the others in step 0).
-func bcMagicSkeleton(class int) bool {
-	switch class {
-	case 0x59, 0x5F, 0x70, 0x76, 0x7C, 0x82, 0x8F, 0x1B1:
-		return true
-	}
-	return false
-}
-
-type bcUser struct {
-	Index, Score, Exp, Money int
-}
 
 type bcDelayed struct {
 	At    time.Time
@@ -75,7 +41,7 @@ type bcCastle struct {
 	Carrier           int   // r[15]
 	WeaponLevel       int   // r[16]
 	Winner            int   // r[17]
-	Users             [bcMaxUsers]bcUser
+	Users             [bloodcastle.MaxUsers]bloodcastle.User
 	Gate, Statue      int // r[0xda], r[0xdb]
 	Mobs              []int
 	Delayed           []bcDelayed
@@ -83,7 +49,7 @@ type bcCastle struct {
 
 type bloodCastle struct {
 	data *gamedata.BloodCastle
-	c    [bcCastles]bcCastle
+	c    [bloodcastle.Castles]bcCastle
 }
 
 func registerBloodcastle(h *hooks) {
@@ -108,7 +74,7 @@ func registerBloodcastle(h *hooks) {
 		// FUN_00413880.
 		for i := range bc.c {
 			if w.bcOn() {
-				bc.c[i].State = dsEmpty
+				bc.c[i].State = devilsquare.StateEmpty
 				w.bcEnterEmpty(&bc.c[i])
 			}
 		}
@@ -117,8 +83,8 @@ func registerBloodcastle(h *hooks) {
 	h.tick1000 = append(h.tick1000, (*World).bcTick)
 	h.worldHandlers[0x9A] = (*World).handleBCEnter
 	h.eventTimeHandlers[2] = (*World).bcRemainTime
-	h.npcTalk[bcArchangel] = func(w *World, o, npc *Object) bool { w.bcArchangelTalk(o); return true }
-	h.npcTalk[bcMessenger] = func(w *World, o, npc *Object) bool { w.bcMessengerTalk(o); return true }
+	h.npcTalk[bloodcastle.Archangel] = func(w *World, o, npc *Object) bool { w.bcArchangelTalk(o); return true }
+	h.npcTalk[bloodcastle.Messenger] = func(w *World, o, npc *Object) bool { w.bcMessengerTalk(o); return true }
 	h.death = append(h.death, func(w *World, killer, victim *Object) {
 		if victim.Map < 11 || victim.Map > 17 {
 			return
@@ -147,42 +113,6 @@ func (c *bcCastle) resetFight() {
 
 // --- packets -----------------------------------------------------------
 
-// packetBCResult is C1 1D 93 success FF name[10] and, after two bytes the
-// original never writes, score exp zen at 17/21/25 (FUN_004178b0).
-func packetBCResult(success byte, name string, u bcUser) []byte {
-	p := make([]byte, 0x1D)
-	p[0], p[1], p[2], p[3], p[4] = 0xC1, 0x1D, 0x93, success, 0xFF
-	copy(p[5:15], name)
-	u32le(p[17:], uint32(u.Score))
-	u32le(p[21:], uint32(u.Exp))
-	u32le(p[25:], uint32(u.Money))
-	return p
-}
-
-// packetBCStatus is C1 0E 9B type remain required kills carrier level+1
-// (FUN_00417ab0; 0xFF without a weapon level).
-func packetBCStatus(typ byte, remain, required, kills, carrier, level int) []byte {
-	p := make([]byte, 0x0E)
-	p[0], p[1], p[2], p[3] = 0xC1, 0x0E, 0x9B, typ
-	u16le(p[4:], remain)
-	u16le(p[6:], required)
-	u16le(p[8:], kills)
-	u16le(p[10:], carrier)
-	p[12] = 0xFF
-	if level != 0xFF && level != -1 {
-		p[12] = byte(level + 1)
-	}
-	return p
-}
-
-// packetBCState is C1 0E 9B type with zeros and 0xFF (the fixed status
-// packets of FUN_00414420 / FUN_004145f0 / FUN_00414910 / FUN_00417b20).
-func packetBCState(typ byte) []byte {
-	p := make([]byte, 0x0E)
-	p[0], p[1], p[2], p[3], p[12] = 0xC1, 0x0E, 0x9B, typ, 0xFF
-	return p
-}
-
 // packetMapAttr is C1 size 46 00 attr remove count rects (FUN_004da600).
 func packetMapAttr(attr byte, remove bool, rects ...[4]byte) []byte {
 	p := []byte{0xC1, byte(7 + 4*len(rects)), 0x46, 0x00, attr, 0, byte(len(rects))}
@@ -197,7 +127,7 @@ func packetMapAttr(attr byte, remove bool, rects ...[4]byte) []byte {
 
 // --- users ---------------------------------------------------------------
 
-func (c *bcCastle) user(index int) *bcUser {
+func (c *bcCastle) user(index int) *bloodcastle.User {
 	for i := range c.Users {
 		if c.Users[i].Index == index {
 			return &c.Users[i]
@@ -223,7 +153,7 @@ func (w *World) bcAddUser(c *bcCastle, o *Object) bool {
 	}
 	for i := range c.Users {
 		if u := c.Users[i]; u.Index < 0 || u.Index >= MaxObjects {
-			c.Users[i] = bcUser{Index: o.Index}
+			c.Users[i] = bloodcastle.User{Index: o.Index}
 			o.P.entries.BC++
 			w.saveCharacter(o, nil)
 			return true
@@ -240,17 +170,17 @@ func (w *World) bcRemoveUser(c *bcCastle, index int) {
 	if u == nil {
 		return
 	}
-	if c.State == dsStart {
+	if c.State == devilsquare.StateStart {
 		w.bcDropCarriedWeapon(c, index)
 		if index >= 0 && index < MaxObjects && w.objects[index].State == StatePlaying {
-			w.send(w.objects[index], packetBCState(2))
+			w.send(w.objects[index], bloodcastle.PacketState(2))
 		} else {
-			w.bcUsersSend(c, packetBCState(2))
+			w.bcUsersSend(c, bloodcastle.PacketState(2))
 		}
 	} else {
 		w.bcDeleteCarriedWeapon(c, index)
 	}
-	*u = bcUser{Index: -1}
+	*u = bloodcastle.User{Index: -1}
 }
 
 // bcCleanUsers is FUN_00415070.
@@ -335,15 +265,15 @@ func (w *World) bcTick() {
 		c.Tick = now
 		c.Remain = int(math.Floor(c.Target.Sub(now).Seconds()))
 		switch c.State {
-		case dsEmpty:
+		case devilsquare.StateEmpty:
 			w.bcEmptyProc(c)
-		case dsReady:
+		case devilsquare.StateReady:
 			w.bcReadyProc(c)
-		case dsStand:
+		case devilsquare.StateStand:
 			w.bcStandProc(c)
-		case dsStart:
+		case devilsquare.StateStart:
 			w.bcStartProc(c)
-		case dsClean:
+		case devilsquare.StateClean:
 			w.bcCleanProc(c)
 		}
 		w.bcDelayedProc(c, now)
@@ -377,7 +307,7 @@ func (w *World) bcEmptyProc(c *bcCastle) {
 		}
 	}
 	if c.Remain < 1 && w.bcOn() {
-		c.State = dsReady
+		c.State = devilsquare.StateReady
 		w.bcEnterReady(c)
 	}
 }
@@ -395,7 +325,7 @@ func (w *World) bcReadyProc(c *bcCastle) {
 		}
 	}
 	if c.Remain > 0 && c.Remain <= 30 && !c.Warned {
-		w.sendAll(packetDSState(3))
+		w.sendAll(devilsquare.PacketState(3))
 		c.Warned = true
 	}
 	if c.Remain > 0 {
@@ -406,7 +336,7 @@ func (w *World) bcReadyProc(c *bcCastle) {
 	}
 	w.bcUsersMsg(c, NoticeBlue, 2, c.Index+1, d.StandTime)
 	if w.bcOn() {
-		c.State = dsStand
+		c.State = devilsquare.StateStand
 		w.bcEnterStand(c)
 	}
 }
@@ -416,13 +346,13 @@ func (w *World) bcStandProc(c *bcCastle) {
 	w.bcCleanUsers(c)
 	if c.userCount() == 0 {
 		if w.bcOn() {
-			c.State = dsEmpty
+			c.State = devilsquare.StateEmpty
 			w.bcEnterEmpty(c)
 		}
 		return
 	}
 	if c.Remain > 0 && c.Remain <= 30 && !c.Warned {
-		w.bcUsersSend(c, packetDSState(4))
+		w.bcUsersSend(c, devilsquare.PacketState(4))
 		c.Warned = true
 	}
 	if c.Remain > 0 {
@@ -430,7 +360,7 @@ func (w *World) bcStandProc(c *bcCastle) {
 	}
 	w.bcUsersMsg(c, NoticeGold, 3)
 	if w.bcOn() {
-		c.State = dsStart
+		c.State = devilsquare.StateStart
 		w.bcEnterStart(c)
 	}
 }
@@ -443,7 +373,7 @@ func (w *World) bcStartProc(c *bcCastle) {
 	w.bcCleanUsers(c)
 	if c.userCount() == 0 {
 		if w.bcOn() {
-			c.State = dsEmpty
+			c.State = devilsquare.StateEmpty
 			w.bcEnterEmpty(c)
 		}
 		return
@@ -453,15 +383,15 @@ func (w *World) bcStartProc(c *bcCastle) {
 	case 0:
 		if c.Kills >= c.Required {
 			c.Step, c.StepTick = 1, now
-			w.bcUsersSend(c, packetBCState(3))
-			w.bcAttr(c, 8, false, [][4]byte{bcBridgeRect})
+			w.bcUsersSend(c, bloodcastle.PacketState(3))
+			w.bcAttr(c, 8, false, [][4]byte{bloodcastle.BridgeRect})
 			w.bcSpawnStage(c, 1)
 			w.bcUsersMsg(c, NoticeGold, 4)
 		}
 	case 1:
 		if now.Sub(c.StepTick) > 2999*time.Millisecond {
 			c.Step, c.StepTick = 2, time.Time{}
-			w.bcUsersSend(c, packetMapAttr(8, true, bcBridgeRect))
+			w.bcUsersSend(c, packetMapAttr(8, true, bloodcastle.BridgeRect))
 			w.bcImmune(c.Gate, false)
 			w.bcSpawnStage(c, 2)
 		}
@@ -469,7 +399,7 @@ func (w *World) bcStartProc(c *bcCastle) {
 		if c.Gate < 0 || c.Gate >= MaxObjects {
 			c.Step, c.Kills = 3, 0
 			c.Required = c.userCount() * 2
-			w.bcAttrSend(c, 4, false, bcStatueRects[:]...)
+			w.bcAttrSend(c, 4, false, bloodcastle.StatueRects[:]...)
 			w.bcSpawnStage(c, 3)
 		}
 	case 3:
@@ -485,17 +415,17 @@ func (w *World) bcStartProc(c *bcCastle) {
 	if c.Step <= 2 {
 		typ = 1
 	}
-	w.bcUsersSend(c, packetBCStatus(typ, c.Remain, c.Required, c.Kills, c.Carrier, c.WeaponLevel))
+	w.bcUsersSend(c, bloodcastle.PacketStatus(typ, c.Remain, c.Required, c.Kills, c.Carrier, c.WeaponLevel))
 	if c.Step == 4 && c.Winner >= 0 && c.Winner < MaxObjects {
 		w.bcUsersMsg(c, NoticeGold, 12, bcName(w.objects[c.Winner]))
 		if w.bcOn() {
-			c.State = dsClean
+			c.State = devilsquare.StateClean
 			w.bcEnterClean(c)
 		}
 		return
 	}
 	if c.Remain > 0 && c.Remain <= 30 && !c.Warned {
-		w.bcUsersSend(c, packetDSState(5))
+		w.bcUsersSend(c, devilsquare.PacketState(5))
 		c.Warned = true
 	}
 	if c.Remain > 0 {
@@ -503,7 +433,7 @@ func (w *World) bcStartProc(c *bcCastle) {
 	}
 	w.bcUsersMsg(c, NoticeGold, 6)
 	if w.bcOn() {
-		c.State = dsClean
+		c.State = devilsquare.StateClean
 		w.bcEnterClean(c)
 	}
 }
@@ -512,11 +442,11 @@ func (w *World) bcStartProc(c *bcCastle) {
 func (w *World) bcCleanProc(c *bcCastle) {
 	w.bcCleanUsers(c)
 	if c.Remain > 0 && c.Remain <= 30 && !c.Warned {
-		w.bcUsersSend(c, packetDSState(6))
+		w.bcUsersSend(c, devilsquare.PacketState(6))
 		c.Warned = true
 	}
 	if c.Remain < 1 && w.bcOn() {
-		c.State = dsEmpty
+		c.State = devilsquare.StateEmpty
 		w.bcEnterEmpty(c)
 	}
 }
@@ -525,23 +455,23 @@ func (w *World) bcCleanProc(c *bcCastle) {
 func (w *World) bcEnterEmpty(c *bcCastle) {
 	gate, statue := c.Gate, c.Statue
 	c.resetFight()
-	w.bcUsersSend(c, packetBCState(2))
+	w.bcUsersSend(c, bloodcastle.PacketState(2))
 	for i := range c.Users { // FUN_00415020: gate 22
 		if u := c.Users[i].Index; u >= 0 && u < MaxObjects {
-			c.Users[i] = bcUser{Index: -1}
-			w.gateMove(w.objects[u], bcKickGate)
+			c.Users[i] = bloodcastle.User{Index: -1}
+			w.gateMove(w.objects[u], bloodcastle.KickGate)
 		}
 	}
 	w.bcDeleteObject(gate)
 	w.bcDeleteObject(statue)
 	w.bcClearMobs(c)
-	w.bcAttrSend(c, 4, true, bcEntranceRect)      // FUN_004167b0
-	w.bcAttr(c, 8, true, [][4]byte{bcBridgeRect}) // FUN_004169d0
-	w.bcAttrSend(c, 4, true, bcStatueRects[:]...) // FUN_00416c80
+	w.bcAttrSend(c, 4, true, bloodcastle.EntranceRect)      // FUN_004167b0
+	w.bcAttr(c, 8, true, [][4]byte{bloodcastle.BridgeRect}) // FUN_004169d0
+	w.bcAttrSend(c, 4, true, bloodcastle.StatueRects[:]...) // FUN_00416c80
 	now := w.now()
 	next, ok := nextSchedule(w.bc().data.Schedule, now)
 	if !ok {
-		c.State = dsBlank
+		c.State = devilsquare.StateBlank
 		return
 	}
 	c.Target = next
@@ -567,10 +497,10 @@ func (w *World) bcEnterStart(c *bcCastle) {
 	c.Open, c.LastMin, c.Warned = false, -1, false
 	c.Kills = 0
 	c.Required = c.userCount() * 40
-	w.bcAttrSend(c, 4, false, bcEntranceRect) // FUN_004168c0
+	w.bcAttrSend(c, 4, false, bloodcastle.EntranceRect) // FUN_004168c0
 	w.bcSpawnGate(c)
 	w.bcSpawnStage(c, 0)
-	w.bcUsersSend(c, packetBCState(0))
+	w.bcUsersSend(c, bloodcastle.PacketState(0))
 	c.Remain = w.bc().data.EventTime * 60
 	c.Target = w.now().Add(time.Duration(c.Remain) * time.Second)
 }
@@ -596,13 +526,13 @@ func (w *World) bcEnterClean(c *bcCastle) {
 		w.bcReward(c, u, win)
 		if win {
 			w.bcItemReward(c, o)
-			w.send(o, packetBCResult(1, bcName(o), *u))
+			w.send(o, bloodcastle.PacketResult(1, bcName(o), *u))
 		} else {
-			w.send(o, packetBCResult(0, bcName(o), *u))
+			w.send(o, bloodcastle.PacketResult(0, bcName(o), *u))
 		}
 		w.reportEventRanking(store.RankingBloodCastle, o, u.Score) // FUN_00476c50
 	}
-	w.bcUsersSend(c, packetBCState(2))
+	w.bcUsersSend(c, bloodcastle.PacketState(2))
 	c.Remain = w.bc().data.CloseTime * 60
 	c.Target = w.now().Add(time.Duration(c.Remain) * time.Second)
 }
@@ -617,7 +547,7 @@ func (w *World) bcWinnerSide(c *bcCastle, o *Object) bool {
 
 // bcReward is FUN_00415180 (experience, score = exp/5) and FUN_00415300
 // (zen).
-func (w *World) bcReward(c *bcCastle, u *bcUser, win bool) {
+func (w *World) bcReward(c *bcCastle, u *bloodcastle.User, win bool) {
 	d := w.bc().data
 	o := w.objects[u.Index]
 	col := 1
@@ -690,7 +620,7 @@ func (w *World) bcClearMobs(c *bcCastle) {
 // castle and step.
 func (w *World) bcSpawnStage(c *bcCastle, stage int) {
 	for _, r := range w.ev().stage {
-		if r.Event != bcEntrySec || r.Level != c.Index || r.Stage != stage {
+		if r.Event != bloodcastle.EntrySection || r.Level != c.Index || r.Stage != stage {
 			continue
 		}
 		for _, idx := range w.spawnStage(c.Map, r.Monster, r.RegenTime) {
@@ -729,7 +659,7 @@ func (w *World) bcSpawnGate(c *bcCastle) {
 	if c.Gate >= 0 && c.Gate < MaxObjects {
 		return
 	}
-	c.Gate = w.bcSpawnFixed(c, bcGateClass, 14, 75, w.bc().data.GateLife[c.Index])
+	c.Gate = w.bcSpawnFixed(c, bloodcastle.GateClass, 14, 75, w.bc().data.GateLife[c.Index])
 }
 
 func (w *World) bcSpawnStatue(c *bcCastle) {
@@ -737,7 +667,7 @@ func (w *World) bcSpawnStatue(c *bcCastle) {
 		return
 	}
 	d := w.bc().data
-	c.Statue = w.bcSpawnFixed(c, bcStatueMin+rnd(3), d.StatueX[c.Index], d.StatueY[c.Index], d.StatueLife[c.Index])
+	c.Statue = w.bcSpawnFixed(c, bloodcastle.StatueMin+rnd(3), d.StatueX[c.Index], d.StatueY[c.Index], d.StatueLife[c.Index])
 }
 
 // bcImmune applies / removes the effects 0x3F and 0x40 (FUN_00478ae0 /
@@ -754,7 +684,7 @@ func (w *World) bcImmune(idx int, on bool) {
 // bcMonsterKilled is FUN_00416ec0.
 func (w *World) bcMonsterKilled(mon *Object) {
 	c := &w.bc().c[mon.Map-11]
-	if c.State != dsStart {
+	if c.State != devilsquare.StateStart {
 		return
 	}
 	var hitter *Object
@@ -762,13 +692,13 @@ func (w *World) bcMonsterKilled(mon *Object) {
 		hitter = w.objects[top]
 	}
 	switch {
-	case mon.Class == bcGateClass && mon.Index == c.Gate && c.Step == 2:
+	case mon.Class == bloodcastle.GateClass && mon.Index == c.Gate && c.Step == 2:
 		c.Gate = -1
 		w.bcUsersMsg(c, NoticeGold, 10, bcName(hitter))
 		return
-	case mon.Class >= bcStatueMin && mon.Class <= bcStatueMin+2 && mon.Index == c.Statue && c.Step == 4:
+	case mon.Class >= bloodcastle.StatueMin && mon.Class <= bloodcastle.StatueMin+2 && mon.Index == c.Statue && c.Step == 4:
 		c.Statue = -1
-		w.bcDropWeapon(c, mon, hitter, mon.Class-bcStatueMin)
+		w.bcDropWeapon(c, mon, hitter, mon.Class-bloodcastle.StatueMin)
 		w.bcUsersMsg(c, NoticeGold, 11, bcName(hitter))
 		w.bcSpawnStage(c, 5)
 		return
@@ -781,7 +711,7 @@ func (w *World) bcMonsterKilled(mon *Object) {
 		return
 	}
 	counting := c.Step == 0
-	if bcMagicSkeleton(mon.Class) {
+	if bloodcastle.MagicSkeleton(mon.Class) {
 		counting = c.Step == 3
 	}
 	if counting && c.Kills < c.Required {
@@ -806,7 +736,7 @@ func (w *World) bcDropWeapon(c *bcCastle, statue, owner *Object, level int) {
 			if c.WeaponSerial == -1 {
 				c.WeaponSerial = int64(serial)
 			}
-			it := item.Item{Index: itemBCWeapon, Level: level, Serial: serial}
+			it := item.Item{Index: bloodcastle.ItemWeapon, Level: level, Serial: serial}
 			it.Durability = float32(w.itemMaxDurability(it))
 			if w.hooks.dropMapItem != nil {
 				w.hooks.dropMapItem(w, mp, x, y, it, ownerIdx)
@@ -823,7 +753,7 @@ func (w *World) bcCastleOf(o *Object) *bcCastle {
 }
 
 func (c *bcCastle) isWeapon(it item.Item) bool {
-	return it.Index == itemBCWeapon && c.WeaponSerial != -1 && int64(it.Serial) == c.WeaponSerial
+	return it.Index == bloodcastle.ItemWeapon && c.WeaponSerial != -1 && int64(it.Serial) == c.WeaponSerial
 }
 
 // bcWeaponPicked is FUN_00416750.
@@ -843,10 +773,10 @@ func (w *World) bcWeaponDropped(o *Object, it item.Item, num int) {
 	if c == nil || !c.isWeapon(it) {
 		return
 	}
-	if t := w.mapItems(o.Map); t != nil && num >= 0 && num < len(t.items) {
+	if t := w.mapItems(o.Map); t != nil && num >= 0 && num < len(t.Items) {
 		now := w.now()
-		t.items[num].Expire = now.Add(time.Duration(c.Remain) * time.Millisecond)
-		t.items[num].Created, t.items[num].OwnerUntil = now, now
+		t.Items[num].Expire = now.Add(time.Duration(c.Remain) * time.Millisecond)
+		t.Items[num].Created, t.Items[num].OwnerUntil = now, now
 	}
 	c.Carrier, c.WeaponLevel, c.WeaponItem = -1, -1, num
 	w.bcUsersMsg(c, NoticeGold, 8, bcName(o))
@@ -882,7 +812,7 @@ func (w *World) bcDropCarriedWeapon(c *bcCastle, index int) {
 		w.deleteInventory(o, slot)
 		w.equipmentChanged(o, slot)
 	}
-	w.send(o, packetDropResult(r, byte(slot)))
+	w.send(o, mapitem.PacketDropResult(r, byte(slot)))
 }
 
 // bcDeleteCarriedWeapon is FUN_004158e0.
@@ -902,7 +832,7 @@ func (w *World) bcDeleteCarriedWeapon(c *bcCastle, index int) {
 // losing rewards, its result 8 s later (FUN_004179e0) and leaves.
 func (w *World) bcPlayerDied(o *Object) {
 	c := w.bcCastleOf(o)
-	if c == nil || c.State != dsStart || o.P == nil {
+	if c == nil || c.State != devilsquare.StateStart || o.P == nil {
 		return
 	}
 	u := c.user(o.Index)
@@ -915,7 +845,7 @@ func (w *World) bcPlayerDied(o *Object) {
 	if win {
 		s = 1
 	}
-	c.Delayed = append(c.Delayed, bcDelayed{At: w.now(), Index: o.Index, Pkt: packetBCResult(s, bcName(o), *u)})
+	c.Delayed = append(c.Delayed, bcDelayed{At: w.now(), Index: o.Index, Pkt: bloodcastle.PacketResult(s, bcName(o), *u)})
 	w.bcRemoveUser(c, o.Index)
 }
 
@@ -936,7 +866,7 @@ func (w *World) bcArchangelTalk(o *Object) {
 		reply(0x2E)
 		return
 	}
-	if c.State != dsStart || c.user(o.Index) == nil || o.Index != c.Carrier {
+	if c.State != devilsquare.StateStart || c.user(o.Index) == nil || o.Index != c.Carrier {
 		reply(0x18)
 		return
 	}
@@ -957,12 +887,12 @@ func (w *World) bcMessengerTalk(o *Object) {
 	if !w.bcOn() {
 		return
 	}
-	lv := w.ev().entry.Level(bcEntrySec, o.Class, o.P.Char.Level)
+	lv := w.ev().entry.Level(bloodcastle.EntrySection, o.Class, o.P.Char.Level)
 	if lv < 0 || lv > 6 {
 		w.send(o, packetCustomNotice(0, 0, w.messageFor(o, 7)))
 		return
 	}
-	if w.countItems(o, itemBCCloak, lv+1) == 0 && w.countItems(o, itemBCFree, 0) == 0 &&
+	if w.countItems(o, bloodcastle.ItemCloak, lv+1) == 0 && w.countItems(o, bloodcastle.ItemFreeTicket, 0) == 0 &&
 		w.cfg.Int("Event", "BloodCastleNPCWithoutEntrance", 0) == 0 {
 		w.send(o, []byte{0xC1, 0x07, 0xF3, 0x40, 0x01, 0x15, 0x00})
 		return
@@ -974,9 +904,6 @@ func (w *World) bcMessengerTalk(o *Object) {
 	w.send(o, packetNpcWindow(6))
 }
 
-// packetBCEnterResult is C1 04 9A result (FUN_004174b0).
-func packetBCEnterResult(r byte) []byte { return []byte{0xC1, 0x04, 0x9A, r} }
-
 // handleBCEnter is 9A (FUN_004174b0): [3] castle (1-based), [4] slot.
 func (w *World) handleBCEnter(o *Object, p []byte) {
 	if len(p) < 5 || !w.bcOn() || !questPlayerOK(o) {
@@ -984,7 +911,7 @@ func (w *World) handleBCEnter(o *Object, p []byte) {
 	}
 	castle, slot := int(p[3]-1), int(p[4])
 	if castle > 6 {
-		w.send(o, packetBCEnterResult(1))
+		w.send(o, bloodcastle.PacketEnterResult(1))
 		return
 	}
 	if max := w.cfg.ALInt("Event", "BloodCastleMaxEntryCount", accountLevel(o), 0); max != 0 && max <= o.P.entries.BC {
@@ -992,56 +919,56 @@ func (w *World) handleBCEnter(o *Object, p []byte) {
 		return
 	}
 	if slot > 0x4B {
-		w.send(o, packetBCEnterResult(1))
+		w.send(o, bloodcastle.PacketEnterResult(1))
 		return
 	}
 	it := o.P.Inventory[slot]
-	if it.IsEmpty() || (it.Index != itemBCCloak && it.Index != itemBCFree) ||
-		(it.Index == itemBCCloak && it.Level != castle+1) {
-		w.send(o, packetBCEnterResult(1))
+	if it.IsEmpty() || (it.Index != bloodcastle.ItemCloak && it.Index != bloodcastle.ItemFreeTicket) ||
+		(it.Index == bloodcastle.ItemCloak && it.Level != castle+1) {
+		w.send(o, bloodcastle.PacketEnterResult(1))
 		return
 	}
 	c := &w.bc().c[castle]
 	if !c.Open {
-		w.send(o, packetBCEnterResult(2))
+		w.send(o, bloodcastle.PacketEnterResult(2))
 		return
 	}
-	lv := w.ev().entry.Level(bcEntrySec, o.Class, o.P.Char.Level)
+	lv := w.ev().entry.Level(bloodcastle.EntrySection, o.Class, o.P.Char.Level)
 	switch {
 	case castle < lv:
-		w.send(o, packetBCEnterResult(3))
+		w.send(o, bloodcastle.PacketEnterResult(3))
 		return
 	case castle > lv:
-		w.send(o, packetBCEnterResult(4))
+		w.send(o, bloodcastle.PacketEnterResult(4))
 		return
 	}
 	if c.userCount() >= w.cfg.Int("Event", "BloodCastleMaxUser", 0) {
-		w.send(o, packetBCEnterResult(5))
+		w.send(o, bloodcastle.PacketEnterResult(5))
 		return
 	}
 	if w.cfg.Int("Common", "PKLimitFree", 0) == 0 && int(o.PKLevel) > 4 && w.cfg.Int("Common", "PKLimitEventEntry", 0) != 0 {
-		w.send(o, packetBCEnterResult(7))
+		w.send(o, bloodcastle.PacketEnterResult(7))
 		return
 	}
 	if !w.bcAddUser(c, o) {
-		w.send(o, packetBCEnterResult(5))
+		w.send(o, bloodcastle.PacketEnterResult(5))
 		return
 	}
 	w.consumeEntryItem(o, slot)
-	w.send(o, packetBCEnterResult(0))
+	w.send(o, bloodcastle.PacketEnterResult(0))
 	items(o).If = ifState{}
-	w.gateMove(o, bcGates[castle])
+	w.gateMove(o, bloodcastle.Gates[castle])
 }
 
 // bcRemainTime is the type 2 branch of 91 (FUN_004d8430).
 func (w *World) bcRemainTime(o *Object, p []byte) []byte {
-	lv := w.ev().entry.Level(bcEntrySec, o.Class, o.P.Char.Level)
+	lv := w.ev().entry.Level(bloodcastle.EntrySection, o.Class, o.P.Char.Level)
 	if lv < 0 || lv > 6 {
 		w.send(o, packetCustomNotice(0, 0, w.messageFor(o, 7)))
 		return nil
 	}
 	out := packetEventTime(2)
-	if c := &w.bc().c[lv]; c.State == dsReady {
+	if c := &w.bc().c[lv]; c.State == devilsquare.StateReady {
 		out[5] = byte(c.userCount())
 	} else if next, ok := nextSchedule(w.bc().data.Schedule, w.now()); ok {
 		sec := int(math.Floor(next.Sub(w.now()).Seconds()))

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/frame"
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/guild"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
@@ -65,52 +65,12 @@ func (w *World) clearWar(n int) {
 
 // --- packets ---------------------------------------------------------------------
 
-// packetGuildWarRequestResult is C1 04 60 result (FUN_00485820).
-func packetGuildWarRequestResult(result byte) []byte {
-	p := newPacket(frame.C1, 0x60, -1, 4)
-	p[3] = result
-	return p
-}
-
-// packetGuildWarRequest is C1 0C 61 guild[8] type (FUN_004858c0), sent to
-// the master of the challenged guild.
-func packetGuildWarRequest(guild string, typ byte) []byte {
-	p := newPacket(frame.C1, 0x61, -1, 0x0C)
-	putName8(p[3:], guild)
-	p[11] = typ
-	return p
-}
-
-// packetGuildWarStart is C1 0D 62 enemy[8] type team (FUN_00485980).
-func packetGuildWarStart(enemy string, typ, team byte) []byte {
-	p := newPacket(frame.C1, 0x62, -1, 0x0D)
-	putName8(p[3:], enemy)
-	p[11], p[12] = typ, team
-	return p
-}
-
-// packetGuildWarEnd is C1 0C 63 result enemy[8] (FUN_00485a50): 1 won, 0
-// lost, 3/2 the war was abandoned (own / enemy side).
-func packetGuildWarEnd(result byte, enemy string) []byte {
-	p := newPacket(frame.C1, 0x63, -1, 0x0C)
-	p[3] = result
-	putName8(p[4:], enemy)
-	return p
-}
-
-// packetGuildWarScore is C1 06 64 own enemy 0 (FUN_00485ab0).
-func packetGuildWarScore(own, enemy byte) []byte {
-	p := newPacket(frame.C1, 0x64, -1, 6)
-	p[3], p[4] = own, enemy
-	return p
-}
-
 func (w *World) packetWarScoreFor(n int) []byte {
 	var enemy byte
 	if war := w.guildWarOf(n); war != nil {
 		enemy = w.warScore(war.enemy)
 	}
-	return packetGuildWarScore(w.warScore(n), enemy)
+	return guild.PacketWarScore(w.warScore(n), enemy)
 }
 
 // --- request ------------------------------------------------------------------------
@@ -133,11 +93,11 @@ func (w *World) guildWarRequest(o *Object, target string, typ byte) bool {
 	case gs.Status != store.GuildMasterStatus:
 		result = 5
 	default:
-		mine, _ := w.guildMgr().byNumber(gs.Number)
-		if cut8(mine.Name) == cut8(target) {
+		mine, _ := w.guildMgr().ByNumber(gs.Number)
+		if guild.SameName(mine.Name, target) {
 			return false // strncmp(own name, target, 8) == 0
 		}
-		enemy, ok := w.guildMgr().find(target)
+		enemy, ok := w.guildMgr().Find(target)
 		if !ok {
 			result = 0
 			break
@@ -165,21 +125,14 @@ func (w *World) guildWarRequest(o *Object, target string, typ byte) bool {
 			result = 4
 			break
 		}
-		w.send(o, packetGuildWarRequestResult(1))
-		w.send(m, packetGuildWarRequest(mine.Name, typ))
+		w.send(o, guild.PacketWarRequestResult(1))
+		w.send(m, guild.PacketWarRequest(mine.Name, typ))
 		w.guilds.wars[mine.Number] = &guildWar{enemy: enemy.Number, requesting: true, typ: typ}
 		w.guilds.wars[enemy.Number] = &guildWar{enemy: mine.Number, requesting: true, typ: typ}
 		return true
 	}
-	w.send(o, packetGuildWarRequestResult(result))
+	w.send(o, guild.PacketWarRequestResult(result))
 	return false
-}
-
-func cut8(s string) string {
-	if len(s) > 8 {
-		return s[:8]
-	}
-	return s
 }
 
 // mapGuildWar is the MapManager GuildWarEnable flag (FUN_004aeab0 +0x60).
@@ -195,7 +148,7 @@ func (w *World) commandGuildWar(typ byte) func(*World, *Object, command, string)
 	return func(w *World, o *Object, c command, arg string) {
 		name := commandToken(arg, 0, 9)
 		if len(name) < 4 {
-			w.send(o, packetGuildWarRequestResult(0))
+			w.send(o, guild.PacketWarRequestResult(0))
 			return
 		}
 		if w.guildWarRequest(o, name, typ) {
@@ -213,7 +166,7 @@ func (w *World) handleGuildWarAnswer(o *Object, p []byte) {
 	}
 	n := guildNumberOf(o)
 	if n == 0 {
-		w.send(o, packetGuildWarRequestResult(0))
+		w.send(o, guild.PacketWarRequestResult(0))
 		return
 	}
 	accept := p[3] != 0
@@ -222,7 +175,7 @@ func (w *World) handleGuildWarAnswer(o *Object, p []byte) {
 	if mine != nil {
 		enemyNum = mine.enemy
 	}
-	enemy, _ := w.guildMgr().byNumber(enemyNum)
+	enemy, _ := w.guildMgr().ByNumber(enemyNum)
 	enemyMaster := w.playerHere(enemy.Master)
 	if enemyNum != 0 && accept && enemyMaster != nil {
 		switch mp := enemyMaster.Map; {
@@ -236,7 +189,7 @@ func (w *World) handleGuildWarAnswer(o *Object, p []byte) {
 			w.clearWar(n)
 			w.clearWar(enemyNum)
 			if enemyMaster != nil {
-				w.send(enemyMaster, packetGuildWarRequestResult(6))
+				w.send(enemyMaster, guild.PacketWarRequestResult(6))
 			}
 		}
 		return
@@ -251,7 +204,7 @@ func (w *World) handleGuildWarAnswer(o *Object, p []byte) {
 	}
 	mine.requesting, mine.active, mine.team, mine.score = false, true, 0, 0
 	ew.requesting, ew.active, ew.team, ew.score = false, true, 1, 0
-	mg, _ := w.guildMgr().byNumber(n)
+	mg, _ := w.guildMgr().ByNumber(n)
 	w.warStartSend(&mg, mine, enemy.Name)
 	w.warStartSend(&enemy, ew, mg.Name)
 	if mine.typ == 1 {
@@ -263,7 +216,7 @@ func (w *World) handleGuildWarAnswer(o *Object, p []byte) {
 // warStartSend is the member loop of FUN_00484520 with FUN_00485eb0: 62 and
 // 64 to every online member (for a soccer only the master and the members
 // of the master's party).
-func (w *World) warStartSend(g *guildRecord, war *guildWar, enemy string) {
+func (w *World) warStartSend(g *guild.Record, war *guildWar, enemy string) {
 	master := w.playerHere(g.Master)
 	party := -1
 	if master != nil && master.P.Party != nil {
@@ -273,7 +226,7 @@ func (w *World) warStartSend(g *guildRecord, war *guildWar, enemy string) {
 		if war.typ == 1 && m != master && (party < 0 || m.P.Party == nil || m.P.Party.Number != party) {
 			continue
 		}
-		w.send(m, packetGuildWarStart(enemy, war.typ, war.team))
+		w.send(m, guild.PacketWarStart(enemy, war.typ, war.team))
 		w.send(m, w.packetWarScoreFor(g.Number))
 	}
 }
@@ -298,7 +251,7 @@ func (w *World) guildWarKill(killer, victim *Object) bool {
 		return false
 	}
 	kn, vn := guildNumberOf(killer), guildNumberOf(victim)
-	vg, _ := w.guildMgr().byNumber(vn)
+	vg, _ := w.guildMgr().ByNumber(vn)
 	score := w.cfg.Int("Common", "GuildWarKillScore1", 0)
 	if victim.P.Char.Name == vg.Master {
 		score = w.cfg.Int("Common", "GuildWarKillScore2", 0)
@@ -349,14 +302,14 @@ func (w *World) warAddScore(kn, en int, add int) bool {
 		bonus = w.cfg.Int("Common", "GuildWarWinnerScore3", 0)
 	}
 	mgr := w.guildMgr()
-	kg, _ := mgr.byNumber(kn)
-	eg, _ := mgr.byNumber(en)
+	kg, _ := mgr.ByNumber(kn)
+	eg, _ := mgr.ByNumber(en)
 	total := kg.Score + bonus
 	w.async(func(ctx context.Context) func() {
-		mgr.update(ctx, kg.Name, func(s store.GuildStore) error { return s.SetGuildScore(ctx, kg.Name, total) },
-			func(r *guildRecord) { r.Score = total })
-		mgr.update(ctx, eg.Name, func(s store.GuildStore) error { return s.SetGuildScore(ctx, eg.Name, eg.Score) },
-			func(r *guildRecord) {})
+		mgr.Update(ctx, kg.Name, func(s store.GuildStore) error { return s.SetGuildScore(ctx, kg.Name, total) },
+			func(r *guild.Record) { r.Score = total })
+		mgr.Update(ctx, eg.Name, func(s store.GuildStore) error { return s.SetGuildScore(ctx, eg.Name, eg.Score) },
+			func(r *guild.Record) {})
 		return nil
 	})
 	return true
@@ -365,13 +318,13 @@ func (w *World) warAddScore(kn, en int, add int) bool {
 // warEnd is FUN_00486530: 63 to both guilds (own result to guild a, enemy
 // result to guild b).
 func (w *World) warEnd(a, b int, own, enemy byte) {
-	ga, _ := w.guildMgr().byNumber(a)
-	gb, _ := w.guildMgr().byNumber(b)
+	ga, _ := w.guildMgr().ByNumber(a)
+	gb, _ := w.guildMgr().ByNumber(b)
 	for _, m := range w.guildMembersHere(a) {
-		w.send(m, packetGuildWarEnd(own, gb.Name))
+		w.send(m, guild.PacketWarEnd(own, gb.Name))
 	}
 	for _, m := range w.guildMembersHere(b) {
-		w.send(m, packetGuildWarEnd(enemy, ga.Name))
+		w.send(m, guild.PacketWarEnd(enemy, ga.Name))
 	}
 }
 
@@ -420,7 +373,7 @@ func registerGuildWar(h *hooks) {
 	h.pkExempt = append(h.pkExempt, func(w *World, killer, victim *Object) bool {
 		// FUN_0050f330: no PK for rival guilds (FUN_00486c20 == 2) or a war.
 		kn, vn := guildNumberOf(killer), guildNumberOf(victim)
-		if kn != 0 && vn != 0 && w.guildMgr().relation(kn, vn) == 2 {
+		if kn != 0 && vn != 0 && w.guildMgr().Relation(kn, vn) == 2 {
 			return true
 		}
 		return w.atWar(killer, victim)

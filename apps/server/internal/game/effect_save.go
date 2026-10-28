@@ -3,6 +3,7 @@ package game
 import (
 	"encoding/binary"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/effect"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
@@ -45,13 +46,13 @@ func encodeEffectList(o *Object) []byte {
 	return b
 }
 
-// loadEffectList is the effect loop of FUN_004cc730: every record whose
+// effect.LoadList is the effect loop of FUN_004cc730: every record whose
 // index is not 0xFF goes through AddEffect with param_2 = 1 (the saved
 // duration and values; EffectList.txt powers still override) and no
 // packet. The stored list is then normalised to what was accepted.
 func (w *World) loadEffectList(o *Object) {
 	c := o.P.Char
-	for i := 0; i < effectSlots && (i+1)*effectRecordSize <= len(c.EffectList); i++ {
+	for i := 0; i < effect.Slots && (i+1)*effectRecordSize <= len(c.EffectList); i++ {
 		r := c.EffectList[i*effectRecordSize : (i+1)*effectRecordSize]
 		if r[0] == 0xFF {
 			continue

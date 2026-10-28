@@ -4,6 +4,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/viniciosanacleto/mu-remake/apps/server/internal/game/packet"
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
@@ -589,7 +590,7 @@ func (w *World) monsterMoveAction(o *Object) {
 	last := path[len(path)-1]
 	o.X, o.Y, o.TX, o.TY = last[0], last[1], last[0], last[1]
 	w.monsterOccupy(o, true)
-	p := newPacket(0xC1, 0xD3, -1, 8)
+	p := packet.New(0xC1, 0xD3, -1, 8)
 	p[3], p[4] = byte(o.Index>>8), byte(o.Index)
 	p[5], p[6], p[7] = byte(o.TX), byte(o.TY), byte(o.Dir)<<4
 	w.broadcast(o, p)
