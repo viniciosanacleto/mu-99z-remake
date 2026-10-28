@@ -116,6 +116,10 @@ docker compose logs -f server
 | `-bind` | all interfaces | Host for every listener |
 | `-public-ip` | — | IP sent to the client instead of the `ServerList` and `MapServerInfo` addresses |
 | `-blacklist` | — | Comma-separated IPs the ConnectServer refuses, instead of the `BlackList` in `server.toml`; `none` = no IPs |
+| `-metrics-addr` | — | Serves `net/http/pprof` and `GET /debug/load` (CPU, memory, goroutines, GC, users per GameServer) for load tests. Keep it off public addresses |
+| `-max-conn-per-ip` | `-1` (configured) | `MaxConnectionPerIP` of the ConnectServer, JoinServer and every GameServer; `0` = no limit |
+| `-max-users` | `0` (configured) | `ServerMaxUserNumber` of every GameServer (at most 1000) |
+| `-seed-load` | `0` | Creates the load test accounts `load0001..` (password `load`) with one character each in a monster field of Lorencia |
 
 Environment variables:
 
@@ -182,6 +186,24 @@ go run ./cmd/migrate -script dump.sql -to "$MU_DATABASE_URL"
 ```
 
 Imported passwords are stored as `plain:` (the original uses `MD5Encryption = 0`). They move to argon2id on each account's first login. The `data/DB/MuOnline.sql` shipped with the package only has the schema and the procedures, with no player data.
+
+## Load test
+
+`cmd/muload` puts fake players (headless bots speaking the original client protocol) on a running server and samples its CPU and memory for each step (1, 10, 50 and 100 players by default). The bots log in through the ConnectServer, walk, chat and attack monsters. How it works, flags and the measured results are in [`18-teste-de-carga.md`](../../docs/server-plan/18-teste-de-carga.md).
+
+```sh
+go run ./cmd/muserver -blacklist none -max-conn-per-ip 0 -seed-load 100 -metrics-addr 127.0.0.1:6060
+go run ./cmd/muload -metrics http://127.0.0.1:6060/debug/load -pid $(pgrep muserver)   # or -docker <container>
+```
+
+It writes `samples.csv` and `summary.md` to `loadtest-<time>/`.
+
+With Docker, the load test has its own files, which the production deploy does not read: `docker-compose.loadtest.yml` (an overlay that turns on the load flags and publishes port 6060) and `.env.loadtest` (copy of `.env.loadtest.example`):
+
+```sh
+cp .env.loadtest.example .env.loadtest
+docker compose -p mu-loadtest -f docker-compose.yml -f docker-compose.loadtest.yml --env-file .env.loadtest up -d --build
+```
 
 ## Tests
 

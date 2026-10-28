@@ -52,18 +52,36 @@ func (w *World) patenteRank(o *Object) int {
 	return rank
 }
 
-// patenteAll sends to dst the patente of every playing player (the loop
-// around FUN_00452250 in FUN_00514700, FUN_00515160 and FUN_005167b0).
-func (w *World) patenteAll(dst *Object) {
-	if !dst.IsPlayer() || dst.State != StatePlaying {
+// The original sends dst the patente of every playing player at the end
+// of each viewport add (FUN_00514700, every second), for each new C2 12
+// entry (FUN_00515160) and for the own entry (FUN_005167b0). That is N
+// packets per event per player: with ~50 players arriving in the same area
+// a player gets 50 x 50 packets at once, overflows the send queue and is
+// disconnected (docs/server-plan/18-teste-de-carga.md, U-LOAD-01). Fixed
+// here: the client only draws the badge of players it sees, so each
+// player gets the patente of its own viewport.
+
+// patenteViewport is the end of FUN_00514700 (every viewport cycle): the
+// patente of o and of every player in its viewport.
+func (w *World) patenteViewport(o *Object) {
+	if !o.IsPlayer() || o.State != StatePlaying {
 		return
 	}
-	for i := PlayerStart; i < MaxObjects; i++ {
-		if t := w.objects[i]; t.State == StatePlaying && t.IsPlayer() {
-			w.send(dst, packetPatente(t.Index, w.patenteRank(t)))
+	w.send(o, packetPatente(o.Index, w.patenteRank(o)))
+	for _, e := range o.VP {
+		if e.Type != byte(TypePlayer) || (e.State != VPNew && e.State != VPVisible) || !validIdx(e.Index) || e.Index == o.Index {
+			continue
+		}
+		if t := w.objects[e.Index]; t.State == StatePlaying && t.IsPlayer() {
+			w.send(o, packetPatente(t.Index, w.patenteRank(t)))
 		}
 	}
 }
 
-// patenteViewport is the end of FUN_00514700 (every viewport cycle).
-func (w *World) patenteViewport(o *Object) { w.patenteAll(o) }
+// patenteEntry sends viewer the patente of the player of a new C2 12
+// entry (the original sent every player's, see above).
+func (w *World) patenteEntry(viewer, t *Object) {
+	if viewer.IsPlayer() && viewer.State == StatePlaying && t.IsPlayer() && t.State == StatePlaying {
+		w.send(viewer, packetPatente(t.Index, w.patenteRank(t)))
+	}
+}

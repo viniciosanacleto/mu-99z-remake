@@ -66,6 +66,7 @@ Os protocolos internos GS↔JS e GS↔DS deixam de ser TCP e viram chamadas de i
 | [11-arquivos-de-configuracao.md](11-arquivos-de-configuracao.md) | Inventário e formato dos arquivos de dados e `.dat`/`.ini` |
 | [12-roadmap-e-incognitas.md](12-roadmap-e-incognitas.md) | Fases de implementação, estratégia de verificação, incógnitas abertas |
 | [13-progresso.md](13-progresso.md) | **Progresso da reconstrução**: o que já foi implementado, descobertas novas e próximo passo |
+| [18-teste-de-carga.md](18-teste-de-carga.md) | Teste de carga (`muserver -seed-load/-metrics-addr`, `cmd/muload`), resultados e dimensionamento |
 
 ## Convenções
 

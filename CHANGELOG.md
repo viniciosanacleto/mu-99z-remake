@@ -4,6 +4,16 @@ All changes to this project are recorded here, newest first.
 
 ## 2026-10-27
 
+- Fixed players being disconnected when about 50 are in the same area (U-LOAD-01). The patente packet (`C1 F3 E5`) went to each player for every online player, every second and again for each new viewport entry, which overflowed the 1024-packet send queue. It now covers only the player and its viewport (`internal/game/patente.go` `patenteViewport`), and a new `C2 12` entry sends only that player's patente (`patenteEntry`, `custom_world_ext.go`). Test: `TestPatenteViewportOnly`. Reran the load test up to 200 players with no disconnects; results in `docs/server-plan/18-teste-de-carga.md`, notes in `10f-gm-eventos-custom.md` and `13-progresso.md`.
+- Added a load test. `cmd/muload` runs steps of 1, 10, 50 and 100 fake players against a running server, samples its CPU and memory (`/debug/load`, `ps` or `docker stats`) and writes `samples.csv` and `summary.md`. `internal/loadbot` is the headless client: ConnectServer lookup, login, character select, walk, attack, chat and keepalive.
+- Added load test flags to `muserver` (`cmd/muserver/metrics.go`, `seed.go`, `main.go`):
+  - `-metrics-addr` serves pprof and `/debug/load`.
+  - `-seed-load N` creates the `load0001..` accounts with one character each in a Lorencia monster field.
+  - `-max-conn-per-ip` overrides `MaxConnectionPerIP` of the ConnectServer, JoinServer and GameServers.
+  - `-max-users` overrides `ServerMaxUserNumber`.
+- Added `docker-compose.loadtest.yml` (an overlay that turns on the load test flags and publishes port 6060) and `.env.loadtest.example` (its own variables: `MU_METRICS_ADDR`, `MU_METRICS_HOST_PORT`, `MU_SEED_LOAD`, `MU_MAX_CONN_PER_IP`, `MU_MAX_USERS` and a separate database port). The production `docker-compose.yml` and `.env.example` are unchanged; `.gitignore` keeps `.env.loadtest.example` versioned.
+- Added `docs/server-plan/18-teste-de-carga.md` with the method, the first results (local and Docker) and sizing. The test found that the reproduced patente broadcast (`C1 F3 E5` to every player for every player) overflows the 1024-packet send queue and drops players once about 50 are in the same area. Updated `docs/server-plan/README.md`, `13-progresso.md` and `apps/server/README.md`.
+
 - Moved the GM level from `config/data/util.toml` (`[GameMaster]`, from `Util/GameMaster.txt`) to the database: new column `characters.gm_level` (`internal/store/migrations/0019_gm_level.sql`), `Character.GMLevel` loaded by `LoadCharacter` and left untouched by `SaveCharacter`, and `store.GMStore.SetGMLevel` (`internal/store/gm.go`, Memory and Postgres). `game.gmLevel` (`internal/game/chat.go`) reads it from the character, so a new GM applies on the next login without a restart.
 - Removed `GameMaster` from `gamedata.UtilConfig` and from the `util` group of `cmd/configconv`; `config/data/util.toml` no longer has the section. `legacy.ReadGameMasters` (`internal/config/legacy/gamemaster.go`) still reads the original file.
 - Added `cmd/migrate -gamemasters <MuServer folder>`: imports `Data/Util/GameMaster.txt` into `characters.gm_level` (account + character match), alone or after `-from`/`-script` (`internal/migrate/gamemaster.go`).

@@ -24,6 +24,7 @@ go.work.sum
 .env
 .env.*
 !.env.example
+!.env.loadtest.example
 
 # Editores e SO
 .DS_Store

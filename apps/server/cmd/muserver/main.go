@@ -52,6 +52,7 @@ func logLevel() slog.Level {
 type Ready struct {
 	Connect string
 	Games   map[int]string // server code -> address
+	Metrics string         // -metrics-addr listener, empty when off
 }
 
 type config struct {
@@ -63,6 +64,11 @@ type config struct {
 	bindHost    string
 	publicIP    string
 	instances   string
+	// Load test (docs/server-plan/18-teste-de-carga.md).
+	metricsAddr  string
+	maxConnPerIP int
+	maxUsers     int
+	seedLoad     int
 }
 
 func parseFlags(args []string) (*config, []string, error) {
@@ -76,6 +82,10 @@ func parseFlags(args []string) (*config, []string, error) {
 	fs.StringVar(&c.bindHost, "bind", "", "host for every listener (default all interfaces)")
 	fs.StringVar(&c.publicIP, "public-ip", "", "address sent to clients instead of the ServerList / MapServerInfo addresses")
 	fs.StringVar(&c.instances, "instances", "gameserver,gameserver-cs", "game server instances (files under <config>/gameserver, without .toml)")
+	fs.StringVar(&c.metricsAddr, "metrics-addr", "", "address for the pprof and /debug/load HTTP endpoint (empty = off)")
+	fs.IntVar(&c.maxConnPerIP, "max-conn-per-ip", -1, "MaxConnectionPerIP for the ConnectServer, JoinServer and every GameServer (0 = unlimited, -1 = configured)")
+	fs.IntVar(&c.maxUsers, "max-users", 0, "ServerMaxUserNumber of every GameServer (0 = configured, at most 1000)")
+	fs.IntVar(&c.seedLoad, "seed-load", 0, "create N load test accounts (load0001/load) with one character each before serving")
 	if err := fs.Parse(args); err != nil {
 		return nil, nil, err
 	}
@@ -106,6 +116,16 @@ func run(ctx context.Context, args []string, log *slog.Logger, ready chan<- Read
 	}
 	ccfg := connect.ConfigFrom(srv.ConnectServer)
 	ccfg.BlackList = blackList(cfg, ccfg.BlackList)
+	if cfg.maxConnPerIP >= 0 {
+		ccfg.MaxPerIP = cfg.maxConnPerIP
+		srv.JoinServer.MaxConnectionPerIP = cfg.maxConnPerIP
+	}
+	if cfg.seedLoad > 0 {
+		if err := seedLoad(ctx, st, filepath.Join(cfg.dataDir, "Data"), cfg.seedLoad); err != nil {
+			return fmt.Errorf("seed-load: %w", err)
+		}
+		log.Info("load test accounts created", "count", cfg.seedLoad)
+	}
 	entries, err := serverlist.Build(srv.ConnectServer.ServerList)
 	if err != nil {
 		return fmt.Errorf("server list: %w", err)
@@ -123,9 +143,19 @@ func run(ctx context.Context, args []string, log *slog.Logger, ready chan<- Read
 		MaxConnectionPerHID: srv.JoinServer.MaxConnectionPerHID,
 	})
 
+	rd := Ready{Games: map[int]string{}}
+	users := newUserCounter(reg)
 	hub := game.NewHub()
 	g, gctx := errgroup.WithContext(ctx)
-	rd := Ready{Games: map[int]string{}}
+	if cfg.metricsAddr != "" {
+		mln, err := net.Listen("tcp", cfg.metricsAddr)
+		if err != nil {
+			return err
+		}
+		rd.Metrics = mln.Addr().String()
+		log.Info("metrics listening", "addr", rd.Metrics)
+		g.Go(func() error { return serveMetrics(gctx, mln, users) })
+	}
 	for _, inst := range strings.Split(cfg.instances, ",") {
 		inst = strings.TrimSpace(inst)
 		if inst == "" {
@@ -135,8 +165,14 @@ func run(ctx context.Context, args []string, log *slog.Logger, ready chan<- Read
 		if err != nil {
 			return err
 		}
+		if cfg.maxConnPerIP >= 0 {
+			gcfg.MaxConnectionPerIP = cfg.maxConnPerIP
+		}
+		if cfg.maxUsers > 0 {
+			gcfg.MaxUsers = min(cfg.maxUsers, 1000)
+		}
 		w, err := game.New(game.Options{DataDir: filepath.Join(cfg.dataDir, "Data"), ConfigDir: cfg.configDir, Config: gcfg,
-			Store: st, Auth: authSvc, Reporter: reg, Log: log.With("module", "game"), PublicIP: cfg.publicIP, Hub: hub,
+			Store: st, Auth: authSvc, Reporter: users, Log: log.With("module", "game"), PublicIP: cfg.publicIP, Hub: hub,
 			BadSyntax: srv.DataServer.BadSyntax})
 		if err != nil {
 			return fmt.Errorf("%s: %w", inst, err)
