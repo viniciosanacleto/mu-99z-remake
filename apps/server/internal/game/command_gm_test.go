@@ -10,10 +10,10 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/store"
 )
 
-// gmPlayer is a player listed in GameMaster.txt with level lv.
+// gmPlayer is a player whose character has GM level lv (characters.gm_level).
 func gmPlayer(b *bareWorld, index int, name string, lv, mp, x, y int) *Object {
 	o := b.player(index, name, mp, x, y)
-	b.moveData.gameMasters = append(b.moveData.gameMasters, gameMaster{o.P.Account.Login, name, lv})
+	o.P.Char.GMLevel = lv
 	mv(o).Authority = lv
 	return o
 }

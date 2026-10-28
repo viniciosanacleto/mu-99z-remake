@@ -96,6 +96,7 @@ type Character struct {
 	MasterResets   int
 	IsNew          bool
 	Patente        int // Character.Patente (obj+0x2500), written only by SetPatente
+	GMLevel        int // gm_level (Util/GameMaster.txt in the original), written only by SetGMLevel
 }
 
 // CreateResult values are the WZ_CreateCharacter results forwarded to the

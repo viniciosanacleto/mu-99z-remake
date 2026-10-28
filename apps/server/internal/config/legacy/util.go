@@ -60,20 +60,8 @@ func utilGroup(dataDir string) ([]byte, error) {
 			}
 			return nil
 		}},
-		{"Util/GameMaster.txt", func(l []mutext.Line) error {
-			for _, r := range mutext.Table(l) {
-				if len(r.Tokens) < 3 { // rows without a level are skipped
-					continue
-				}
-				lv, err := r.Int(2)
-				if err != nil {
-					return err
-				}
-				c.GameMaster.Rows = append(c.GameMaster.Rows, gamedata.GameMasterRow{Account: tok(r, 0), Name: tok(r, 1),
-					GMLevel: lv, Comment: lineComment(r)})
-			}
-			return nil
-		}},
+		// Util/GameMaster.txt is not converted: the GM level lives in
+		// characters.gm_level (ReadGameMasters, cmd/migrate -gamemasters).
 		{"Util/PetDamageTable.txt", func(l []mutext.Line) error {
 			recs, comments := streamComments(mutext.Table(l), 6)
 			for i, v := range recs {

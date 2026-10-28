@@ -4,6 +4,21 @@ All changes to this project are recorded here, newest first.
 
 ## 2026-10-27
 
+- Moved the GM level from `config/data/util.toml` (`[GameMaster]`, from `Util/GameMaster.txt`) to the database: new column `characters.gm_level` (`internal/store/migrations/0019_gm_level.sql`), `Character.GMLevel` loaded by `LoadCharacter` and left untouched by `SaveCharacter`, and `store.GMStore.SetGMLevel` (`internal/store/gm.go`, Memory and Postgres). `game.gmLevel` (`internal/game/chat.go`) reads it from the character, so a new GM applies on the next login without a restart.
+- Removed `GameMaster` from `gamedata.UtilConfig` and from the `util` group of `cmd/configconv`; `config/data/util.toml` no longer has the section. `legacy.ReadGameMasters` (`internal/config/legacy/gamemaster.go`) still reads the original file.
+- Added `cmd/migrate -gamemasters <MuServer folder>`: imports `Data/Util/GameMaster.txt` into `characters.gm_level` (account + character match), alone or after `-from`/`-script` (`internal/migrate/gamemaster.go`).
+- Added the `muserver character gm <name> <level>` administrative subcommand (`cmd/muserver/main.go`).
+- GM level 32 now gets every privilege of level 8: the original's `Authority == 8` tests became `gmFull` (level 8 or higher, `internal/game/monster_skill.go`) in PvP, Castle Siege, pushback, `/hide`, `/superdrop`, trade block, trap targeting and the xshop GM packets (U-GM-05 in `docs/server-plan/10f-gm-eventos-custom.md`).
+- Updated `docs/server-plan/06`, `11`, `13` and `16` for the new column; tests in `internal/store/gm_test.go`, `internal/game/gm_level_test.go`, `internal/config/legacy/gamemaster_test.go`, `cmd/muserver/command_test.go` and `cmd/migrate/main_test.go`.
+
+- Fixed the comments of four rows of `[Shop."255 - Lumen the Barmaid"]` in `apps/server/config/data/shop.toml` that said "Scroll of Blood +5": items 12,000 / 12,001 / 12,002 / 13,030 are Wings of Elf, Wings of Heaven, Wings of Satan and Cape of Lord (names from `config/data/item.toml`). Comments only; the items sold are unchanged.
+- Moved the GM level from `config/data/util.toml` (`[GameMaster]`, from `Util/GameMaster.txt`) to the database: new column `characters.gm_level` (`internal/store/migrations/0019_gm_level.sql`), `Character.GMLevel` loaded by `LoadCharacter` and left untouched by `SaveCharacter`, and `store.GMStore.SetGMLevel` (`internal/store/gm.go`, Memory and Postgres). `game.gmLevel` (`internal/game/chat.go`) reads it from the character, so a new GM applies on the next login without a restart.
+- Removed `GameMaster` from `gamedata.UtilConfig` and from the `util` group of `cmd/configconv`; `config/data/util.toml` no longer has the section. `legacy.ReadGameMasters` (`internal/config/legacy/gamemaster.go`) still reads the original file.
+- Added `cmd/migrate -gamemasters <MuServer folder>`: imports `Data/Util/GameMaster.txt` into `characters.gm_level` (account + character match), alone or after `-from`/`-script` (`internal/migrate/gamemaster.go`).
+- Added the `muserver character gm <name> <level>` administrative subcommand (`cmd/muserver/main.go`).
+- GM level 32 now gets every privilege of level 8: the original's `Authority == 8` tests became `gmFull` (level 8 or higher, `internal/game/monster_skill.go`) in PvP, Castle Siege, pushback, `/hide`, `/superdrop`, trade block, trap targeting and the xshop GM packets (U-GM-05 in `docs/server-plan/10f-gm-eventos-custom.md`).
+- Updated `docs/server-plan/06`, `11`, `13` and `16` for the new column; tests in `internal/store/gm_test.go`, `internal/game/gm_level_test.go`, `internal/config/legacy/gamemaster_test.go`, `cmd/muserver/command_test.go` and `cmd/migrate/main_test.go`.
+
 - Added Docker support: `apps/server/Dockerfile` (static `muserver` on distroless, non-root, with `config/` and `data/`), `apps/server/.dockerignore`, `docker-compose.yml` at the repository root (server plus PostgreSQL 17 with healthcheck and volumes for the database and the files the server rewrites) and `.env.example` (`MU_PUBLIC_IP`, `MU_BLACKLIST`, `MU_INSTANCES`, `MU_DEBUG`, database credentials and host port).
 - Added the "Running with Docker" section to `apps/server/README.md`.
 - Rewrote `apps/server/README.md` in English; dropped the duplicate `data/` row of the layout table.

@@ -63,7 +63,7 @@ func (w *World) pushAllowed(o *Object, knock bool) bool {
 	if _, ok := w.data.Maps[o.Map]; !ok {
 		return false
 	}
-	if o.Type == TypePlayer && (o.Teleporting || (o.Move != nil && o.Move.Authority == 8)) {
+	if o.Type == TypePlayer && (o.Teleporting || gmFull(o)) {
 		return false
 	}
 	if pushImmuneClass(o.Class, knock) {

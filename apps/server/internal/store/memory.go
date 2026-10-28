@@ -253,10 +253,13 @@ func (m *Memory) LoadCharacter(_ context.Context, accountID int64, name string) 
 func (m *Memory) SaveCharacter(_ context.Context, c *Character) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.chars[c.ID] == nil {
+	old := m.chars[c.ID]
+	if old == nil {
 		return ErrNotFound
 	}
-	m.chars[c.ID] = cloneChar(c)
+	n := cloneChar(c)
+	n.GMLevel = old.GMLevel // like gm_level, only SetGMLevel writes it
+	m.chars[c.ID] = n
 	return nil
 }
 

@@ -260,22 +260,22 @@ const characterColumns = `id, account_id, slot, name, class, level, level_up_poi
 	strength, dexterity, vitality, energy, leadership, money, life, max_life, mana, max_mana, bp, max_bp,
 	shield, max_shield, map, pos_x, pos_y, dir, pk_count, pk_level, pk_time, ctl_code,
 	inventory, magic_list, effect_list, quest, chat_limit_time, fruit_add_points, fruit_sub_points,
-	married, coalesce(marry_couple,''), resets, master_resets, is_new, patente`
+	married, coalesce(marry_couple,''), resets, master_resets, is_new, patente, gm_level`
 
 func (p *Postgres) LoadCharacter(ctx context.Context, accountID int64, name string) (*Character, error) {
 	var c Character
-	var class, ctl, mp, x, y, dir int16
+	var class, ctl, mp, x, y, dir, gm int16
 	err := p.pool.QueryRow(ctx, `SELECT `+characterColumns+` FROM characters WHERE account_id=$1 AND name=$2`,
 		accountID, name).Scan(&c.ID, &c.AccountID, &c.Slot, &c.Name, &class, &c.Level, &c.LevelUpPoints, &c.Experience,
 		&c.Strength, &c.Dexterity, &c.Vitality, &c.Energy, &c.Leadership, &c.Money, &c.Life, &c.MaxLife,
 		&c.Mana, &c.MaxMana, &c.BP, &c.MaxBP, &c.Shield, &c.MaxShield, &mp, &x, &y, &dir,
 		&c.PKCount, &c.PKLevel, &c.PKTime, &ctl, &c.Inventory, &c.MagicList, &c.EffectList, &c.Quest,
 		&c.ChatLimitTime, &c.FruitAddPoints, &c.FruitSubPoints, &c.Married, &c.MarryCouple,
-		&c.Resets, &c.MasterResets, &c.IsNew, &c.Patente)
+		&c.Resets, &c.MasterResets, &c.IsNew, &c.Patente, &gm)
 	if err != nil {
 		return nil, notFound(err)
 	}
-	c.Class, c.CtlCode = byte(class), byte(ctl)
+	c.Class, c.CtlCode, c.GMLevel = byte(class), byte(ctl), int(gm)
 	c.Map, c.X, c.Y, c.Dir = int(mp), int(x), int(y), int(dir)
 	return &c, nil
 }

@@ -11,10 +11,12 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"math"
 	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -203,6 +205,24 @@ func command(ctx context.Context, st store.Store, args []string) error {
 		}
 		fmt.Printf("account %q created (id %d)\n", a.Login, a.ID)
 		return nil
+	case len(args) == 4 && args[0] == "character" && args[1] == "gm":
+		lv, err := strconv.Atoi(args[3])
+		if err != nil || lv < 0 || lv > math.MaxInt16 {
+			return fmt.Errorf("invalid GM level %q", args[3])
+		}
+		gs, ok := st.(store.GMStore)
+		if !ok {
+			return errors.New("the store cannot set GM levels")
+		}
+		found, err := gs.SetGMLevel(ctx, args[2], lv)
+		if err != nil {
+			return err
+		}
+		if !found {
+			return fmt.Errorf("character %q not found", args[2])
+		}
+		fmt.Printf("character %q GM level %d (applies on the next login)\n", args[2], lv)
+		return nil
 	}
-	return fmt.Errorf("unknown command %q (use: account create <login> <password>)", strings.Join(args, " "))
+	return fmt.Errorf("unknown command %q (use: account create <login> <password> | character gm <name> <level>)", strings.Join(args, " "))
 }

@@ -219,7 +219,7 @@ func (w *World) monsterAreaAttack(o *Object) {
 func isTrap(class int) bool { return (class >= 100 && class <= 0x6E) || class == 0x20B }
 
 // trapAct is FUN_004b5be0: the trap picks a random player of its VP2 (not
-// a GM, Authority 2/8) standing within AttackRange cells (square); with
+// a GM, Authority 2 or gmFull) standing within AttackRange cells (square); with
 // AttackRange 0 the first one found. A target means ActAttack with
 // AttackSpeed delay, otherwise the delay is MoveSpeed (obj+0x374).
 func (w *World) trapAct(o *Object) {
@@ -230,7 +230,7 @@ func (w *World) trapAct(o *Object) {
 			continue
 		}
 		t := w.objects[e.Index]
-		if a := gmAuthority(t); a == 2 || a == 8 {
+		if gmAuthority(t) == 2 || gmFull(t) {
 			continue
 		}
 		if t.State != StatePlaying || !t.Alive || w.cellHas(t, gamedata.AttrSafeZone) {
@@ -263,6 +263,13 @@ func gmAuthority(o *Object) int {
 	}
 	return o.Move.Authority
 }
+
+// gmFull stands for the original's Authority == 8 tests (PvP and Castle
+// Siege immunity, no pushback, /hide, /superdrop, trade block, xshop GM
+// packets). The rewrite gives the same privileges to every level from 8
+// up, so the level 32 of GameMaster.txt is a superset of 8 (a project
+// decision, U-GM-05).
+func gmFull(o *Object) bool { return o.Move != nil && o.Move.Authority >= 8 }
 
 // --- CMonsterSkillManager ------------------------------------------------------
 
