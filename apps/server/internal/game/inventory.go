@@ -59,7 +59,7 @@ type itemsState struct {
 // WarehouseSlots is the CWarehouse capacity (0x6900 / 0xe0).
 const WarehouseSlots = 120
 
-// itemData holds the tables of the item module (loaded by startHooks).
+// itemData holds the tables of the item module (loaded by hooks.start).
 type itemData struct {
 	stack  *gamedata.ItemStack
 	values []gamedata.ItemValueRule
@@ -72,10 +72,10 @@ type itemData struct {
 	shopsSpawned bool
 }
 
-func init() {
-	startHooks = append(startHooks, loadItemData)
-	enterWorldHooks = append(enterWorldHooks, func(w *World, o *Object) { items(o) })
-	leaveWorldHooks = append(leaveWorldHooks, func(w *World, o *Object) {
+func registerInventory(h *hooks) {
+	h.start = append(h.start, loadItemData)
+	h.enterWorld = append(h.enterWorld, func(w *World, o *Object) { items(o) })
+	h.leaveWorld = append(h.leaveWorld, func(w *World, o *Object) {
 		// Runs after the trade/warehouse hooks of the same list only when
 		// registered later; reset the window state of the session.
 		if o.P != nil && o.P.Items != nil && !o.P.Items.WarehouseLoaded {

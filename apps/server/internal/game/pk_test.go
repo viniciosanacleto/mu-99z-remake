@@ -19,7 +19,7 @@ func TestPlayerKillLevels(t *testing.T) {
 		{PKOutlaw2, 4, 90000}, // +Req4
 	}
 	for i, s := range steps {
-		playerKillHook(b.World, k, v)
+		b.hooks.playerKill(b.World, k, v)
 		c := k.P.Char
 		if k.PKLevel != s.level || c.PKCount != s.count || c.PKTime != s.time || c.PKLevel != s.level {
 			t.Fatalf("kill %d: level %d count %d time %d", i+1, k.PKLevel, c.PKCount, c.PKTime)
@@ -34,7 +34,7 @@ func TestPlayerKillLevels(t *testing.T) {
 	}
 	// A murderer killing a murderer changes nothing.
 	v.PKLevel = PKOutlaw1
-	playerKillHook(b.World, k, v)
+	b.hooks.playerKill(b.World, k, v)
 	if k.P.Char.PKCount != 4 {
 		t.Fatal("outlaw vs outlaw counted")
 	}
@@ -45,11 +45,11 @@ func TestPlayerKillHero(t *testing.T) {
 	k := statsPlayer(b, PlayerStart, 1, 100)
 	v := statsPlayer(b, PlayerStart+1, 1, 100)
 	k.PKLevel, v.PKLevel = PKCommoner, PKOutlaw1
-	playerKillHook(b.World, k, v)
+	b.hooks.playerKill(b.World, k, v)
 	if k.PKLevel != PKHero0 || k.P.Char.PKTime != 21600 || k.P.Char.PKCount != 1 {
 		t.Fatalf("hero level %d time %d", k.PKLevel, k.P.Char.PKTime)
 	}
-	playerKillHook(b.World, k, v) // hero0: Req2 -> not above Req2 -> hero1
+	b.hooks.playerKill(b.World, k, v) // hero0: Req2 -> not above Req2 -> hero1
 	if k.PKLevel != PKHero1 || k.P.Char.PKTime != 43200 {
 		t.Fatalf("hero level %d time %d", k.PKLevel, k.P.Char.PKTime)
 	}
@@ -62,19 +62,19 @@ func TestPlayerKillExceptions(t *testing.T) {
 	k.PKLevel, v.PKLevel = PKCommoner, PKCommoner
 	// Chaos Castle (both on maps 18..23).
 	k.Map, v.Map = 18, 18
-	playerKillHook(b.World, k, v)
+	b.hooks.playerKill(b.World, k, v)
 	if k.PKLevel != PKCommoner {
 		t.Fatal("PK in Chaos Castle")
 	}
 	// Self defense: the victim attacked first (SelfDefenseTime 60 s).
 	k.Map, v.Map = 0, 0
 	b.addSelfDefense(v, k)
-	playerKillHook(b.World, k, v)
+	b.hooks.playerKill(b.World, k, v)
 	if k.PKLevel != PKCommoner {
 		t.Fatal("self defense counted as PK")
 	}
 	b.advance(61 * time.Second)
-	playerKillHook(b.World, k, v)
+	b.hooks.playerKill(b.World, k, v)
 	if k.PKLevel != PKWarning {
 		t.Fatal("expired self defense")
 	}

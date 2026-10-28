@@ -425,7 +425,7 @@ func (w *World) canMonsterMove(o *Object) bool {
 // that see the monster (VP2) and are inside its ViewRange. Guards
 // (classes 0xF7/0xF9) only pick PK level > 4 players.
 func (w *World) monsterSearchEnemy(o *Object) {
-	if monsterSearchHook != nil && monsterSearchHook(w, o) { // mercenaries (FUN_004b2ec0)
+	if w.hooks.monsterSearch != nil && w.hooks.monsterSearch(w, o) { // mercenaries (FUN_004b2ec0)
 		return
 	}
 	m := o.Mon
@@ -562,7 +562,7 @@ func (w *World) monsterTargetPos(o *Object) bool {
 }
 
 // monsterMoveAction is FUN_004b65b0: find a path to (MTX, MTY) and walk it
-// through the D3 code (setPathHook).
+// through the D3 code (hooks.setPath).
 func (w *World) monsterMoveAction(o *Object) {
 	if w.immobilized(o) {
 		return
@@ -579,8 +579,8 @@ func (w *World) monsterMoveAction(o *Object) {
 	for i := 1; i < len(path); i++ {
 		dirs = append(dirs, byte(dirTo(path[i][0]-path[i-1][0], path[i][1]-path[i-1][1])))
 	}
-	if setPathHook != nil {
-		setPathHook(w, o, o.X, o.Y, dirs)
+	if w.hooks.setPath != nil {
+		w.hooks.setPath(w, o, o.X, o.Y, dirs)
 		return
 	}
 	// Without the movement module: jump to the end of the path and

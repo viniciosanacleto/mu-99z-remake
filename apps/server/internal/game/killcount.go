@@ -35,8 +35,8 @@ func (w *World) kills() *killCount {
 	return x.kills
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerKillcount(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		w.wcx().kills = nil
 		if w.configDir == "" {
 			return nil
@@ -45,12 +45,8 @@ func init() {
 		w.kills().rows = rows
 		return err
 	})
-	monsterKillHook = (*World).killCountKill
+	h.monsterKill = (*World).killCountKill
 }
-
-// monsterKillHook runs in the monster drop FUN_004b7290 for a monster
-// that is not a summon, with its top hitter (drop.go).
-var monsterKillHook func(w *World, mon, p *Object)
 
 // killCountKill is FUN_004b8f90.
 func (w *World) killCountKill(mon, p *Object) {

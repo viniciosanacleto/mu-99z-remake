@@ -93,12 +93,10 @@ func TestMonsterSkillUnitWitchQueen(t *testing.T) {
 		t.Fatal("Witch Queen has MonsterSkill")
 	}
 	var stun []int
-	old := addEffectHook
-	addEffectHook = func(w *World, o *Object, effect, value, sec int) bool {
+	b.hooks.addEffect = func(w *World, o *Object, effect, value, sec int) bool {
 		stun = append(stun, o.Index, effect, sec)
 		return true
 	}
-	t.Cleanup(func() { addEffectHook = old })
 	// Slot 1 -> unit 1 (target, scope 0 / 6 cells, element 1 = stun 50%).
 	fixRand(t, 1, 0)
 	b.useMonsterSkill(m, p)

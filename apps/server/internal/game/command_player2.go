@@ -17,27 +17,24 @@ import (
 // /guildsoccer (1, 2) live in guild_war.go; index 21 and /offline
 // (CHelperOffline, FUN_004888e0) are pending.
 
-func init() {
-	commandHandlers[3] = (*World).commandRequest
-	commandHandlers[12] = (*World).commandChange
-	commandHandlers[13] = (*World).commandWare
-	commandHandlers[14] = (*World).commandReset
-	commandHandlers[15] = (*World).commandMasterReset
-	commandHandlers[19] = (*World).commandRename
-	commandHandlers[20] = (*World).commandDCFriend
-	commandHandlers[22] = (*World).commandOpenWare
-	commandHandlers[23] = (*World).commandChangeClass
-	commandHandlers[24] = (*World).commandEZen
-	commandHandlers[25] = (*World).commandAutoPotion
-	commandHandlers[26] = (*World).commandLock
-	commandHandlers[27] = (*World).commandUnlock
-	commandHandlers[28] = (*World).commandQuizAnswer
-	for _, i := range []int{3, 12, 13, 14, 15, 19, 20, 22, 23, 24, 25, 26, 27, 28} {
-		delete(pendingCommands, i)
-	}
-	hardCodedHandlers["/bau"] = (*World).commandBau
-	startHooks = append(startHooks, loadCmdWorld)
-	tick1000Hooks = append(tick1000Hooks, (*World).autoResetSecond, (*World).autoPotionSecond)
+func registerCommandPlayer2(h *hooks) {
+	h.commandHandlers[3] = (*World).commandRequest
+	h.commandHandlers[12] = (*World).commandChange
+	h.commandHandlers[13] = (*World).commandWare
+	h.commandHandlers[14] = (*World).commandReset
+	h.commandHandlers[15] = (*World).commandMasterReset
+	h.commandHandlers[19] = (*World).commandRename
+	h.commandHandlers[20] = (*World).commandDCFriend
+	h.commandHandlers[22] = (*World).commandOpenWare
+	h.commandHandlers[23] = (*World).commandChangeClass
+	h.commandHandlers[24] = (*World).commandEZen
+	h.commandHandlers[25] = (*World).commandAutoPotion
+	h.commandHandlers[26] = (*World).commandLock
+	h.commandHandlers[27] = (*World).commandUnlock
+	h.commandHandlers[28] = (*World).commandQuizAnswer
+	h.hardCodedHandlers["/bau"] = (*World).commandBau
+	h.start = append(h.start, loadCmdWorld)
+	h.tick1000 = append(h.tick1000, (*World).autoResetSecond, (*World).autoPotionSecond)
 }
 
 // cmdState holds the per-player fields of these commands.
@@ -509,12 +506,6 @@ func (w *World) requestReset(o *Object, c command, master bool) {
 	})
 }
 
-// commandEventBlockHook reports the custom event flags tested by both
-// DS replies (obj+0x24f0 and three per-index event tables) that make them
-// answer "Proibido usar o comando no evento."; those events do not exist
-// yet (U-CUST-07).
-var commandEventBlockHook func(w *World, o *Object) bool
-
 // saveResetInfo is FUN_00476a70 / FUN_00476b10 (WZ_SetResetInfo /
 // WZ_SetMasterResetInfo).
 func (w *World) saveResetInfo(o *Object, master bool, counts store.ResetCounts) {
@@ -661,7 +652,7 @@ func (w *World) resetReply(o *Object, c command, counts store.ResetCounts) {
 		w.systemMessage(o, w.messageFor(o, 0x15D, month))
 		return
 	}
-	if commandEventBlockHook != nil && commandEventBlockHook(w, o) {
+	if w.hooks.commandEventBlock != nil && w.hooks.commandEventBlock(w, o) {
 		w.systemMessage(o, "Proibido usar o comando no evento.")
 		return
 	}
@@ -717,8 +708,8 @@ func (w *World) resetReply(o *Object, c command, counts store.ResetCounts) {
 	if ch.LevelUpPoints != 0 && a.Count > 0 {
 		w.spreadAutoPoints(o)
 	}
-	if itemBagHook != nil {
-		itemBagHook(w, o, 0x17, -1, o.Map, o.X, o.Y)
+	if w.hooks.itemBag != nil {
+		w.hooks.itemBag(w, o, 0x17, -1, o.Map, o.X, o.Y)
 	}
 	w.log.Info("[CommandReset]", "account", o.P.Account.Login, "name", ch.Name, "reset", ch.Resets)
 }
@@ -774,7 +765,7 @@ func (w *World) masterResetReply(o *Object, c command, counts store.ResetCounts)
 		w.systemMessage(o, w.messageFor(o, 0x16A, key("LimitMon")))
 		return
 	}
-	if commandEventBlockHook != nil && commandEventBlockHook(w, o) {
+	if w.hooks.commandEventBlock != nil && w.hooks.commandEventBlock(w, o) {
 		w.systemMessage(o, "Proibido usar o comando no evento.")
 		return
 	}
@@ -834,8 +825,8 @@ func (w *World) masterResetReply(o *Object, c command, counts store.ResetCounts)
 			w.gateMove(o, g)
 		}
 	}
-	if itemBagHook != nil {
-		itemBagHook(w, o, 0x16, -1, o.Map, o.X, o.Y)
+	if w.hooks.itemBag != nil {
+		w.hooks.itemBag(w, o, 0x16, -1, o.Map, o.X, o.Y)
 	}
 	w.log.Info("[CommandMasterReset]", "account", o.P.Account.Login, "name", ch.Name, "mreset", ch.MasterResets)
 }

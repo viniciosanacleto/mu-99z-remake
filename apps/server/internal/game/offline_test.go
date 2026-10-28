@@ -90,7 +90,7 @@ func TestHelperOfflineRefusals(t *testing.T) {
 	}
 	// Index 21 runs the same function.
 	items(o).If.Use = false
-	commandHandlers[21](b.World, o, command{Index: 21}, "")
+	b.hooks.commandHandlers[21](b.World, o, command{Index: 21}, "")
 	if !isOffline(o) {
 		t.Fatal("index 21")
 	}

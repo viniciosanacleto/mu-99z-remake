@@ -27,10 +27,8 @@ func skillPlayer(b *bareWorld, index, cls int, x, y int, skills ...int) *Object 
 	return o
 }
 
-func stubStats(t *testing.T, f func(o *Object) CombatStats) {
-	old := combatStatsHook
-	combatStatsHook = func(w *World, o *Object) CombatStats { return f(o) }
-	t.Cleanup(func() { combatStatsHook = old })
+func stubStats(b *bareWorld, f func(o *Object) CombatStats) {
+	b.hooks.combatStats = func(w *World, o *Object) CombatStats { return f(o) }
 }
 
 func TestSkillPacketLayouts(t *testing.T) {
@@ -167,7 +165,7 @@ func TestEnergyBallMagicDamage(t *testing.T) {
 	m := b.monsterNear(0, p, 2)
 	b.see(p, m)
 	m.Mon.DefenseRate, m.Mon.Defense, m.Mon.Life = 0, 0, 1000
-	stubStats(t, func(o *Object) CombatStats {
+	stubStats(b, func(o *Object) CombatStats {
 		if o.Type == TypePlayer {
 			return CombatStats{MagicDamageMin: 50, MagicDamageMax: 50, AttackSuccessRate: 100}
 		}
@@ -208,7 +206,7 @@ func TestTwistingSlashHitsAround(t *testing.T) {
 	for _, m := range []*Object{m1, m2} {
 		m.Mon.DefenseRate, m.Mon.Defense, m.Mon.Life = 0, 0, 5000
 	}
-	stubStats(t, func(o *Object) CombatStats {
+	stubStats(b, func(o *Object) CombatStats {
 		if o.Type == TypePlayer {
 			return CombatStats{DamageMinRight: 100, DamageMaxRight: 100, AttackSuccessRate: 100}
 		}
@@ -237,7 +235,7 @@ func TestAreaMagicTargetsBy10(t *testing.T) {
 	m1 := b.monsterNear(0, p, 1)
 	b.see(p, m1)
 	m1.Mon.DefenseRate, m1.Mon.Defense, m1.Mon.Life = 0, 0, 5000
-	stubStats(t, func(o *Object) CombatStats {
+	stubStats(b, func(o *Object) CombatStats {
 		if o.Type == TypePlayer {
 			return CombatStats{MagicDamageMin: 100, MagicDamageMax: 100, AttackSuccessRate: 100}
 		}
@@ -276,7 +274,7 @@ func TestNovaChargeAndRelease(t *testing.T) {
 	m := b.monsterNear(0, p, 1)
 	b.see(p, m)
 	m.Mon.DefenseRate, m.Mon.Defense, m.Mon.Life = 0, 0, 50000
-	stubStats(t, func(o *Object) CombatStats {
+	stubStats(b, func(o *Object) CombatStats {
 		if o.Type == TypePlayer {
 			return CombatStats{MagicDamageMin: 100, MagicDamageMax: 100, AttackSuccessRate: 100}
 		}

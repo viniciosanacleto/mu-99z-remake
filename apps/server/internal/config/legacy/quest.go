@@ -5,8 +5,6 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
-func init() { register("quest", questGroup) }
-
 // questGroup converts Data/Quest/*.txt: tables of numbers ("*" = -1);
 // columns past the expected ones are ignored.
 func questGroup(dataDir string) ([]byte, error) {

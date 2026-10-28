@@ -498,8 +498,8 @@ func (w *World) sendMonsterViewport(o *Object) {
 		}
 		b := make([]byte, 16)
 		monsterViewportEntry(b, t)
-		if monsterEntryHook != nil { // castle objects (castlesiege_hooks.go)
-			monsterEntryHook(w, o, t, b)
+		if w.hooks.monsterEntry != nil { // castle objects (castlesiege_hooks.go)
+			w.hooks.monsterEntry(w, o, t, b)
 		}
 		entries = append(entries, b)
 	}
@@ -521,17 +521,17 @@ func (w *World) monsterByClass(mp, class int) *Object {
 	return nil
 }
 
-func init() {
-	monsterViewportHook = (*World).sendMonsterViewport
-	startHooks = append(startHooks, func(w *World) error {
+func registerMonster(h *hooks) {
+	h.monsterViewport = (*World).sendMonsterViewport
+	h.start = append(h.start, func(w *World) error {
 		if err := w.loadMonsterData(); err != nil {
 			return fmt.Errorf("monsters: %w", err)
 		}
 		w.spawnMonsters()
 		return nil
 	})
-	tick100Hooks = append(tick100Hooks, (*World).monsterTick)
-	tick1000Hooks = append(tick1000Hooks, (*World).monsterStateProc, (*World).playerDeathProc)
+	h.tick100 = append(h.tick100, (*World).monsterTick)
+	h.tick1000 = append(h.tick1000, (*World).monsterStateProc, (*World).playerDeathProc)
 }
 
 // spawnFixedNPC places an NPC of class at a fixed cell (CShopManager
@@ -552,6 +552,6 @@ func (w *World) spawnFixedNPC(class, mp, x, y, dir int) *Object {
 	return o
 }
 
-func init() {
-	spawnNPCHook = func(w *World, class, mp, x, y, dir int) *Object { return w.spawnFixedNPC(class, mp, x, y, dir) }
+func registerSpawnNPC(h *hooks) {
+	h.spawnNPC = func(w *World, class, mp, x, y, dir int) *Object { return w.spawnFixedNPC(class, mp, x, y, dir) }
 }

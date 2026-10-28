@@ -219,13 +219,9 @@ func (w *World) skillDelayOK(o *Object, num int) bool {
 	return true
 }
 
-// guildStatusHook overrides obj+0x30c (default: guild.go Status, -1 without
-// a guild); used by tests.
-var guildStatusHook func(w *World, o *Object) int
-
 func (w *World) guildStatus(o *Object) int {
-	if guildStatusHook != nil {
-		return guildStatusHook(w, o)
+	if w.hooks.guildStatus != nil {
+		return w.hooks.guildStatus(w, o)
 	}
 	if o.P == nil {
 		return -1
@@ -431,10 +427,10 @@ func (w *World) skillTargetOK(a *Object, idx int, vpType byte, mainTarget int) b
 	if a.Type == TypePlayer && w.inDuelWith(a, w.objects[owner]) {
 		return true
 	}
-	if a.Type == TypePlayer && guildWarHook != nil && guildWarHook(w, a, w.objects[owner]) {
+	if a.Type == TypePlayer && w.hooks.guildWar != nil && w.hooks.guildWar(w, a, w.objects[owner]) {
 		return true
 	}
-	if a.Type == TypePlayer && arenaFightHook != nil && arenaFightHook(w, a) { // FUN_00443f50 (customarena.go)
+	if a.Type == TypePlayer && w.hooks.arenaFight != nil && w.hooks.arenaFight(w, a) { // FUN_00443f50 (customarena.go)
 		return true
 	}
 	// The Castle Siege rules are not implemented.
@@ -759,7 +755,7 @@ func (w *World) dispatchSkill(o *Object, ref *skillRef, target, x, y, angle int,
 		return w.skillInfinityArrow(o, ref, target)
 	case 30, 31, 32, 33, 34, 35, 36:
 		// Summons (FUN_004fae50, summon.go).
-		return summonSkillHook != nil && summonSkillHook(w, o, ref.Num)
+		return w.hooks.summonSkill != nil && w.hooks.summonSkill(w, o, ref.Num)
 	case 63, 67, 68, 69, 70, 71, 72, 75:
 		// Summon Party (FUN_004fc1a0) and the Castle Siege guild skills
 		// (maps 30/31 only), skill_guild.go.
@@ -1443,8 +1439,8 @@ func (w *World) skillMessages(o *Object) {
 	}
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerSkill(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		if w.configDir == "" {
 			w.skills = &skillWorld{}
 			return nil
@@ -1456,10 +1452,10 @@ func init() {
 		w.skills = sw
 		return nil
 	})
-	worldHandlers[0x19] = (*World).handleSkillTarget
-	worldHandlers[0x1E] = (*World).handleSkillArea
-	worldHandlers[0x10] = (*World).handleSkillMulti
-	tick100Hooks = append(tick100Hooks, func(w *World) {
+	h.worldHandlers[0x19] = (*World).handleSkillTarget
+	h.worldHandlers[0x1E] = (*World).handleSkillArea
+	h.worldHandlers[0x10] = (*World).handleSkillMulti
+	h.tick100 = append(h.tick100, func(w *World) {
 		for i := PlayerStart; i < MaxObjects; i++ {
 			o := w.objects[i]
 			if o.State != StatePlaying || o.Skill == nil {
@@ -1469,5 +1465,5 @@ func init() {
 			w.skillMessages(o)
 		}
 	})
-	leaveWorldHooks = append(leaveWorldHooks, func(w *World, o *Object) { o.Skill = nil })
+	h.leaveWorld = append(h.leaveWorld, func(w *World, o *Object) { o.Skill = nil })
 }

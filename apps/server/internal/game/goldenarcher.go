@@ -27,8 +27,8 @@ type goldenArcherState struct {
 	CountPending, RewardPending bool // obj+0x6a8 / obj+0x6ac
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerGoldenarcher(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		w.ev().archer = nil
 		if w.configDir == "" {
 			return nil
@@ -37,15 +37,15 @@ func init() {
 		w.ev().archer = r
 		return err
 	})
-	npcTalkHooks[gaNPC] = func(w *World, o, npc *Object) bool {
+	h.npcTalk[gaNPC] = func(w *World, o, npc *Object) bool {
 		// FUN_004c22f0: interface type 9, then the count request.
 		items(o).If = ifState{Use: true, Type: ifArcher}
 		w.gaRequestCount(o)
 		return true
 	}
-	worldHandlers[0x95] = (*World).handleGiveRena
-	worldHandlers[0x96] = (*World).handleArcherReward
-	worldHandlers[0x97] = (*World).handleArcherClose
+	h.worldHandlers[0x95] = (*World).handleGiveRena
+	h.worldHandlers[0x96] = (*World).handleArcherReward
+	h.worldHandlers[0x97] = (*World).handleArcherClose
 }
 
 func gaState(o *Object) *goldenArcherState {

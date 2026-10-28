@@ -7,8 +7,6 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
-func init() { register("event", eventGroup) }
-
 // eventGroup converts Data/Event/*.dat (Crywolf.dat, IllusionTemple.dat and
 // Kanturu.dat are not read by the original and are left out).
 func eventGroup(dataDir string) ([]byte, error) {

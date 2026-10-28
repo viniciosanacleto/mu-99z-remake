@@ -16,7 +16,7 @@ func onWorld(e *testEnv, f func(w *World)) {
 }
 
 // TestItemsEndToEnd speaks the original client protocol: an item dropped
-// with dropMapItemHook appears in the viewport (C2 20), is picked up
+// with hooks.dropMapItem appears in the viewport (C2 20), is picked up
 // (C3 22 -> C3 10 22 slot item), moved inside the bag (C3 24) and dropped
 // again (C3 23 -> C1 05 23 01 slot).
 func TestItemsEndToEnd(t *testing.T) {
@@ -47,7 +47,7 @@ func TestItemsEndToEnd(t *testing.T) {
 		// A 1x1 Small Healing Potion (droppable per ItemMove.txt).
 		it := item.Item{Index: item.Make(14, 1), Durability: 1}
 		for dx := -1; dx <= 1; dx++ {
-			if dropMapItemHook(w, mp, x+dx, y, it, idx) {
+			if w.hooks.dropMapItem(w, mp, x+dx, y, it, idx) {
 				return
 			}
 		}

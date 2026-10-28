@@ -40,8 +40,8 @@ type invasionState struct {
 	Counters  [invCounters]invCounter
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerInvasion(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		e := w.ev()
 		if w.configDir == "" {
 			return nil
@@ -70,17 +70,14 @@ func init() {
 		}
 		return nil
 	})
-	tick1000Hooks = append(tick1000Hooks, (*World).invTick)
-	deathHooks = append(deathHooks, func(w *World, killer, victim *Object) {
+	h.tick1000 = append(h.tick1000, (*World).invTick)
+	h.death = append(h.death, func(w *World, killer, victim *Object) {
 		if victim.Mon != nil && victim.Mon.Invasion >= 0 {
 			w.invMonsterKilled(victim)
 		}
 	})
-	mapEventStateHook = (*World).invMapState
+	h.mapEventState = (*World).invMapState
 }
-
-// mapEventStateHook builds the C1 05 0B packet sent on map entry (reshow).
-var mapEventStateHook func(w *World, o *Object) []byte
 
 func (w *World) invOn() bool { return w.cfg.Int("Event", "InvasionManagerSwitch", 0) != 0 }
 

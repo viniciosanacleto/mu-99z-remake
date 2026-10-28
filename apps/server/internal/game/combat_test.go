@@ -152,14 +152,14 @@ func TestPlayerKillsMonster(t *testing.T) {
 	m := b.monsterNear(0, p, 1)
 	b.see(p, m)
 	var gained int64
-	oldGain, oldStats, oldDrop := gainExperienceHook, combatStatsHook, dropMapMoneyHook
-	gainExperienceHook = func(w *World, o *Object, exp int64) { gained += exp; o.P.Char.Experience += exp }
-	combatStatsHook = func(w *World, o *Object) CombatStats {
+	oldGain, oldStats, oldDrop := b.hooks.gainExperience, b.hooks.combatStats, b.hooks.dropMapMoney
+	b.hooks.gainExperience = func(w *World, o *Object, exp int64) { gained += exp; o.P.Char.Experience += exp }
+	b.hooks.combatStats = func(w *World, o *Object) CombatStats {
 		return CombatStats{DamageMinLeft: 40, DamageMaxLeft: 50, AttackSuccessRate: 1000}
 	}
 	var money int
-	dropMapMoneyHook = func(w *World, mp, x, y, amount, owner int) bool { money = amount; return true }
-	t.Cleanup(func() { gainExperienceHook, combatStatsHook, dropMapMoneyHook = oldGain, oldStats, oldDrop })
+	b.hooks.dropMapMoney = func(w *World, mp, x, y, amount, owner int) bool { money = amount; return true }
+	t.Cleanup(func() { b.hooks.gainExperience, b.hooks.combatStats, b.hooks.dropMapMoney = oldGain, oldStats, oldDrop })
 	fixRand(t, 100)
 	m.Mon.Life = 100
 	b.handleAttack(p, frame.Build(frame.C1, 0xD7, byte(m.Index>>8), byte(m.Index), 0x78, 3))
@@ -220,9 +220,7 @@ func TestMonsterKillsPlayerAndRespawn(t *testing.T) {
 	p.P.Char.Life, p.P.Char.MaxLife = 5, 100
 	m := b.monsterNear(0, p, 1)
 	b.see(p, m)
-	old := combatStatsHook
-	combatStatsHook = func(w *World, o *Object) CombatStats { return CombatStats{} }
-	t.Cleanup(func() { combatStatsHook = old })
+	b.hooks.combatStats = func(w *World, o *Object) CombatStats { return CombatStats{} }
 	fixRand(t, 0)
 	m.Mon.Life = m.Mon.MaxLife
 	b.attack(m, p, 0, false)

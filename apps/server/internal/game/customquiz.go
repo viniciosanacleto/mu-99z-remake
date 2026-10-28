@@ -72,8 +72,8 @@ func (w *World) loadQuiz() error {
 	return nil
 }
 
-func init() {
-	tick1000Hooks = append(tick1000Hooks, (*World).quizTick)
+func registerCustomquiz(h *hooks) {
+	h.tick1000 = append(h.tick1000, (*World).quizTick)
 }
 
 // quizNotice is FUN_004c0ab0 with a Message.txt text: a golden notice to
@@ -218,8 +218,8 @@ func (w *World) commandQuizAnswer(o *Object, c command, arg string) {
 		}
 	}
 	w.sendMoney(o)
-	if itemBagHook != nil {
-		itemBagHook(w, o, quizBag, -1, o.Map, o.X, o.Y)
+	if w.hooks.itemBag != nil {
+		w.hooks.itemBag(w, o, quizBag, -1, o.Map, o.X, o.Y)
 	}
 	q.Active = false
 	q.slots[q.Slot].Remain = 0

@@ -10,10 +10,6 @@ import (
 // "far from owner" teleport of FUN_004b4090 (FUN_0050e180), the life bar
 // C1 05 F3 20 and the C2 1F viewport (FUN_00515890).
 
-// summonSkillHook is called by the skills module when a player casts one
-// of the summon skills (30..36, 432); true when a monster was summoned.
-var summonSkillHook func(w *World, o *Object, skill int) bool
-
 // summonRange is obj+0x376 of a summon (MoveRange 15): farther than this
 // from its owner it teleports back.
 const summonRange = 15
@@ -222,8 +218,8 @@ func (w *World) summonKeepUp(o *Object) bool {
 	if ow.Map == o.Map && distance(o, ow) < m.MoveRange {
 		return false
 	}
-	if teleportHook != nil {
-		teleportHook(w, o, ow.Map, ow.X, ow.Y, o.Dir)
+	if w.hooks.teleport != nil {
+		w.hooks.teleport(w, o, ow.Map, ow.X, ow.Y, o.Dir)
 	} else {
 		w.monsterOccupy(o, false)
 		o.Map, o.X, o.Y, o.TX, o.TY = ow.Map, ow.X, ow.Y, ow.X, ow.Y
@@ -277,15 +273,15 @@ func (w *World) sendSummonViewport(o *Object) {
 	w.send(o, p)
 }
 
-func init() {
-	summonSkillHook = func(w *World, o *Object, skill int) bool { return w.summonMonster(o, skill) }
-	leaveWorldHooks = append(leaveWorldHooks, func(w *World, o *Object) {
+func registerSummon(h *hooks) {
+	h.summonSkill = func(w *World, o *Object, skill int) bool { return w.summonMonster(o, skill) }
+	h.leaveWorld = append(h.leaveWorld, func(w *World, o *Object) {
 		if w.mon != nil {
 			w.removeSummon(o)
 		}
 	})
 	// The owner's death removes the summon (FUN_004cda80 -> FUN_004b5960).
-	deathHooks = append(deathHooks, func(w *World, killer, victim *Object) {
+	h.death = append(h.death, func(w *World, killer, victim *Object) {
 		if victim.Type == TypePlayer {
 			w.removeSummon(victim)
 		}

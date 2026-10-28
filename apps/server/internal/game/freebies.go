@@ -9,12 +9,8 @@ import "github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 // IsNewChar set (packet +0x8f0); the DataServer clears the column at once
 // (UPDATE Character SET IsNewChar='0').
 
-// newCharacterHook runs after the world entry of a character whose
-// IsNewChar column was set (enterworld.go).
-var newCharacterHook func(w *World, o *Object)
-
-func init() {
-	newCharacterHook = (*World).giveFreebies
+func registerFreebies(h *hooks) {
+	h.newCharacter = (*World).giveFreebies
 }
 
 const freebiesMaxMoney = 2000000000

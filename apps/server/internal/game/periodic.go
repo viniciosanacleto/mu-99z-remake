@@ -13,12 +13,12 @@ import (
 // after a login, from the DataServer table PeriodicItem by serial; +0xb8
 // (PeriodicActive) is set once it is known.
 
-func init() {
-	enterWorldHooks = append(enterWorldHooks, (*World).periodicLoad)
-	characterSaveHooks = append(characterSaveHooks, func(w *World, o *Object, _ *store.Character) {
+func registerPeriodic(h *hooks) {
+	h.enterWorld = append(h.enterWorld, (*World).periodicLoad)
+	h.characterSave = append(h.characterSave, func(w *World, o *Object, _ *store.Character) {
 		w.periodicSave(o)
 	})
-	tick1000Hooks = append(tick1000Hooks, (*World).periodicSecond)
+	h.tick1000 = append(h.tick1000, (*World).periodicSecond)
 }
 
 // packetPeriodicItem is C1 0C D5 01 from(u16) slot(u16) time(u32)

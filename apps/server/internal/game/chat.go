@@ -26,25 +26,6 @@ type moveData struct {
 	moves    []moveEntry // Move/Move.txt (CMove)
 }
 
-// Hooks for the chat routes owned by other modules.
-var (
-	// partyMembersHook returns the object indexes of o's party (up to 5,
-	// obj+0x2f0 party number); "~" messages go to each of them.
-	partyMembersHook func(w *World, o *Object) []int
-	// guildChatHook routes "@" messages: kind 0 guild chat
-	// (FUN_00483500(0)), 1 alliance chat "@@" (FUN_00483500(1), only with
-	// a union), 2 guild notice "@>" (master only, C1 49 A0 06 ... through
-	// the ExDB). msg starts after the prefix character(s).
-	guildChatHook func(w *World, o *Object, kind int, msg []byte)
-	// chatAnswerHook sees every normal chat line before the command check
-	// (FUN_0044f430: an event answer check, probably CustomQuiz).
-	chatAnswerHook func(w *World, o *Object, msg string)
-	// globalWhisperHook forwards a whisper to another instance (DataServer
-	// 0x72 / 0x73 relay). It returns false when the name is not online
-	// anywhere; nil means "not found".
-	globalWhisperHook func(w *World, from *Object, target string, msg []byte) bool
-)
-
 func loadMoveData(w *World) error {
 	d := &moveData{commands: map[string]command{}}
 	w.moveData = d
@@ -177,11 +158,11 @@ func (w *World) handleChat(o *Object, pkt []byte) {
 		return
 	}
 	w.log.Info("[General]", "account", o.P.Account.Login, "name", o.P.Char.Name, "message", string(cstr(msg)))
-	if customMoveHook != nil { // CustomMove.txt words (FUN_0044f430, custom_world.go)
-		customMoveHook(w, o, string(cstr(msg)))
+	if w.hooks.customMove != nil { // CustomMove.txt words (FUN_0044f430, custom_world.go)
+		w.hooks.customMove(w, o, string(cstr(msg)))
 	}
-	if chatAnswerHook != nil {
-		chatAnswerHook(w, o, string(cstr(msg)))
+	if w.hooks.chatAnswer != nil {
+		w.hooks.chatAnswer(w, o, string(cstr(msg)))
 	}
 	filterText(msg, w.moveData.filter)
 	if msg[0] == '/' {
@@ -196,22 +177,22 @@ func (w *World) handleChat(o *Object, pkt []byte) {
 	case msg[0] == '!' && mv(o).Authority > 3:
 		w.noticeAll(NoticeGold, string(cstr(msg[1:])))
 	case msg[0] == '~':
-		if partyMembersHook != nil {
-			for _, idx := range partyMembersHook(w, o) {
+		if w.hooks.partyMembers != nil {
+			for _, idx := range w.hooks.partyMembers(w, o) {
 				w.sendIndex(idx, out)
 			}
 		}
 	case msg[0] == '@':
-		if guildChatHook == nil {
+		if w.hooks.guildChat == nil {
 			return
 		}
 		switch msg[1] {
 		case '>':
-			guildChatHook(w, o, 2, cstr(msg[2:]))
+			w.hooks.guildChat(w, o, 2, cstr(msg[2:]))
 		case '@':
-			guildChatHook(w, o, 1, cstr(msg[2:]))
+			w.hooks.guildChat(w, o, 1, cstr(msg[2:]))
 		default:
-			guildChatHook(w, o, 0, cstr(msg[1:]))
+			w.hooks.guildChat(w, o, 0, cstr(msg[1:]))
 		}
 	default:
 		w.send(o, out)
@@ -255,7 +236,7 @@ func (w *World) handleWhisper(o *Object, pkt []byte) {
 	t := w.findPlayer(target)
 	switch {
 	case t == nil:
-		if globalWhisperHook == nil || !globalWhisperHook(w, o, target, cstr(msg)) {
+		if w.hooks.globalWhisper == nil || !w.hooks.globalWhisper(w, o, target, cstr(msg)) {
 			w.send(o, packetWhisperNotFound())
 		}
 	case t == o:
@@ -293,9 +274,9 @@ func (w *World) chatLimitSecond() {
 	}
 }
 
-func init() {
-	worldHandlers[0x00] = (*World).handleChat
-	worldHandlers[0x02] = (*World).handleWhisper
-	startHooks = append(startHooks, loadMoveData)
-	tick1000Hooks = append(tick1000Hooks, (*World).chatLimitSecond)
+func registerChat(h *hooks) {
+	h.worldHandlers[0x00] = (*World).handleChat
+	h.worldHandlers[0x02] = (*World).handleWhisper
+	h.start = append(h.start, loadMoveData)
+	h.tick1000 = append(h.tick1000, (*World).chatLimitSecond)
 }

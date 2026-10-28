@@ -11,8 +11,8 @@ import (
 // list. The file is missing in this installation, so the list is empty
 // and every packet carries -1.
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerPatente(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		if w.configDir == "" {
 			return nil
 		}

@@ -93,44 +93,11 @@ func commandToken(s string, n, size int) string {
 	return out
 }
 
-// commandHandlers are the implemented commands by CommandManager index.
-// Every other index is a pending stub (see pendingCommands).
-var commandHandlers = map[int]func(w *World, o *Object, c command, arg string){
-	0: (*World).commandMove,
-	4: (*World).commandPost,
-}
-
-// pendingCommands lists the CommandManager indexes known from the switch
-// of FUN_00435400 that are not implemented yet (they need modules that do
-// not exist yet: stats, items, guild, events, custom systems).
-var pendingCommands = map[int]string{
-	1: "/guildwar", 2: "/guildsoccer", 3: "/request", 5: "/f", 6: "/a", 7: "/v", 8: "/e", 9: "/c",
-	10: "/pk", 11: "/zen", 12: "/evo", 13: "/bau", 14: "/reset", 15: "/mreset", 16: "/clearinv",
-	17: "/readd", 19: "/rename", 20: "/dcfriend", 22: "/open", 23: "/classe", 24: "/ezen",
-	25: "/autopotion", 26: "/lock", 27: "/unlock", 28: "/resp", 50: "/store", 51: "/offstore",
-	52: "/attack", 53: "/offattack", 54: "/gift", 55: "/marry", 56: "/accept", 57: "/divorce",
-	58: "/trackmarry", 60: "/buyvip", 61: "/pack", 62: "/unpack", 63: "/pick", 64: "/pickset",
-	65: "/pickclear", 100: "/gmove", 101: "/gg", 102: "/trace", 103: "/track", 104: "/dc",
-	105: "/firework", 106: "/make", 107: "/drop", 108: "/skin", 109: "/setzen", 110: "/hide",
-	111: "/edit", 113: "/setpk", 114: "/setvip", 115: "/moveall", 116: "/moveguild", 117: "/mob",
-	118: "/makeset", 119: "/banacc", 120: "/banchar", 121: "/banchat", 122: "/unbanacc",
-	123: "/unbanchar", 124: "/unbanchat", 125: "/bcstart", 126: "/dsstart", 127: "/ccstart",
-	129: "/setbuff", 130: "/escesc", 131: "/prainhapvp", 132: "/matamata", 133: "/dupla",
-	134: "/patente", 135: "/rodar",
-}
-
 // hardCodedCommands are compared before the table in FUN_00435400
 // (/vendo, /compro, /attack with "off", /minhainfo, /superdrop, /combo,
 // /offline, /bau with the extended warehouse); the ones without an entry
 // in hardCodedHandlers are not implemented yet.
 var hardCodedCommands = []string{"/vendo", "/compro", "/attack", "/minhainfo", "/superdrop", "/combo", "/offline", "/bau"}
-
-// hardCodedHandlers are the implemented hard-coded commands (lower case).
-var hardCodedHandlers = map[string]func(w *World, o *Object, arg string){}
-
-// commandScriptHook is the Lua OnCommandManager bridge (FUN_004e6ba0):
-// returning true means the script handled the command.
-var commandScriptHook func(w *World, o *Object, index int, arg string) bool
 
 // runCommand is the CommandManager part of FUN_00435400.
 func (w *World) runCommand(o *Object, msg string) {
@@ -141,12 +108,12 @@ func (w *World) runCommand(o *Object, msg string) {
 	}
 	// The custom event join commands are compared first (strcmp with the
 	// Syntax of each event file; customevent.go).
-	if commandEventHook != nil && commandEventHook(w, o, name) {
+	if w.hooks.commandEvent != nil && w.hooks.commandEvent(w, o, name) {
 		return
 	}
 	for _, h := range hardCodedCommands {
 		if strings.EqualFold(name, h) {
-			if f := hardCodedHandlers[h]; f != nil {
+			if f := w.hooks.hardCodedHandlers[h]; f != nil {
 				f(w, o, arg)
 				return
 			}
@@ -187,16 +154,16 @@ func (w *World) runCommand(o *Object, msg string) {
 		w.systemMessage(o, w.messageFor(o, msgID, val, name))
 		return
 	}
-	if commandScriptHook != nil && commandScriptHook(w, o, c.Index, arg) {
+	if w.hooks.commandScript != nil && w.hooks.commandScript(w, o, c.Index, arg) {
 		w.commandDone(o, c)
 		return
 	}
 	// CommandRequirement.txt (FUN_00440660, cmdrequirement.go): true
 	// means a matching row failed and the command does not run.
-	if commandRequirementHook != nil && commandRequirementHook(w, o, c.Index) {
+	if w.hooks.commandRequirement != nil && w.hooks.commandRequirement(w, o, c.Index) {
 		return
 	}
-	h := commandHandlers[c.Index]
+	h := w.hooks.commandHandlers[c.Index]
 	if h == nil {
 		w.log.Debug("command pending", "command", name, "index", c.Index)
 		return
@@ -289,7 +256,7 @@ func (w *World) moveTo(o *Object, e moveEntry) {
 	}
 	// TODO(command): the self-defense timers (obj+0x2d4.., message 265)
 	// belong to the PvP module.
-	if arenaMoveHook != nil && !arenaMoveHook(w, o, e.Gate) { // CustomArena join FUN_00443c50 (customarena.go)
+	if w.hooks.arenaMove != nil && !w.hooks.arenaMove(w, o, e.Gate) { // CustomArena join FUN_00443c50 (customarena.go)
 		return
 	}
 	if w.gateMove(o, e.Gate) {
@@ -306,8 +273,8 @@ func (w *World) commandPost(o *Object, c command, arg string) {
 	name := o.P.Char.Name
 	if w.cfg.Int("Command", "CommandPostGlobal", 0) != 0 {
 		// The original sends C1 52 20 to the ExDB for every server.
-		if globalPostHook != nil {
-			globalPostHook(w, o, arg)
+		if w.hooks.globalPost != nil {
+			w.hooks.globalPost(w, o, arg)
 		} else {
 			w.postLocal(name, arg)
 		}
@@ -317,9 +284,6 @@ func (w *World) commandPost(o *Object, c command, arg string) {
 	w.log.Info("[CommandPost]", "account", o.P.Account.Login, "name", name, "message", arg)
 	w.commandDone(o, c)
 }
-
-// globalPostHook relays /post to every instance (ExDB C1 52 20).
-var globalPostHook func(w *World, o *Object, msg string)
 
 // postLocal broadcasts a /post line on this instance according to
 // CommandPostType: 0 whisper-style C1 02 with the formatted message

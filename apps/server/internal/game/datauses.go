@@ -42,10 +42,10 @@ func (w *World) dus() *dataUses {
 	return w.du
 }
 
-func init() {
-	startHooks = append(startHooks, loadDataUses)
-	tick1000Hooks = append(tick1000Hooks, (*World).monsterMoveSecond, (*World).monsterScheduleSecond)
-	leaveWorldHooks = append(leaveWorldHooks, func(w *World, o *Object) { delete(w.dus().speed, o.Index) })
+func registerDatauses(h *hooks) {
+	h.start = append(h.start, loadDataUses)
+	h.tick1000 = append(h.tick1000, (*World).monsterMoveSecond, (*World).monsterScheduleSecond)
+	h.leaveWorld = append(h.leaveWorld, func(w *World, o *Object) { delete(w.dus().speed, o.Index) })
 }
 
 // loadDataUses reads the files at start-up (FUN_004e8520, FUN_004e85f0,

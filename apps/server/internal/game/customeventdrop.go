@@ -44,9 +44,9 @@ func (w *World) edrop() *customEventDrop {
 	return x.edrop
 }
 
-func init() {
-	startHooks = append(startHooks, loadCustomEventDrop)
-	tick1000Hooks = append(tick1000Hooks, (*World).eventDropSecond)
+func registerCustomeventdrop(h *hooks) {
+	h.start = append(h.start, loadCustomEventDrop)
+	h.tick1000 = append(h.tick1000, (*World).eventDropSecond)
 }
 
 // loadCustomEventDrop is FUN_004623e0 and, at the end of the start-up,

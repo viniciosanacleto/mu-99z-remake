@@ -346,9 +346,7 @@ func TestRebuildCharSetRecalculates(t *testing.T) {
 	if o.P.Char.MaxLife != 110 || o.P.Stats == nil {
 		t.Fatalf("max life %v", o.P.Char.MaxLife)
 	}
-	if cs := b.combatStatsHook(o); cs.DamageMinRight != 6 || cs.AttackSuccessRate != 50 {
+	if cs := b.hooks.combatStats(b.World, o); cs.DamageMinRight != 6 || cs.AttackSuccessRate != 50 {
 		t.Fatalf("combat stats %+v", cs)
 	}
 }
-
-func (b *bareWorld) combatStatsHook(o *Object) CombatStats { return combatStatsHook(b.World, o) }

@@ -13,12 +13,8 @@ package game
 //   - HWID: F3 09 (FUN_00441730) closes the client (FUN_00512780) when
 //     FUN_00411fa0 finds the 44-character hardware id in section 1.
 
-// acceptFilterHook decides whether a new GameServer connection from ip is
-// accepted (world.go).
-var acceptFilterHook func(w *World, ip string) bool
-
-func init() {
-	acceptFilterHook = func(w *World, ip string) bool { return !w.blacklistedIP(ip) }
+func registerBlacklist(h *hooks) {
+	h.acceptFilter = func(w *World, ip string) bool { return !w.blacklistedIP(ip) }
 }
 
 // blacklistedIP is the std::set lookup of FUN_00411f00 (exact string;

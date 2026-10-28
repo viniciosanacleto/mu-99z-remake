@@ -277,9 +277,7 @@ func TestItemMoneyDropGlobalRule(t *testing.T) {
 	m := b.monsterNear(0, p, 1)
 	m.Mon.ExpGiven = 1234
 	var money int
-	old := dropMapMoneyHook
-	dropMapMoneyHook = func(w *World, mp, x, y, amount, owner int) bool { money = amount; return true }
-	t.Cleanup(func() { dropMapMoneyHook = old })
+	b.hooks.dropMapMoney = func(w *World, mp, x, y, amount, owner int) bool { money = amount; return true }
 	// Global row: rate 1000 of 1e6; amount "*" = the monster experience
 	// times obj+0x878 (100) / 100.
 	fixRand(t, 999)

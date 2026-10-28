@@ -225,7 +225,7 @@ func (w *World) skillSummonParty(o *Object, ref *skillRef) bool {
 			switch {
 			case !w.moveSummonOK(m, o.Map, o.X, o.Y):
 				w.customMsg(m, 0x110)
-			case o.Map == csMap && castleBattleHook != nil && castleBattleHook(w) && csSide(o) != csSide(m):
+			case o.Map == csMap && w.hooks.castleBattle != nil && w.hooks.castleBattle(w) && csSide(o) != csSide(m):
 				w.customMsg(m, 0x110)
 			default:
 				x, y, ok := w.randomNearCell(o.Map, o.X, o.Y, 4, 4, 10)
@@ -298,7 +298,7 @@ func (w *World) summonMove(o *Object, s *summonState) {
 		}
 		return
 	}
-	for _, h := range mapChangeHooks {
+	for _, h := range w.hooks.mapChange {
 		h(w, o, o.Map, s.mp)
 	}
 	w.placeAt(o, -1, s.mp, s.x, s.y, o.Dir)
@@ -345,7 +345,7 @@ func (w *World) moveSummonOK(o *Object, mp, x, y int) bool {
 	}
 	switch mp {
 	case csMap:
-		if !(castleBattleHook != nil && castleBattleHook(w)) && x >= 0xA1 && x <= 0xBF && y >= 0xBC && y <= 0xD8 {
+		if !(w.hooks.castleBattle != nil && w.hooks.castleBattle(w)) && x >= 0xA1 && x <= 0xBF && y >= 0xBC && y <= 0xD8 {
 			return false
 		}
 	case 7:
@@ -485,9 +485,9 @@ func (w *World) handleTeleportAlly(o *Object, p []byte) {
 	w.payMana(o, teleportAlly)
 }
 
-func init() {
-	worldHandlers[0xB0] = (*World).handleTeleportAlly
-	startHooks = append(startHooks, func(w *World) error {
+func registerSkillGuild(h *hooks) {
+	h.worldHandlers[0xB0] = (*World).handleTeleportAlly
+	h.start = append(h.start, func(w *World) error {
 		if w.configDir == "" {
 			return nil
 		}
@@ -498,9 +498,9 @@ func init() {
 		w.q().moveSummon = rows
 		return nil
 	})
-	tick1000Hooks = append(tick1000Hooks, (*World).summonSecond)
-	beforeGateMoveHooks = append(beforeGateMoveHooks, func(w *World, o *Object) { w.summonCancel(o) })
-	leaveWorldHooks = append(leaveWorldHooks, func(w *World, o *Object) {
+	h.tick1000 = append(h.tick1000, (*World).summonSecond)
+	h.beforeGateMove = append(h.beforeGateMove, func(w *World, o *Object) { w.summonCancel(o) })
+	h.leaveWorld = append(h.leaveWorld, func(w *World, o *Object) {
 		if w.rq != nil && w.rq.summons != nil {
 			delete(w.rq.summons, o.Index)
 		}

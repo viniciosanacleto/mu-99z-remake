@@ -10,8 +10,6 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
-func init() { register("eventitembag", eventItemBagGroup) }
-
 // eventItemBagGroup converts Data/EventItemBagManager.txt and the bags it
 // names (EventItemBag\<BagPath>.txt); other bag files are not read.
 func eventItemBagGroup(dataDir string) ([]byte, error) {

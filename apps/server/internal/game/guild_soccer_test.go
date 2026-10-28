@@ -27,7 +27,7 @@ func soccerMatch(t *testing.T) (*bareWorld, *Object, *Object, int, int) {
 	m1.X, m2.X = 58, 66
 	b.drain(m1)
 	b.drain(m2)
-	worldHandlers[0x61](w, m2, []byte{0xC1, 4, 0x61, 1})
+	b.hooks.worldHandlers[0x61](w, m2, []byte{0xC1, 4, 0x61, 1})
 	return b, m1, m2, g1, g2
 }
 

@@ -25,25 +25,25 @@ import (
 // The same file holds the shared state of CustomJewel (customjewel.go),
 // CustomJewelBank (jewelbank.go) and CLuckyWheel (luckywheel.go).
 
-func init() {
-	worldHandlers[0xFA] = func(w *World, o *Object, p []byte) {
+func registerXshop(h *hooks) {
+	h.worldHandlers[0xFA] = func(w *World, o *Object, p []byte) {
 		if len(p) > 3 && p[0] == frame.C1 {
-			if h := faHandlers[p[3]]; h != nil {
+			if h := w.hooks.faHandlers[p[3]]; h != nil {
 				h(w, o, p)
 			}
 		}
 	}
-	worldHandlers[0xFB] = func(w *World, o *Object, p []byte) {
+	h.worldHandlers[0xFB] = func(w *World, o *Object, p []byte) {
 		if len(p) > 3 {
-			if h := fbHandlers[p[3]]; h != nil {
+			if h := w.hooks.fbHandlers[p[3]]; h != nil {
 				h(w, o, p)
 			}
 		}
 	}
-	faHandlers[0x05] = sized(0x0C, (*World).xshopGMPrice)
-	faHandlers[0x07] = sized(0x10, (*World).xshopBuy)
-	faHandlers[0x08] = sized(0x06, (*World).xshopList)
-	startHooks = append(startHooks, loadCashWorld)
+	h.faHandlers[0x05] = sized(0x0C, (*World).xshopGMPrice)
+	h.faHandlers[0x07] = sized(0x10, (*World).xshopBuy)
+	h.faHandlers[0x08] = sized(0x06, (*World).xshopList)
+	h.start = append(h.start, loadCashWorld)
 }
 
 // sized keeps the exact-size test of the FA dispatcher (FUN_004d6690).

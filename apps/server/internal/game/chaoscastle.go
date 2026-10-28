@@ -77,8 +77,8 @@ type chaosCastle struct {
 	c    [ccCastles]ccCastle
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerChaoscastle(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		cc := &chaosCastle{data: &gamedata.ChaosCastle{}}
 		for i := range cc.c {
 			c := &cc.c[i]
@@ -107,16 +107,16 @@ func init() {
 		}
 		return nil
 	})
-	tick1000Hooks = append(tick1000Hooks, (*World).ccTick)
-	worldHandlers[0xAF] = (*World).handleCCPacket
-	eventTimeHandlers[4] = (*World).ccRemainTime
-	chaosCastleStateHook = func(w *World, room int) int { // FUN_00431420
+	h.tick1000 = append(h.tick1000, (*World).ccTick)
+	h.worldHandlers[0xAF] = (*World).handleCCPacket
+	h.eventTimeHandlers[4] = (*World).ccRemainTime
+	h.chaosCastleState = func(w *World, room int) int { // FUN_00431420
 		if w.cc() == nil || room < 0 || room >= ccCastles {
 			return 0
 		}
 		return w.cc().c[room].State
 	}
-	deathHooks = append(deathHooks, func(w *World, killer, victim *Object) {
+	h.death = append(h.death, func(w *World, killer, victim *Object) {
 		if victim.Map < 18 || victim.Map > 23 {
 			return
 		}
@@ -637,7 +637,7 @@ func (w *World) ccExperience(c *ccCastle, u *ccUser) {
 		return
 	}
 	u.Exp = capped(int64(w.cfg.ALInt("Common", "AddEventExperienceRate", accountLevel(o), 0)) * int64(exp))
-	if moveEffectHook != nil && (moveEffectHook(w, o, 31) || moveEffectHook(w, o, 42)) {
+	if w.hooks.moveEffect != nil && (w.hooks.moveEffect(w, o, 31) || w.hooks.moveEffect(w, o, 42)) {
 		return
 	}
 	if !w.levelUp(o, int64(u.Exp), w.cfg.Int("Common", "MaxLevelUpEvent", 0)) {
@@ -652,8 +652,8 @@ func (w *World) ccItemReward(o *Object) {
 	drop := func(index, level int) {
 		it := item.Item{Index: index, Level: level, Serial: math.MaxUint32}
 		it.Durability = float32(w.itemMaxDurability(it))
-		if dropMapItemHook != nil {
-			dropMapItemHook(w, o.Map, o.X, o.Y, it, o.Index)
+		if w.hooks.dropMapItem != nil {
+			w.hooks.dropMapItem(w, o.Map, o.X, o.Y, it, o.Index)
 		}
 	}
 	for i := 0; i < 5; i++ {

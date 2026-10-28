@@ -16,13 +16,13 @@ import (
 // /attack, /offline and /bau ones are in customattack.go, offline.go and
 // command_player2.go.
 
-func init() {
-	hardCodedHandlers["/vendo"] = func(w *World, o *Object, arg string) { w.commandAd(o, arg, true) }
-	hardCodedHandlers["/compro"] = func(w *World, o *Object, arg string) { w.commandAd(o, arg, false) }
-	hardCodedHandlers["/minhainfo"] = (*World).commandMyInfo
-	hardCodedHandlers["/superdrop"] = (*World).commandSuperDrop
-	hardCodedHandlers["/combo"] = (*World).commandCombo
-	tick1000Hooks = append(tick1000Hooks, (*World).adSecond)
+func registerCommandHardcoded(h *hooks) {
+	h.hardCodedHandlers["/vendo"] = func(w *World, o *Object, arg string) { w.commandAd(o, arg, true) }
+	h.hardCodedHandlers["/compro"] = func(w *World, o *Object, arg string) { w.commandAd(o, arg, false) }
+	h.hardCodedHandlers["/minhainfo"] = (*World).commandMyInfo
+	h.hardCodedHandlers["/superdrop"] = (*World).commandSuperDrop
+	h.hardCodedHandlers["/combo"] = (*World).commandCombo
+	h.tick1000 = append(h.tick1000, (*World).adSecond)
 }
 
 // --- /vendo, /compro -----------------------------------------------------------------

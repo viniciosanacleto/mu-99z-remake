@@ -24,18 +24,14 @@ type skillSpeedState struct {
 	BlockUntil time.Time // obj+0x2094 (set by Action 3; its reader is not identified)
 }
 
-// skillSpeedHook is FUN_00488550 for a player and a skill: false stops
-// the caller.
-var skillSpeedHook func(w *World, o *Object, skill int) bool
-
-func init() {
-	skillSpeedHook = (*World).skillSpeedOK
+func registerSkillspeed(h *hooks) {
+	h.skillSpeed = (*World).skillSpeedOK
 }
 
 // skillSpeedAllowed runs the hook for players (the callers test obj+0x6c
 // == 1 first).
 func (w *World) skillSpeedAllowed(o *Object, skill int) bool {
-	return o.Type != TypePlayer || skillSpeedHook == nil || skillSpeedHook(w, o, skill)
+	return o.Type != TypePlayer || w.hooks.skillSpeed == nil || w.hooks.skillSpeed(w, o, skill)
 }
 
 // skillSpeedOK is FUN_00488550. The speed is the magic speed (obj+0x364)

@@ -206,8 +206,8 @@ func loadMobCombo(configDir string) ([]int, error) {
 	return gamedata.LoadCustomMobCombo(configDir)
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerPushback(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		if w.configDir == "" {
 			return nil
 		}
@@ -218,5 +218,5 @@ func init() {
 		w.q().noPush = l
 		return nil
 	})
-	tick100Hooks = append(tick100Hooks, (*World).pushTick)
+	h.tick100 = append(h.tick100, (*World).pushTick)
 }

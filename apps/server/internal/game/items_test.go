@@ -308,7 +308,7 @@ func TestShopBuySellRepair(t *testing.T) {
 	o := b.player(PlayerStart, "Buyer", 0, 127, 88)
 	o.P.Char.Money = 100000
 	amy := fakeNPC(b, 100, 253, 0, 127, 86) // Potion Girl Amy (ShopManager row 11)
-	h := npcTalkHooks[253]
+	h := b.hooks.npcTalk[253]
 	if h == nil || !h(b.World, o, amy) {
 		t.Fatal("shop talk not handled")
 	}
@@ -414,7 +414,7 @@ func TestMoneyPickupAndExpiry(t *testing.T) {
 	x, y := b.openRow(0, 4)
 	o := b.player(PlayerStart, "Rich", 0, x, y)
 	o.P.Char.Money = 10
-	if !dropMapMoneyHook(b.World, 0, x, y, 5000, -1) {
+	if !b.hooks.dropMapMoney(b.World, 0, x, y, 5000, -1) {
 		t.Fatal("money drop failed")
 	}
 	b.viewportProc()
@@ -425,7 +425,7 @@ func TestMoneyPickupAndExpiry(t *testing.T) {
 		t.Fatalf("money pick = % X", m)
 	}
 	// An item left on the ground expires after ItemDropTime seconds.
-	dropMapItemHook(b.World, 0, x+1, y, mkItem(14, 0, 0, 1), -1)
+	b.hooks.dropMapItem(b.World, 0, x+1, y, mkItem(14, 0, 0, 1), -1)
 	tbl := b.mapItems(0)
 	b.advance(time.Duration(b.cfg.Int("Common", "ItemDropTime", 0)+1) * time.Second)
 	b.mapItemProc() // new -> normal

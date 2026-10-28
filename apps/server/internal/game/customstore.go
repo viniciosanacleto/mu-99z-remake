@@ -35,9 +35,9 @@ var storeSyntaxKeys = [6]string{
 	"CustomStoreCommandJoCSyntax", "CustomStoreCommandJCRSyntax", "CustomStoreCommandJoGSyntax",
 }
 
-func init() {
-	commandHandlers[50] = (*World).commandCustomStore
-	commandHandlers[51] = (*World).commandOffStore
+func registerCustomstore(h *hooks) {
+	h.commandHandlers[50] = (*World).commandCustomStore
+	h.commandHandlers[51] = (*World).commandOffStore
 }
 
 // commandCustomStore is /store [word] (FUN_00468d90): CustomStoreSwitch and no

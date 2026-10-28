@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"errors"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -34,6 +35,9 @@ const maxSessions = 10000
 type Config struct {
 	MaxConnectionPerIP  int // 0 = unlimited
 	MaxConnectionPerHID int // 0 = unlimited
+	// Log receives the store failures of best-effort steps (password
+	// rehash, logout); nil uses slog.Default().
+	Log *slog.Logger
 }
 
 // Kicker is implemented by the game instance holding a session; it receives
@@ -85,9 +89,18 @@ type Service struct {
 	tickets  map[string]*MoveTicket
 }
 
+// New builds the account service on top of s.
 func New(s store.Store, cfg Config) *Service {
-	return &Service{store: s, cfg: cfg, now: time.Now,
-		sessions: map[string]*Session{}, tickets: map[string]*MoveTicket{}}
+	if cfg.Log == nil {
+		cfg.Log = slog.Default()
+	}
+	return &Service{
+		store:    s,
+		cfg:      cfg,
+		now:      time.Now,
+		sessions: map[string]*Session{},
+		tickets:  map[string]*MoveTicket{},
+	}
 }
 
 func key(account string) string { return strings.ToLower(account) }
@@ -141,9 +154,7 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (byte, *Session, 
 		return ResultWrongPassword, nil, nil
 	}
 	if rehash {
-		if h, err := HashPassword(req.Password); err == nil {
-			_ = s.store.SetPasswordHash(ctx, acc.ID, h)
-		}
+		s.upgradePasswordHash(ctx, acc.ID, req.Password)
 	}
 	if err := s.expireLevel(ctx, acc); err != nil {
 		return 0, nil, err
@@ -206,8 +217,24 @@ func (s *Service) Logout(ctx context.Context, account string) {
 	sess := s.sessions[key(account)]
 	delete(s.sessions, key(account))
 	s.mu.Unlock()
-	if sess != nil {
-		_ = s.store.DisconnectAccount(ctx, sess.Account.ID)
+	if sess == nil {
+		return
+	}
+	if err := s.store.DisconnectAccount(ctx, sess.Account.ID); err != nil {
+		s.cfg.Log.Warn("auth: marking the account disconnected", "account", account, "err", err)
+	}
+}
+
+// upgradePasswordHash stores a current hash of password after a login
+// that matched an outdated one. A failure keeps the old hash, which still
+// works, so it is only logged.
+func (s *Service) upgradePasswordHash(ctx context.Context, accountID int64, password string) {
+	h, err := HashPassword(password)
+	if err == nil {
+		err = s.store.SetPasswordHash(ctx, accountID, h)
+	}
+	if err != nil {
+		s.cfg.Log.Warn("auth: upgrading the password hash", "account_id", accountID, "err", err)
 	}
 }
 

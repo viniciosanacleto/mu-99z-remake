@@ -54,18 +54,18 @@ type partyState struct {
 	Password string
 }
 
-func init() {
-	worldHandlers[0x40] = func(w *World, o *Object, p []byte) { w.handlePartyRequest(o, p) }
-	worldHandlers[0x41] = func(w *World, o *Object, p []byte) { w.handlePartyAnswer(o, p) }
-	worldHandlers[0x42] = func(w *World, o *Object, p []byte) { w.handlePartyList(o) }
-	worldHandlers[0x43] = func(w *World, o *Object, p []byte) { w.handlePartyLeave(o, p) }
-	startHooks = append(startHooks, func(w *World) error {
+func registerParty(h *hooks) {
+	h.worldHandlers[0x40] = func(w *World, o *Object, p []byte) { w.handlePartyRequest(o, p) }
+	h.worldHandlers[0x41] = func(w *World, o *Object, p []byte) { w.handlePartyAnswer(o, p) }
+	h.worldHandlers[0x42] = func(w *World, o *Object, p []byte) { w.handlePartyList(o) }
+	h.worldHandlers[0x43] = func(w *World, o *Object, p []byte) { w.handlePartyLeave(o, p) }
+	h.start = append(h.start, func(w *World) error {
 		w.parties = &partyManager{parties: map[int]*party{}}
 		return nil
 	})
-	enterWorldHooks = append(enterWorldHooks, func(w *World, o *Object) { w.partyStateOf(o) })
-	leaveWorldHooks = append(leaveWorldHooks, func(w *World, o *Object) { w.partyLeaveWorld(o) })
-	tick1000Hooks = append(tick1000Hooks, func(w *World) { w.partySecond() })
+	h.enterWorld = append(h.enterWorld, func(w *World, o *Object) { w.partyStateOf(o) })
+	h.leaveWorld = append(h.leaveWorld, func(w *World, o *Object) { w.partyLeaveWorld(o) })
+	h.tick1000 = append(h.tick1000, func(w *World) { w.partySecond() })
 }
 
 func (w *World) partyStateOf(o *Object) *partyState {
@@ -492,9 +492,9 @@ func (w *World) partySecond() {
 	}
 }
 
-func init() {
+func registerPartyLoot(h *hooks) {
 	// Map-item loot rights are shared inside a party (FUN_004982e0).
-	samePartyHook = func(w *World, a, b *Object) bool {
+	h.sameParty = func(w *World, a, b *Object) bool {
 		pa := w.partyOf(a)
 		return pa != nil && pa == w.partyOf(b)
 	}

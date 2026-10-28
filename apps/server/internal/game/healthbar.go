@@ -25,8 +25,8 @@ func (w *World) hpBar() *healthBar {
 	return x.hpBar
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerHealthbar(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		w.wcx().hpBar = nil
 		if w.configDir == "" {
 			return nil
@@ -35,7 +35,7 @@ func init() {
 		w.hpBar().rows = rows
 		return err
 	})
-	tick1000Hooks = append(tick1000Hooks, (*World).healthBarSecond)
+	h.tick1000 = append(h.tick1000, (*World).healthBarSecond)
 }
 
 // healthBarMap is FUN_004ae830: the MapManager MonsterHPBar flag, "*" =

@@ -16,13 +16,42 @@ type Output struct {
 	Build func(root string) ([]byte, error)
 }
 
-// dataOutputs are the config/data/*.toml files, registered by the files
-// that convert each Data/ group.
-var dataOutputs []Output
+// dataGroups are the config/data/<name>.toml files, one per converted
+// Data/ group, in the order configconv writes them.
+var dataGroups = []struct {
+	name  string
+	build func(dataDir string) ([]byte, error)
+}{
+	{name: "character", build: characterGroup},
+	{name: "common", build: commonGroup},
+	{name: "custom", build: customGroup},
+	{name: "custom-event", build: customEventGroup},
+	{name: "xshop", build: xshopGroup},
+	{name: "event", build: eventGroup},
+	{name: "eventitembag", build: eventItemBagGroup},
+	{name: "item", build: itemGroup},
+	{name: "lang", build: langGroup},
+	{name: "monster", build: monsterGroup},
+	{name: "spawn", build: spawnGroup},
+	{name: "move", build: moveGroup},
+	{name: "quest", build: questGroup},
+	{name: "shop", build: shopGroup},
+	{name: "skill", build: skillGroup},
+	{name: "hack", build: hackGroup},
+	{name: "util", build: utilGroup},
+}
 
-func register(group string, build func(dataDir string) ([]byte, error)) {
-	dataOutputs = append(dataOutputs, Output{Group: group, Path: filepath.Join("data", group+".toml"),
-		Build: func(root string) ([]byte, error) { return build(filepath.Join(root, "Data")) }})
+// dataOutputs returns the Output of every data group.
+func dataOutputs() []Output {
+	out := make([]Output, 0, len(dataGroups))
+	for _, g := range dataGroups {
+		out = append(out, Output{
+			Group: g.name,
+			Path:  filepath.Join("data", g.name+".toml"),
+			Build: func(root string) ([]byte, error) { return g.build(filepath.Join(root, "Data")) },
+		})
+	}
+	return out
 }
 
 // Outputs lists every file configconv writes, for an original MuServer
@@ -39,7 +68,7 @@ func Outputs() []Output {
 		out = append(out, Output{Group: "gameserver", Path: filepath.Join("gameserver", Instances[dir]+".toml"),
 			Build: func(root string) ([]byte, error) { return GameServer(filepath.Join(root, dir, "DATA")) }})
 	}
-	return append(out, dataOutputs...)
+	return append(out, dataOutputs()...)
 }
 
 // Convert writes the outputs whose group is in only (all when only is

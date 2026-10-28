@@ -1,7 +1,10 @@
 package auth
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"log/slog"
 	"strings"
 	"testing"
 	"time"
@@ -78,6 +81,34 @@ func TestLoginResults(t *testing.T) {
 	// The upgraded hash still accepts the password.
 	if got := login(s, "player", "secret", "1.1.1.1", nil); got != ResultOK {
 		t.Fatalf("login after rehash = %d", got)
+	}
+}
+
+// failingStore fails the best-effort writes of Login and Logout.
+type failingStore struct{ *store.Memory }
+
+var errStoreDown = errors.New("store down")
+
+func (failingStore) SetPasswordHash(context.Context, int64, string) error { return errStoreDown }
+func (failingStore) DisconnectAccount(context.Context, int64) error       { return errStoreDown }
+
+func TestBestEffortStoreFailuresAreLogged(t *testing.T) {
+	_, m := setup(t, Config{})
+	var logs bytes.Buffer
+	s := New(failingStore{m}, Config{Log: slog.New(slog.NewTextHandler(&logs, nil))})
+	// "player" has a plain password, so the login tries to rehash it.
+	if got := login(s, "player", "secret", "1.1.1.1", nil); got != ResultOK {
+		t.Fatalf("login with a failing rehash = %d, want %d", got, ResultOK)
+	}
+	if !strings.Contains(logs.String(), "upgrading the password hash") {
+		t.Fatalf("rehash failure not logged: %q", logs.String())
+	}
+	s.Logout(context.Background(), "player")
+	if s.Online("player") {
+		t.Fatal("logout kept the session after a store failure")
+	}
+	if !strings.Contains(logs.String(), "marking the account disconnected") {
+		t.Fatalf("logout failure not logged: %q", logs.String())
 	}
 }
 

@@ -41,10 +41,10 @@ func pshop(o *Object) *pshopState {
 
 func pshopOpen(o *Object) bool { return o.P != nil && o.P.PShop != nil && o.P.PShop.Open }
 
-func init() {
-	worldHandlers[0x3F] = func(w *World, o *Object, p []byte) { w.handlePShop(o, p) }
-	viewportEndHooks = append(viewportEndHooks, func(w *World) { w.pshopViewportProc() })
-	beforeGateMoveHooks = append(beforeGateMoveHooks, func(w *World, o *Object) {
+func registerPshop(h *hooks) {
+	h.worldHandlers[0x3F] = func(w *World, o *Object, p []byte) { w.handlePShop(o, p) }
+	h.viewportEnd = append(h.viewportEnd, func(w *World) { w.pshopViewportProc() })
+	h.beforeGateMove = append(h.beforeGateMove, func(w *World, o *Object) {
 		if o.P != nil {
 			pshop(o).ResetKnown = true // FUN_004bec30
 		}

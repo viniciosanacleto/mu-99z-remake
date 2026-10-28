@@ -39,19 +39,8 @@ const (
 	questRewardEvolution2 = 0x10
 )
 
-var (
-	// questTalkHook runs before the NpcTalk.txt messages (npc.go).
-	questTalkHook func(w *World, o, npc *Object) bool
-	// questDropHook is the quest item drop of the monster death
-	// (combat.go): true replaces the normal drop.
-	questDropHook func(w *World, mon *Object) bool
-	// questEffectHook applies a reward of type 7 (FUN_00478ae0, effect
-	// index and duration); set by the effect module.
-	questEffectHook func(w *World, o *Object, effect, value int)
-)
-
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerQuest(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		if w.configDir == "" {
 			w.quests = &gamedata.Quests{}
 			return nil
@@ -63,10 +52,10 @@ func init() {
 		w.quests = q
 		return nil
 	})
-	questTalkHook = func(w *World, o, npc *Object) bool { return w.questNpcTalk(o, npc) }
-	questDropHook = func(w *World, mon *Object) bool { return w.questItemDrop(mon) }
-	worldHandlers[0xA0] = (*World).handleQuestList
-	worldHandlers[0xA2] = (*World).handleQuestState
+	h.questTalk = func(w *World, o, npc *Object) bool { return w.questNpcTalk(o, npc) }
+	h.questDrop = func(w *World, mon *Object) bool { return w.questItemDrop(mon) }
+	h.worldHandlers[0xA0] = (*World).handleQuestList
+	h.worldHandlers[0xA2] = (*World).handleQuestState
 }
 
 // questState is FUN_004dd680 / the 2-bit read: 0 for indexes >= 200.
@@ -298,8 +287,8 @@ func (w *World) giveRewards(o *Object, idx int) {
 					Luck: r.Option2 != 0, Option: r.Option3, Excellent: byte(r.NewOption)})
 			}
 		case questRewardEffect:
-			if questEffectHook != nil {
-				questEffectHook(w, o, r.Index, r.Quantity)
+			if w.hooks.questEffect != nil {
+				w.hooks.questEffect(w, o, r.Index, r.Quantity)
 			}
 		case questRewardFlag:
 			w.sendQuestReward(o, r.Index, r.Quantity)
@@ -533,8 +522,8 @@ func (w *World) questItemDrop(mon *Object) bool {
 			it := item.Item{Index: ob.Index, Level: ob.Level, Skill: ob.Option1 != 0, Luck: ob.Option2 != 0,
 				Option: ob.Option3, Excellent: byte(ob.NewOption), Serial: math.MaxUint32}
 			it.Durability = float32(w.itemMaxDurability(it))
-			if dropMapItemHook != nil {
-				dropMapItemHook(w, mon.Map, mon.X, mon.Y, it, owner.Index)
+			if w.hooks.dropMapItem != nil {
+				w.hooks.dropMapItem(w, mon.Map, mon.X, mon.Y, it, owner.Index)
 			}
 			return true
 		}

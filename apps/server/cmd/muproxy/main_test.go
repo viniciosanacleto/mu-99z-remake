@@ -21,7 +21,8 @@ func dataRoot() string {
 
 func clientKeys() string {
 	_, file, _, _ := runtime.Caller(0)
-	return filepath.Join(filepath.Dir(file), "..", "..", "..", "client", "assets", "Data")
+	// The client's Enc1.dat/Dec2.dat are kept with the crypto tests.
+	return filepath.Join(filepath.Dir(file), "..", "..", "internal", "protocol", "crypto", "testdata")
 }
 
 func TestParseFlags(t *testing.T) {

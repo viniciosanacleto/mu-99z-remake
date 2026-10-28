@@ -46,8 +46,8 @@ func (w *World) kalima() *kalimaState {
 	return e.kalima
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerKalima(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		w.ev().kalima = nil
 		if w.configDir == "" {
 			return nil
@@ -56,10 +56,10 @@ func init() {
 		w.kalima().next = next
 		return err
 	})
-	tick1000Hooks = append(tick1000Hooks, (*World).kalimaTick)
+	h.tick1000 = append(h.tick1000, (*World).kalimaTick)
 	// gObjMoveGate (FUN_0050f6d0) removes the gate when its owner moves to
 	// another map (the two FUN_004a3480 calls).
-	mapChangeHooks = append(mapChangeHooks, func(w *World, o *Object, from, to int) {
+	h.mapChange = append(h.mapChange, func(w *World, o *Object, from, to int) {
 		w.removeKalimaGate(o)
 	})
 }

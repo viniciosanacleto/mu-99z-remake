@@ -114,8 +114,8 @@ func loadStatsData(w *World) (*statsData, error) {
 	return d, nil
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerStats(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		d, err := loadStatsData(w)
 		if err != nil {
 			return fmt.Errorf("stats data: %w", err)
@@ -123,9 +123,9 @@ func init() {
 		w.statsData = d
 		return nil
 	})
-	recalcHook = func(w *World, o *Object) { w.calcCharacter(o) }
-	combatStatsHook = func(w *World, o *Object) CombatStats { return w.playerCombatStats(o) }
-	f3Handlers[0x06] = func(w *World, o *Object, p []byte) { w.handleStatAdd(o, p) }
+	h.recalc = func(w *World, o *Object) { w.calcCharacter(o) }
+	h.combatStats = func(w *World, o *Object) CombatStats { return w.playerCombatStats(o) }
+	h.f3Handlers[0x06] = func(w *World, o *Object, p []byte) { w.handleStatAdd(o, p) }
 }
 
 // ---------------------------------------------------------------------------

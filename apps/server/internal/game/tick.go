@@ -24,13 +24,10 @@ func (w *World) rand(n int) int {
 }
 
 func (w *World) tick100() {
-	for _, f := range tick100Hooks {
+	for _, f := range w.hooks.tick100 {
 		f(w)
 	}
 }
-
-// tick100Hooks are registered by the movement and monster modules.
-var tick100Hooks []func(*World)
 
 func (w *World) tick1000() {
 	now := w.now()
@@ -41,20 +38,14 @@ func (w *World) tick1000() {
 		}
 		w.playerSecond(o, now)
 	}
-	for _, f := range tick1000Hooks {
+	for _, f := range w.hooks.tick1000 {
 		f(w)
 	}
 	w.viewportProc()
-	for _, f := range viewportEndHooks {
+	for _, f := range w.hooks.viewportEnd {
 		f(w)
 	}
 }
-
-var tick1000Hooks []func(*World)
-
-// viewportEndHooks run after the 1-second viewport cycle (the tail of
-// FUN_0050a020: FUN_004c3b10 state transitions).
-var viewportEndHooks []func(*World)
 
 // playerSecond is the per-client part of FUN_00510810.
 func (w *World) playerSecond(o *Object, now time.Time) {

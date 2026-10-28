@@ -9,11 +9,8 @@ import "github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 // true result (AL = 1) ends the command without running it or charging
 // it.
 
-// commandRequirementHook is FUN_00440660; true blocks the command.
-var commandRequirementHook func(w *World, o *Object, index int) bool
-
-func init() {
-	commandRequirementHook = (*World).commandRequirementFails
+func registerCmdrequirement(h *hooks) {
+	h.commandRequirement = (*World).commandRequirementFails
 }
 
 // commandRequirementFails is FUN_00440660. The rows of the command whose

@@ -12,7 +12,7 @@ func TestEventEntriesSavedAndLoaded(t *testing.T) {
 	o := b.player(PlayerStart, "Entrant", 0, 130, 130)
 	o.P.entries = store.EventEntry{BC: 1, DS: 2}
 	c := *o.P.Char
-	for _, h := range characterSaveHooks {
+	for _, h := range b.hooks.characterSave {
 		h(b.World, o, &c)
 	}
 	b.wg.Wait()
@@ -22,7 +22,7 @@ func TestEventEntriesSavedAndLoaded(t *testing.T) {
 	}
 	// Entering the world loads them back.
 	o.P.entries = store.EventEntry{}
-	for _, h := range enterWorldHooks {
+	for _, h := range b.hooks.enterWorld {
 		h(b.World, o)
 	}
 	b.wg.Wait()

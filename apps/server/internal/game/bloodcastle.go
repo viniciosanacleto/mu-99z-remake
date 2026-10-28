@@ -86,8 +86,8 @@ type bloodCastle struct {
 	c    [bcCastles]bcCastle
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerBloodcastle(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		bc := &bloodCastle{data: &gamedata.BloodCastle{}}
 		for i := range bc.c {
 			c := &bc.c[i]
@@ -114,12 +114,12 @@ func init() {
 		}
 		return nil
 	})
-	tick1000Hooks = append(tick1000Hooks, (*World).bcTick)
-	worldHandlers[0x9A] = (*World).handleBCEnter
-	eventTimeHandlers[2] = (*World).bcRemainTime
-	npcTalkHooks[bcArchangel] = func(w *World, o, npc *Object) bool { w.bcArchangelTalk(o); return true }
-	npcTalkHooks[bcMessenger] = func(w *World, o, npc *Object) bool { w.bcMessengerTalk(o); return true }
-	deathHooks = append(deathHooks, func(w *World, killer, victim *Object) {
+	h.tick1000 = append(h.tick1000, (*World).bcTick)
+	h.worldHandlers[0x9A] = (*World).handleBCEnter
+	h.eventTimeHandlers[2] = (*World).bcRemainTime
+	h.npcTalk[bcArchangel] = func(w *World, o, npc *Object) bool { w.bcArchangelTalk(o); return true }
+	h.npcTalk[bcMessenger] = func(w *World, o, npc *Object) bool { w.bcMessengerTalk(o); return true }
+	h.death = append(h.death, func(w *World, killer, victim *Object) {
 		if victim.Map < 11 || victim.Map > 17 {
 			return
 		}
@@ -129,8 +129,8 @@ func init() {
 			w.bcMonsterKilled(victim)
 		}
 	})
-	itemPickedHooks = append(itemPickedHooks, (*World).bcWeaponPicked)
-	itemDroppedHooks = append(itemDroppedHooks, (*World).bcWeaponDropped)
+	h.itemPicked = append(h.itemPicked, (*World).bcWeaponPicked)
+	h.itemDropped = append(h.itemDropped, (*World).bcWeaponDropped)
 }
 
 func (w *World) bc() *bloodCastle { return w.ev().bc }
@@ -612,7 +612,7 @@ func (w *World) bcWinnerSide(c *bcCastle, o *Object) bool {
 	if c.Winner < 0 || c.Winner >= MaxObjects {
 		return false
 	}
-	return o.Index == c.Winner || (samePartyHook != nil && samePartyHook(w, o, w.objects[c.Winner]))
+	return o.Index == c.Winner || (w.hooks.sameParty != nil && w.hooks.sameParty(w, o, w.objects[c.Winner]))
 }
 
 // bcReward is FUN_00415180 (experience, score = exp/5) and FUN_00415300
@@ -627,7 +627,7 @@ func (w *World) bcReward(c *bcCastle, u *bcUser, win bool) {
 	exp := d.Experience[c.Index][col]
 	u.Score = exp / 5
 	u.Exp = exp * w.cfg.ALInt("Common", "AddEventExperienceRate", accountLevel(o), 0)
-	if moveEffectHook == nil || !(moveEffectHook(w, o, 31) || moveEffectHook(w, o, 42)) {
+	if w.hooks.moveEffect == nil || !(w.hooks.moveEffect(w, o, 31) || w.hooks.moveEffect(w, o, 42)) {
 		if !w.levelUp(o, int64(u.Exp), w.cfg.Int("Common", "MaxLevelUpEvent", 0)) {
 			ch := o.P.Char
 			w.send(o, packetKillExp(0xFFFF, uint32(u.Exp), 0, uint32(ch.Experience), o.P.NextExp))
@@ -650,8 +650,8 @@ func (w *World) bcItemReward(c *bcCastle, o *Object) {
 	drop := func(index, level int) {
 		it := item.Item{Index: index, Level: level, Serial: math.MaxUint32}
 		it.Durability = float32(w.itemMaxDurability(it))
-		if dropMapItemHook != nil {
-			dropMapItemHook(w, o.Map, o.X, o.Y, it, o.Index)
+		if w.hooks.dropMapItem != nil {
+			w.hooks.dropMapItem(w, o.Map, o.X, o.Y, it, o.Index)
 		}
 	}
 	switch {
@@ -743,12 +743,12 @@ func (w *World) bcSpawnStatue(c *bcCastle) {
 // bcImmune applies / removes the effects 0x3F and 0x40 (FUN_00478ae0 /
 // FUN_00478d30) through the effect module.
 func (w *World) bcImmune(idx int, on bool) {
-	if idx < 0 || idx >= MaxObjects || eventEffectHook == nil {
+	if idx < 0 || idx >= MaxObjects || w.hooks.eventEffect == nil {
 		return
 	}
 	o := w.objects[idx]
-	eventEffectHook(w, o, 0x3F, on)
-	eventEffectHook(w, o, 0x40, on)
+	w.hooks.eventEffect(w, o, 0x3F, on)
+	w.hooks.eventEffect(w, o, 0x40, on)
 }
 
 // bcMonsterKilled is FUN_00416ec0.
@@ -808,8 +808,8 @@ func (w *World) bcDropWeapon(c *bcCastle, statue, owner *Object, level int) {
 			}
 			it := item.Item{Index: itemBCWeapon, Level: level, Serial: serial}
 			it.Durability = float32(w.itemMaxDurability(it))
-			if dropMapItemHook != nil {
-				dropMapItemHook(w, mp, x, y, it, ownerIdx)
+			if w.hooks.dropMapItem != nil {
+				w.hooks.dropMapItem(w, mp, x, y, it, ownerIdx)
 			}
 		}
 	})

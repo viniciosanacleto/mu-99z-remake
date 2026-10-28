@@ -17,20 +17,16 @@ import (
 // customattack.go, the auto pick in custompick.go and the hard-coded
 // commands in command_hardcoded.go.
 
-func init() {
-	commandHandlers[54] = (*World).commandGift
-	commandHandlers[55] = (*World).commandMarry
-	commandHandlers[56] = (*World).commandMarryAccept
-	commandHandlers[57] = (*World).commandDivorce
-	commandHandlers[58] = (*World).commandTrackMarry
-	commandHandlers[60] = (*World).commandBuyVip
-	commandHandlers[61] = func(w *World, o *Object, c command, arg string) { w.commandJewelPack(o, c, arg, true) }
-	commandHandlers[62] = func(w *World, o *Object, c command, arg string) { w.commandJewelPack(o, c, arg, false) }
-	for i := 50; i <= 65; i++ {
-		delete(pendingCommands, i)
-	}
-	delete(pendingCommands, 21)
-	startHooks = append(startHooks, loadCustomWorld)
+func registerCommandCustom(h *hooks) {
+	h.commandHandlers[54] = (*World).commandGift
+	h.commandHandlers[55] = (*World).commandMarry
+	h.commandHandlers[56] = (*World).commandMarryAccept
+	h.commandHandlers[57] = (*World).commandDivorce
+	h.commandHandlers[58] = (*World).commandTrackMarry
+	h.commandHandlers[60] = (*World).commandBuyVip
+	h.commandHandlers[61] = func(w *World, o *Object, c command, arg string) { w.commandJewelPack(o, c, arg, true) }
+	h.commandHandlers[62] = func(w *World, o *Object, c command, arg string) { w.commandJewelPack(o, c, arg, false) }
+	h.start = append(h.start, loadCustomWorld)
 }
 
 // customState holds the per-player fields of the commands 21 and 50..65

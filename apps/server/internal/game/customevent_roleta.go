@@ -32,9 +32,8 @@ type roletaEvent struct {
 	shooter int
 }
 
-func init() {
-	commandHandlers[135] = (*World).commandRoletaStart
-	delete(pendingCommands, 135)
+func registerCustomeventRoleta(h *hooks) {
+	h.commandHandlers[135] = (*World).commandRoletaStart
 }
 
 func (e *roletaEvent) has(o *Object) bool {

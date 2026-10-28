@@ -38,8 +38,8 @@ func parseOptions(p []byte) (*store.Options, bool) {
 		WKey: p[16], EKey: p[17], ChatWindow: p[18]}, true
 }
 
-func init() {
-	enterWorldHooks = append(enterWorldHooks, func(w *World, o *Object) {
+func registerOptions(h *hooks) {
+	h.enterWorld = append(h.enterWorld, func(w *World, o *Object) {
 		id := o.P.Char.ID
 		c := o.conn
 		w.async(func(ctx context.Context) func() {
@@ -60,7 +60,7 @@ func init() {
 			}
 		})
 	})
-	f3Handlers[0x30] = func(w *World, o *Object, p []byte) {
+	h.f3Handlers[0x30] = func(w *World, o *Object, p []byte) {
 		opt, ok := parseOptions(p)
 		if !ok || o.P.Char == nil {
 			return

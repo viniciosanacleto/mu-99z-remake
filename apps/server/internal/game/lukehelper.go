@@ -42,15 +42,11 @@ func (w *World) luke() *lukeHelper {
 	return x.luke
 }
 
-func init() {
-	startHooks = append(startHooks, loadLukeHelper)
-	tick1000Hooks = append(tick1000Hooks, (*World).lukeSecond)
-	npcPreTalkHook = (*World).lukeTalk
+func registerLukehelper(h *hooks) {
+	h.start = append(h.start, loadLukeHelper)
+	h.tick1000 = append(h.tick1000, (*World).lukeSecond)
+	h.npcPreTalk = (*World).lukeTalk
 }
-
-// npcPreTalkHook runs after the quest talk and before the NpcTalk lines
-// (FUN_004c2eb0); true ends the talk (npc.go).
-var npcPreTalkHook func(w *World, o, npc *Object) bool
 
 // loadLukeHelper is FUN_00467550 and the start-up part of FUN_004e8a50
 // (state 1, NPC removed, FUN_00467d30).
@@ -237,8 +233,8 @@ func (w *World) lukeTalk(o, npc *Object) bool {
 		if s.Bag != -1 {
 			bag = s.Bag
 		}
-		if itemBagHook != nil {
-			itemBagHook(w, o, bag, -1, o.Map, o.X, o.Y)
+		if w.hooks.itemBag != nil {
+			w.hooks.itemBag(w, o, bag, -1, o.Map, o.X, o.Y)
 		}
 	}
 	return true

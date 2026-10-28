@@ -501,7 +501,7 @@ func (w *World) guildCapacity(master *Object) int {
 	return min(n, guildMaxMembers)
 }
 
-func (w *World) castleBattle() bool { return castleBattleHook != nil && castleBattleHook(w) }
+func (w *World) castleBattle() bool { return w.hooks.castleBattle != nil && w.hooks.castleBattle(w) }
 
 // --- world entry / exit --------------------------------------------------------------
 
@@ -549,29 +549,29 @@ func (w *World) guildLeave(o *Object) {
 	}
 }
 
-func init() {
-	startHooks = append(startHooks, func(w *World) error {
+func registerGuild(h *hooks) {
+	h.start = append(h.start, func(w *World) error {
 		gst, _ := w.store.(store.GuildStore)
 		w.guilds = &guildWorld{wars: map[int]*guildWar{}}
 		return w.guildMgr().load(context.Background(), gst)
 	})
-	enterWorldHooks = append(enterWorldHooks, func(w *World, o *Object) {
+	h.enterWorld = append(h.enterWorld, func(w *World, o *Object) {
 		guildOf(o)
 		w.guildEnter(o)
 	})
-	leaveWorldHooks = append(leaveWorldHooks, func(w *World, o *Object) { w.guildLeave(o) })
-	guildViewportHook = func(w *World, o *Object) { w.guildViewportSend(o) }
-	guildReshowHook = func(w *World, o *Object) {
+	h.leaveWorld = append(h.leaveWorld, func(w *World, o *Object) { w.guildLeave(o) })
+	h.guildViewport = func(w *World, o *Object) { w.guildViewportSend(o) }
+	h.guildReshow = func(w *World, o *Object) {
 		w.showGuild(o)
 		w.showUnion(o)
 	}
-	guildNumberHook = func(w *World, o *Object) uint32 { return uint32(guildNumberOf(o)) }
-	guildChatHook = func(w *World, o *Object, kind int, msg []byte) { w.guildChat(o, kind, msg) }
+	h.guildNumber = func(w *World, o *Object) uint32 { return uint32(guildNumberOf(o)) }
+	h.guildChat = func(w *World, o *Object, kind int, msg []byte) { w.guildChat(o, kind, msg) }
 
-	reg := func(head byte, h func(*World, *Object, []byte)) {
-		worldHandlers[head] = func(w *World, o *Object, p []byte) {
+	reg := func(head byte, handler func(*World, *Object, []byte)) {
+		h.worldHandlers[head] = func(w *World, o *Object, p []byte) {
 			if guildUsable(o) {
-				h(w, o, p)
+				handler(w, o, p)
 			}
 		}
 	}
@@ -597,7 +597,7 @@ func init() {
 	reg(0xEB, (*World).handleUnionKick)
 
 	// NPC 241 (Guild Master): FUN_004c2520 from the NPC talk switch.
-	npcTalkHooks[241] = func(w *World, o, npc *Object) bool {
+	h.npcTalk[241] = func(w *World, o, npc *Object) bool {
 		w.guildMasterTalk(o)
 		return true
 	}
@@ -863,12 +863,8 @@ func (w *World) handleGuildLeave(o *Object, p []byte) {
 	w.guildDelMember(g.Name, name)
 }
 
-// castleOwnerHook reports whether a guild owns the castle (FUN_00429b00,
-// Castle Siege module).
-var castleOwnerHook func(w *World, guild string) bool
-
 func (w *World) castleOwner(guild string) bool {
-	return castleOwnerHook != nil && castleOwnerHook(w, guild)
+	return w.hooks.castleOwner != nil && w.hooks.castleOwner(w, guild)
 }
 
 // guildDelete is DataServer A0 01 and its reply FUN_004817d0: every online

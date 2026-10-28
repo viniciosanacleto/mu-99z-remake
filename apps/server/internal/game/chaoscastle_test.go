@@ -169,9 +169,7 @@ func TestChaosCastleRun(t *testing.T) {
 	// No monster left and one user: CLEAN, a wins.
 	b.ccClearMobs(c)
 	var drops []item.Item
-	old := dropMapItemHook
-	dropMapItemHook = func(w *World, mp, x, y int, it item.Item, owner int) bool { drops = append(drops, it); return true }
-	t.Cleanup(func() { dropMapItemHook = old })
+	b.hooks.dropMapItem = func(w *World, mp, x, y int, it item.Item, owner int) bool { drops = append(drops, it); return true }
 	b.drain(a)
 	tick(time.Second)
 	pk = b.drain(a)
@@ -331,7 +329,7 @@ func TestChaosCastlePushAndKills(t *testing.T) {
 		t.Fatalf("experience %+v want %d", *u, want)
 	}
 	// The PvP / walk rules see START.
-	if chaosCastleStateHook(b.World, 0) != dsStart || chaosCastleStateHook(b.World, 6) != 0 {
+	if b.hooks.chaosCastleState(b.World, 0) != dsStart || b.hooks.chaosCastleState(b.World, 6) != 0 {
 		t.Fatal("state hook")
 	}
 }

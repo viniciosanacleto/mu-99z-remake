@@ -332,8 +332,8 @@ func (w *World) csCrownState(v byte) {
 		if o.State != StatePlaying || o.Class != csClassCrown || o.Mon == nil {
 			continue
 		}
-		if eventEffectHook != nil {
-			eventEffectHook(w, o, csEffCrown, v == 0)
+		if w.hooks.eventEffect != nil {
+			w.hooks.eventEffect(w, o, csEffCrown, v == 0)
 		}
 		w.broadcast(o, packetCSCrownState(v))
 		return
@@ -667,20 +667,20 @@ func (w *World) csHeal(t *Object) {
 	c := t.P.Char
 	if lim := c.MaxLife + float32(t.P.AddLife); c.Life < lim {
 		c.Life = min(c.Life+lim/100, lim)
-		if sendLifeHook != nil {
-			sendLifeHook(w, t)
+		if w.hooks.sendLife != nil {
+			w.hooks.sendLife(w, t)
 		}
 	}
 	if lim := c.MaxMana + float32(t.P.AddMana); c.Mana < lim {
 		c.Mana = min(c.Mana+lim/100, lim)
-		if sendManaHook != nil {
-			sendManaHook(w, t)
+		if w.hooks.sendMana != nil {
+			w.hooks.sendMana(w, t)
 		}
 	}
 	if lim := c.MaxBP + float32(t.P.AddBP); c.BP < lim {
 		c.BP = min(c.BP+float32(int(lim)/100), lim)
-		if sendManaHook != nil {
-			sendManaHook(w, t)
+		if w.hooks.sendMana != nil {
+			w.hooks.sendMana(w, t)
 		}
 	}
 }
@@ -1087,9 +1087,9 @@ func (w *World) csObjectProc() {
 	}
 }
 
-func init() {
-	tick1000Hooks = append(tick1000Hooks, (*World).csObjectProc)
-	tick100Hooks = append(tick100Hooks, func(w *World) {
+func registerCastlesiegeBattle(h *hooks) {
+	h.tick1000 = append(h.tick1000, (*World).csObjectProc)
+	h.tick100 = append(h.tick100, func(w *World) {
 		if w.cs() != nil {
 			w.csWeaponProc()
 		}

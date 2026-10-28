@@ -77,13 +77,9 @@ func (p *Proxy) Serve(ctx context.Context, ln net.Listener, kind Kind, upstream 
 			if ctx.Err() != nil {
 				return nil
 			}
-			return err
+			return fmt.Errorf("accepting: %w", err)
 		}
-		p.sessions.Add(1)
-		go func() {
-			defer p.sessions.Done()
-			p.handle(ctx, c, kind, upstream)
-		}()
+		p.sessions.Go(func() { p.handle(ctx, c, kind, upstream) })
 	}
 }
 
@@ -115,11 +111,11 @@ func (p *Proxy) route(upstream string) (host string, port int, err error) {
 		if ctx == nil {
 			ctx = context.Background()
 		}
-		p.wg.Add(1)
-		go func() {
-			defer p.wg.Done()
-			p.Serve(ctx, ln, Game, upstream)
-		}()
+		p.wg.Go(func() {
+			if err := p.Serve(ctx, ln, Game, upstream); err != nil {
+				p.logf("route %s -> %s: %v", ln.Addr(), upstream, err)
+			}
+		})
 		p.logf("route %s -> %s", ln.Addr(), upstream)
 	}
 	a := ln.Addr().(*net.TCPAddr)

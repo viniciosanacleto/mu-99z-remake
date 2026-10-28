@@ -1,35 +1,7 @@
 package game
 
-import "github.com/viniciosanacleto/mu-remake/apps/server/internal/game/item"
-
 // Wiring of the castle module: client heads, NPC talks and the hooks the
 // other modules call (the castle rules of their original functions).
-
-var (
-	// gate97Hook decides gate 0x61 (the crown room) in gObjMoveGate
-	// (FUN_0050f6d0); teleport.go calls it.
-	gate97Hook func(w *World, o *Object) bool
-	// castleAttackHook is the map 30 test at the start of FUN_0040b110
-	// (pvp.go attackFull).
-	castleAttackHook func(w *World, a, t *Object) bool
-	// castlePvPHook is the map 30 branch of FUN_0040dca0 (pvp.go).
-	castlePvPHook func(w *World, a, t *Object) (allowed, decided bool)
-	// castleDamageRateHook is the CastleSiegeDamageRate1/2 branch of the
-	// PvP damage (pvp.go).
-	castleDamageRateHook func(w *World, a, t *Object) (rate int, ok bool)
-	// castleRespawnHook is the map 30 branch of FUN_004c53c0 (combat.go
-	// respawnPlayer): a gate, or (gate -1) a fixed cell.
-	castleRespawnHook func(w *World, o *Object) (gate, mp, x, y int, ok bool)
-	// monsterEntryHook adjusts a C2 13 entry (FUN_00515510: life stone
-	// flags, crown and gate effects); monster.go calls it.
-	monsterEntryHook func(w *World, viewer, t *Object, entry []byte)
-	// castleDropHook intercepts the castle scrolls of the item drop
-	// FUN_004988f0 (drop.go dropSpecialItem).
-	castleDropHook func(w *World, o *Object, it item.Item, x, y int) (handled, ok bool)
-	// monsterSearchHook replaces the enemy search of special monsters
-	// (FUN_004b4090 -> FUN_004b2ec0 for mercenaries; monster_ai.go).
-	monsterSearchHook func(w *World, o *Object) bool
-)
 
 // handleCSPacket is the B2 sub dispatch of ProtocolCore.
 func (w *World) handleCSPacket(o *Object, p []byte) {
@@ -107,29 +79,29 @@ func (w *World) csMonsterEntry(viewer, t *Object, e []byte) {
 		}
 		e[2] = flags
 	case csClassCrown:
-		if c := w.cs(); c != nil && eventEffectHook != nil {
+		if c := w.cs(); c != nil && w.hooks.eventEffect != nil {
 			if c.crownOpen != hasEffectIndex(t, csEffCrown) {
-				eventEffectHook(w, t, csEffCrown, c.crownOpen)
+				w.hooks.eventEffect(w, t, csEffCrown, c.crownOpen)
 				u32le(e[4:], t.ViewSkillState)
 			}
 		}
 	case csClassGate:
-		if t.CS != nil && eventEffectHook != nil {
+		if t.CS != nil && w.hooks.eventEffect != nil {
 			open := t.CS.GateOpen != 0
 			if open != hasEffectIndex(t, csEffGateOpen) {
-				eventEffectHook(w, t, csEffGateOpen, open)
+				w.hooks.eventEffect(w, t, csEffGateOpen, open)
 				u32le(e[4:], t.ViewSkillState)
 			}
 		}
 	}
 }
 
-func init() {
-	worldHandlers[0xB2] = (*World).handleCSPacket
-	worldHandlers[0xB3] = (*World).handleCSNPCList
-	worldHandlers[0xB4] = (*World).handleCSRegList
-	worldHandlers[0xB5] = (*World).handleCSSiegeList
-	worldHandlers[0xB7] = func(w *World, o *Object, p []byte) {
+func registerCastlesiegeHooks(h *hooks) {
+	h.worldHandlers[0xB2] = (*World).handleCSPacket
+	h.worldHandlers[0xB3] = (*World).handleCSNPCList
+	h.worldHandlers[0xB4] = (*World).handleCSRegList
+	h.worldHandlers[0xB5] = (*World).handleCSSiegeList
+	h.worldHandlers[0xB7] = func(w *World, o *Object, p []byte) {
 		if len(p) < 4 {
 			return
 		}
@@ -140,7 +112,7 @@ func init() {
 			w.handleCSWeaponHit(o, p)
 		}
 	}
-	worldHandlers[0xB9] = func(w *World, o *Object, p []byte) {
+	h.worldHandlers[0xB9] = func(w *World, o *Object, p []byte) {
 		if len(p) < 4 {
 			return
 		}
@@ -161,22 +133,22 @@ func init() {
 			return true
 		}
 	}
-	npcTalkHooks[csClassCrown] = csTalk((*World).csCrownTalk)
-	npcTalkHooks[csClassSwitch1] = csTalk((*World).csSwitchTalk)
-	npcTalkHooks[csClassSwitch2] = csTalk((*World).csSwitchTalk)
-	npcTalkHooks[csClassLever] = csTalk((*World).csLeverTalk)
-	npcTalkHooks[csClassKeeper] = csTalk(func(w *World, o, _ *Object) { w.csKeeperTalk(o) })
-	npcTalkHooks[csClassSlingA] = func(w *World, o, npc *Object) bool { w.csSlingTalk(o, npc); return true }
-	npcTalkHooks[csClassSlingD] = func(w *World, o, npc *Object) bool { w.csSlingTalk(o, npc); return true }
-	npcTalkHooks[csClassSenior] = func(w *World, o, npc *Object) bool {
+	h.npcTalk[csClassCrown] = csTalk((*World).csCrownTalk)
+	h.npcTalk[csClassSwitch1] = csTalk((*World).csSwitchTalk)
+	h.npcTalk[csClassSwitch2] = csTalk((*World).csSwitchTalk)
+	h.npcTalk[csClassLever] = csTalk((*World).csLeverTalk)
+	h.npcTalk[csClassKeeper] = csTalk(func(w *World, o, _ *Object) { w.csKeeperTalk(o) })
+	h.npcTalk[csClassSlingA] = func(w *World, o, npc *Object) bool { w.csSlingTalk(o, npc); return true }
+	h.npcTalk[csClassSlingD] = func(w *World, o, npc *Object) bool { w.csSlingTalk(o, npc); return true }
+	h.npcTalk[csClassSenior] = func(w *World, o, npc *Object) bool {
 		if !pshopOpen(o) { // obj+0x2468: personal shop open
 			w.csSeniorTalk(o)
 		}
 		return true
 	}
-	npcTalkHooks[csClassGuard] = func(w *World, o, npc *Object) bool { w.csGuardTalk(o, npc); return true }
+	h.npcTalk[csClassGuard] = func(w *World, o, npc *Object) bool { w.csGuardTalk(o, npc); return true }
 
-	deathHooks = append(deathHooks, func(w *World, killer, victim *Object) {
+	h.death = append(h.death, func(w *World, killer, victim *Object) {
 		if w.cs() == nil || victim.Mon == nil || victim.CS == nil {
 			return
 		}
@@ -191,18 +163,18 @@ func init() {
 		}
 	})
 
-	castleBattleHook = func(w *World) bool { return w.csBattleOn() }
-	castleOwnerHook = func(w *World, guild string) bool {
+	h.castleBattle = func(w *World) bool { return w.csBattleOn() }
+	h.castleOwner = func(w *World, guild string) bool {
 		_, _, _, owner := w.csSyncValues()
 		return guild != "" && guild == owner
 	}
-	gate97Hook = (*World).csGate97
-	castleAttackHook = (*World).csAttackAllowed
-	castlePvPHook = (*World).csPvP
-	castleDamageRateHook = (*World).csDamageRate
-	castleRespawnHook = (*World).csRespawn
-	monsterEntryHook = (*World).csMonsterEntry
-	castleDropHook = (*World).csDropItem
-	monsterSearchHook = func(w *World, o *Object) bool { return w.cs() != nil && w.csMercenarySearch(o) }
-	pkExemptHooks = append(pkExemptHooks, (*World).csPKExempt)
+	h.gate97 = (*World).csGate97
+	h.castleAttack = (*World).csAttackAllowed
+	h.castlePvP = (*World).csPvP
+	h.castleDamageRate = (*World).csDamageRate
+	h.castleRespawn = (*World).csRespawn
+	h.monsterEntry = (*World).csMonsterEntry
+	h.castleDrop = (*World).csDropItem
+	h.monsterSearch = func(w *World, o *Object) bool { return w.cs() != nil && w.csMercenarySearch(o) }
+	h.pkExempt = append(h.pkExempt, (*World).csPKExempt)
 }

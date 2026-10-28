@@ -10,7 +10,7 @@ import (
 // onWorld runs f on the world goroutine and waits for it.
 func (e *testEnv) onWorld(f func()) {
 	done := make(chan struct{})
-	e.world.events <- func() { f(); close(done) } // not post: it reads w.ctx, set by Serve
+	e.world.post(func() { f(); close(done) })
 	<-done
 }
 

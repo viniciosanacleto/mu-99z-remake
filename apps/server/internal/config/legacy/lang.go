@@ -7,8 +7,6 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
-func init() { register("lang", langGroup) }
-
 // langGroup converts Data/Lang/<Eng|Por|Spn>/Message.txt and Notice.txt.
 func langGroup(dataDir string) ([]byte, error) {
 	var c gamedata.LangConfig

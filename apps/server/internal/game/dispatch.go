@@ -41,7 +41,7 @@ func (w *World) handlePacket(c *conn, pkt gscodec.Packet) {
 			w.handleMoveAuth(o, p)
 			return
 		}
-		if h := worldHandlers[head]; h != nil && o.State == StatePlaying {
+		if h := w.hooks.worldHandlers[head]; h != nil && o.State == StatePlaying {
 			h(w, o, p)
 		}
 	case 0xF3:
@@ -60,37 +60,16 @@ func (w *World) handlePacket(c *conn, pkt gscodec.Packet) {
 		case 0x09:
 			w.handleVerify(o, p)
 		default:
-			if h := f3Handlers[sub]; h != nil && o.State == StatePlaying {
+			if h := w.hooks.f3Handlers[sub]; h != nil && o.State == StatePlaying {
 				h(w, o, p)
 			}
 		}
 	default:
-		if h := worldHandlers[head]; h != nil && o.State == StatePlaying {
-			if packetBlockHook != nil && packetBlockHook(w, o, head) {
+		if h := w.hooks.worldHandlers[head]; h != nil && o.State == StatePlaying {
+			if w.hooks.packetBlock != nil && w.hooks.packetBlock(w, o, head) {
 				return
 			}
 			h(w, o, p)
 		}
 	}
 }
-
-// packetBlockHook refuses an in-game head before its handler (the
-// Custom event checks of 36, 40 and AA in FUN_004d6690;
-// customevent.go).
-var packetBlockHook func(w *World, o *Object, head byte) bool
-
-// worldHandlers maps in-game heads to handlers; gameplay files register
-// themselves in init functions.
-var worldHandlers = map[byte]func(*World, *Object, []byte){}
-
-// faHandlers and fbHandlers map the sub-codes of the custom heads FA
-// and FB (FUN_004d6690: FA only for C1 packets longer than 3 bytes, the
-// sub-code at [3]); xshop.go registers the head handlers.
-var (
-	faHandlers = map[byte]func(*World, *Object, []byte){}
-	fbHandlers = map[byte]func(*World, *Object, []byte){}
-)
-
-// f3Handlers maps F3 sub-codes (other than 00-03 and 09) to in-game
-// handlers; modules register them in init functions.
-var f3Handlers = map[byte]func(*World, *Object, []byte){}

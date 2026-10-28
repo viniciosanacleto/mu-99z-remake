@@ -411,15 +411,13 @@ func (w *World) warTick() {
 	w.guilds.clears = keep
 }
 
-func init() {
-	commandHandlers[1] = func(w *World, o *Object, c command, arg string) { w.commandGuildWar(0)(w, o, c, arg) }
-	commandHandlers[2] = func(w *World, o *Object, c command, arg string) { w.commandGuildWar(1)(w, o, c, arg) }
-	delete(pendingCommands, 1)
-	delete(pendingCommands, 2)
-	tick1000Hooks = append(tick1000Hooks, (*World).warTick)
-	guildWarKillHook = func(w *World, killer, victim *Object) bool { return w.guildWarKill(killer, victim) }
-	guildWarHook = func(w *World, a, b *Object) bool { return w.atWar(a, b) }
-	pkExemptHooks = append(pkExemptHooks, func(w *World, killer, victim *Object) bool {
+func registerGuildWar(h *hooks) {
+	h.commandHandlers[1] = func(w *World, o *Object, c command, arg string) { w.commandGuildWar(0)(w, o, c, arg) }
+	h.commandHandlers[2] = func(w *World, o *Object, c command, arg string) { w.commandGuildWar(1)(w, o, c, arg) }
+	h.tick1000 = append(h.tick1000, (*World).warTick)
+	h.guildWarKill = func(w *World, killer, victim *Object) bool { return w.guildWarKill(killer, victim) }
+	h.guildWar = func(w *World, a, b *Object) bool { return w.atWar(a, b) }
+	h.pkExempt = append(h.pkExempt, func(w *World, killer, victim *Object) bool {
 		// FUN_0050f330: no PK for rival guilds (FUN_00486c20 == 2) or a war.
 		kn, vn := guildNumberOf(killer), guildNumberOf(victim)
 		if kn != 0 && vn != 0 && w.guildMgr().relation(kn, vn) == 2 {

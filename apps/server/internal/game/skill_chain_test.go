@@ -41,7 +41,7 @@ func chainWorld(t *testing.T) (*bareWorld, *Object, [4]*Object) {
 	for _, i := range []int{3, 0, 1, 2} {
 		b.see(p, m[i])
 	}
-	stubStats(t, func(o *Object) CombatStats {
+	stubStats(b, func(o *Object) CombatStats {
 		if o.Type == TypePlayer {
 			return CombatStats{MagicDamageMin: 1000, MagicDamageMax: 1000, AttackSuccessRate: 100}
 		}

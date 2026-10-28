@@ -30,13 +30,13 @@ type pickState struct {
 	Loaded                 bool
 }
 
-func init() {
-	commandHandlers[63] = (*World).commandPick
-	commandHandlers[64] = (*World).commandPickSet
-	commandHandlers[65] = (*World).commandPickClear
-	tick100Hooks = append(tick100Hooks, (*World).pickTick)
-	enterWorldHooks = append(enterWorldHooks, func(w *World, o *Object) { w.loadPick(o) })
-	characterSaveHooks = append(characterSaveHooks, func(w *World, o *Object, _ *store.Character) { w.savePick(o) })
+func registerCustompick(h *hooks) {
+	h.commandHandlers[63] = (*World).commandPick
+	h.commandHandlers[64] = (*World).commandPickSet
+	h.commandHandlers[65] = (*World).commandPickClear
+	h.tick100 = append(h.tick100, (*World).pickTick)
+	h.enterWorld = append(h.enterWorld, func(w *World, o *Object) { w.loadPick(o) })
+	h.characterSave = append(h.characterSave, func(w *World, o *Object, _ *store.Character) { w.savePick(o) })
 }
 
 func pickOf(o *Object) *pickState { return &custom(o).Pick }

@@ -7,6 +7,7 @@ import (
 	"net"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"testing"
 	"time"
 
@@ -59,12 +60,13 @@ func newTestEnv(t *testing.T) *testEnv {
 	done := make(chan error, 1)
 	go func() { done <- w.Serve(ctx, ln) }()
 	env := &testEnv{world: w, store: mem, auth: a, addr: ln.Addr().String()}
-	env.stop = func() {
+	// stop may run from the test body and again from t.Cleanup.
+	env.stop = sync.OnceFunc(func() {
 		cancel()
 		if err := <-done; err != nil {
 			t.Errorf("Serve: %v", err)
 		}
-	}
+	})
 	t.Cleanup(env.stop)
 	return env
 }

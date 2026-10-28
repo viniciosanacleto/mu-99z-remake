@@ -114,10 +114,7 @@ func run(ctx context.Context, args []string, log *slog.Logger, ready chan<- Read
 	if err != nil {
 		return err
 	}
-	ccfg := connect.ConfigFrom(srv.ConnectServer)
-	ccfg.BlackList = blackList(cfg, ccfg.BlackList)
 	if cfg.maxConnPerIP >= 0 {
-		ccfg.MaxPerIP = cfg.maxConnPerIP
 		srv.JoinServer.MaxConnectionPerIP = cfg.maxConnPerIP
 	}
 	if cfg.seedLoad > 0 {
@@ -137,70 +134,151 @@ func run(ctx context.Context, args []string, log *slog.Logger, ready chan<- Read
 	}
 	reg := connect.NewRegistry(entries)
 	reg.SetAuthStatus(true, 0)
+	m := &modules{
+		cfg:   cfg,
+		srv:   srv,
+		store: st,
+		auth: auth.New(st, auth.Config{
+			MaxConnectionPerIP:  srv.JoinServer.MaxConnectionPerIP,
+			MaxConnectionPerHID: srv.JoinServer.MaxConnectionPerHID,
+			Log:                 log.With("module", "auth"),
+		}),
+		reg:     reg,
+		servers: len(entries),
+		users:   newUserCounter(reg),
+		hub:     game.NewHub(),
+		log:     log,
+	}
 
-	authSvc := auth.New(st, auth.Config{
-		MaxConnectionPerIP:  srv.JoinServer.MaxConnectionPerIP,
-		MaxConnectionPerHID: srv.JoinServer.MaxConnectionPerHID,
-	})
-
-	rd := Ready{Games: map[int]string{}}
-	users := newUserCounter(reg)
-	hub := game.NewHub()
+	// Cancelled on a start-up failure too, so the modules already serving
+	// stop before the deferred st.Close.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	g, gctx := errgroup.WithContext(ctx)
-	if cfg.metricsAddr != "" {
-		mln, err := net.Listen("tcp", cfg.metricsAddr)
-		if err != nil {
-			return err
-		}
-		rd.Metrics = mln.Addr().String()
-		log.Info("metrics listening", "addr", rd.Metrics)
-		g.Go(func() error { return serveMetrics(gctx, mln, users) })
-	}
-	for _, inst := range strings.Split(cfg.instances, ",") {
-		inst = strings.TrimSpace(inst)
-		if inst == "" {
-			continue
-		}
-		gcfg, err := gsconfig.Load(filepath.Join(cfg.configDir, "gameserver", inst+".toml"))
-		if err != nil {
-			return err
-		}
-		if cfg.maxConnPerIP >= 0 {
-			gcfg.MaxConnectionPerIP = cfg.maxConnPerIP
-		}
-		if cfg.maxUsers > 0 {
-			gcfg.MaxUsers = min(cfg.maxUsers, 1000)
-		}
-		w, err := game.New(game.Options{DataDir: filepath.Join(cfg.dataDir, "Data"), ConfigDir: cfg.configDir, Config: gcfg,
-			Store: st, Auth: authSvc, Reporter: users, Log: log.With("module", "game"), PublicIP: cfg.publicIP, Hub: hub,
-			BadSyntax: srv.DataServer.BadSyntax})
-		if err != nil {
-			return fmt.Errorf("%s: %w", inst, err)
-		}
-		ln, err := net.Listen("tcp", net.JoinHostPort(cfg.bindHost, fmt.Sprint(gcfg.ServerPort)))
-		if err != nil {
-			return err
-		}
-		rd.Games[gcfg.ServerCode] = ln.Addr().String()
-		log.Info("game server listening", "name", gcfg.ServerName, "code", gcfg.ServerCode, "addr", ln.Addr().String())
-		g.Go(func() error { return w.Serve(gctx, ln) })
-	}
-
-	addr := cfg.connectAddr
-	if addr == "" {
-		addr = net.JoinHostPort(cfg.bindHost, fmt.Sprint(ccfg.Port))
-	}
-	cln, err := net.Listen("tcp", addr)
+	rd, err := m.start(gctx, g)
 	if err != nil {
-		return err
+		cancel()
+		return errors.Join(err, g.Wait())
 	}
-	rd.Connect = cln.Addr().String()
-	log.Info("connect server listening", "addr", rd.Connect, "servers", len(entries))
-	g.Go(func() error { return connect.NewServer(ccfg, reg, log.With("module", "connect")).Serve(gctx, cln) })
 	if ready != nil {
 		ready <- rd
 	}
 	return g.Wait()
+}
+
+// modules is what the listeners of one muserver process share.
+type modules struct {
+	cfg   *config
+	srv   *servercfg.File
+	store store.Store
+	auth  *auth.Service
+	reg   *connect.Registry
+	// servers is the number of ServerList entries in reg.
+	servers int
+	users   *userCounter
+	hub     *game.Hub
+	log     *slog.Logger
+}
+
+// start opens every listener and serves each one in g. On error, the
+// modules already started are left to the caller to stop through ctx.
+func (m *modules) start(ctx context.Context, g *errgroup.Group) (Ready, error) {
+	rd := Ready{Games: map[int]string{}}
+	if m.cfg.metricsAddr != "" {
+		ln, err := listen(m.cfg.metricsAddr)
+		if err != nil {
+			return rd, err
+		}
+		rd.Metrics = ln.Addr().String()
+		m.log.Info("metrics listening", "addr", rd.Metrics)
+		g.Go(func() error { return serveMetrics(ctx, ln, m.users) })
+	}
+	for _, inst := range strings.Split(m.cfg.instances, ",") {
+		inst = strings.TrimSpace(inst)
+		if inst == "" {
+			continue
+		}
+		code, addr, err := m.startGameServer(ctx, g, inst)
+		if err != nil {
+			return rd, fmt.Errorf("game server %s: %w", inst, err)
+		}
+		rd.Games[code] = addr
+	}
+	addr, err := m.startConnectServer(ctx, g)
+	if err != nil {
+		return rd, fmt.Errorf("connect server: %w", err)
+	}
+	rd.Connect = addr
+	return rd, nil
+}
+
+// startGameServer builds the game instance configured in
+// <config>/gameserver/<inst>.toml and serves it in g.
+func (m *modules) startGameServer(ctx context.Context, g *errgroup.Group, inst string) (code int, addr string, err error) {
+	gcfg, err := gsconfig.Load(filepath.Join(m.cfg.configDir, "gameserver", inst+".toml"))
+	if err != nil {
+		return 0, "", err
+	}
+	if m.cfg.maxConnPerIP >= 0 {
+		gcfg.MaxConnectionPerIP = m.cfg.maxConnPerIP
+	}
+	if m.cfg.maxUsers > 0 {
+		gcfg.MaxUsers = min(m.cfg.maxUsers, 1000)
+	}
+	w, err := game.New(game.Options{
+		DataDir:   filepath.Join(m.cfg.dataDir, "Data"),
+		ConfigDir: m.cfg.configDir,
+		Config:    gcfg,
+		Store:     m.store,
+		Auth:      m.auth,
+		Reporter:  m.users,
+		Log:       m.log.With("module", "game"),
+		PublicIP:  m.cfg.publicIP,
+		Hub:       m.hub,
+		BadSyntax: m.srv.DataServer.BadSyntax,
+	})
+	if err != nil {
+		return 0, "", err
+	}
+	ln, err := listen(net.JoinHostPort(m.cfg.bindHost, strconv.Itoa(gcfg.ServerPort)))
+	if err != nil {
+		return 0, "", err
+	}
+	addr = ln.Addr().String()
+	m.log.Info("game server listening", "name", gcfg.ServerName, "code", gcfg.ServerCode, "addr", addr)
+	g.Go(func() error { return w.Serve(ctx, ln) })
+	return gcfg.ServerCode, addr, nil
+}
+
+// startConnectServer serves the ConnectServer in g.
+func (m *modules) startConnectServer(ctx context.Context, g *errgroup.Group) (string, error) {
+	ccfg := connect.ConfigFrom(m.srv.ConnectServer)
+	ccfg.BlackList = blackList(m.cfg, ccfg.BlackList)
+	if m.cfg.maxConnPerIP >= 0 {
+		ccfg.MaxPerIP = m.cfg.maxConnPerIP
+	}
+	addr := m.cfg.connectAddr
+	if addr == "" {
+		addr = net.JoinHostPort(m.cfg.bindHost, strconv.Itoa(ccfg.Port))
+	}
+	ln, err := listen(addr)
+	if err != nil {
+		return "", err
+	}
+	addr = ln.Addr().String()
+	m.log.Info("connect server listening", "addr", addr, "servers", m.servers)
+	srv := connect.NewServer(ccfg, m.reg, m.log.With("module", "connect"))
+	g.Go(func() error { return srv.Serve(ctx, ln) })
+	return addr, nil
+}
+
+// listen opens a TCP listener on addr.
+func listen(addr string) (net.Listener, error) {
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return nil, fmt.Errorf("listening on %s: %w", addr, err)
+	}
+	return ln, nil
 }
 
 // blackList applies the -blacklist flag to the configured list.

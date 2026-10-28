@@ -195,13 +195,11 @@ func TestMonsterChasesThroughSetPath(t *testing.T) {
 	m := b.monsterNear(0, p, 5)
 	b.see(p, m)
 	var gotDirs []byte
-	old := setPathHook
-	setPathHook = func(w *World, o *Object, sx, sy int, dirs []byte) {
+	b.hooks.setPath = func(w *World, o *Object, sx, sy int, dirs []byte) {
 		if o == m {
 			gotDirs = dirs
 		}
 	}
-	t.Cleanup(func() { setPathHook = old })
 	fixRand(t, 0)
 	m.Mon.Target, m.Mon.Emotion, m.Mon.EmotionCount = p.Index, emotionAttack, 30
 	m.Mon.Delay = 0

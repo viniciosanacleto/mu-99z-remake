@@ -502,20 +502,20 @@ func TestCashHeadRouting(t *testing.T) {
 	b := newBareWorld(t)
 	o := b.player(PlayerStart, "Router", 0, 130, 130)
 	// FA: C1 only and the exact size of each sub-code (FUN_004d6690).
-	worldHandlers[0xFA](b.World, o, []byte{0xC1, 7, 0xFA, 0x08, 0, 0, 0})
-	worldHandlers[0xFA](b.World, o, []byte{0xC2, 0, 6, 0xFA, 0x08, 0})
+	b.hooks.worldHandlers[0xFA](b.World, o, []byte{0xC1, 7, 0xFA, 0x08, 0, 0, 0})
+	b.hooks.worldHandlers[0xFA](b.World, o, []byte{0xC2, 0, 6, 0xFA, 0x08, 0})
 	if len(b.drain(o)) != 0 {
 		t.Fatal("wrong size or kind answered")
 	}
-	worldHandlers[0xFA](b.World, o, []byte{0xC1, 6, 0xFA, 0x08, 0, 0})
+	b.hooks.worldHandlers[0xFA](b.World, o, []byte{0xC1, 6, 0xFA, 0x08, 0, 0})
 	if find(b.drain(o), 0xFA, 0x09) == nil {
 		t.Fatal("FA 08 not routed")
 	}
-	worldHandlers[0xFB](b.World, o, []byte{0xC1, 4, 0xFB, 0x16})
+	b.hooks.worldHandlers[0xFB](b.World, o, []byte{0xC1, 4, 0xFB, 0x16})
 	if len(cash(o).Spins) != 1 {
 		t.Fatal("FB 16 not routed")
 	}
-	if f3Handlers[0xF5] == nil || f3Handlers[0xF6] == nil {
+	if b.hooks.f3Handlers[0xF5] == nil || b.hooks.f3Handlers[0xF6] == nil {
 		t.Fatal("jewel bank handlers")
 	}
 }

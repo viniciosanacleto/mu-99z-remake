@@ -84,8 +84,8 @@ func (w *World) csGateBlock(x, y int, open bool) {
 // csSetGate opens (effect 13, no block) or closes a gate.
 func (w *World) csSetGate(o *Object, open bool) {
 	w.csGateBlock(o.X, o.Y, open)
-	if eventEffectHook != nil {
-		eventEffectHook(w, o, csEffGateOpen, open)
+	if w.hooks.eventEffect != nil {
+		w.hooks.eventEffect(w, o, csEffGateOpen, open)
 	}
 	if open {
 		csOf(o).GateOpen = 1
@@ -854,8 +854,8 @@ func (w *World) handleCSGateOperate(o *Object, p []byte) {
 			// (FUN_00515510) re-syncs it with obj+0x975.
 			g := w.objects[gi]
 			w.csGateBlock(g.X, g.Y, op != 0)
-			if eventEffectHook != nil {
-				eventEffectHook(w, g, csEffGateOpen, true)
+			if w.hooks.eventEffect != nil {
+				w.hooks.eventEffect(w, g, csEffGateOpen, true)
 			}
 			csOf(g).GateOpen = op
 			w.send(o, packetCSGateOperate(1, op, gi))

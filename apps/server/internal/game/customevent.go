@@ -32,31 +32,18 @@ import (
 //   - the 1-second player proc FUN_0050e280 sends home (obj+0x24f9) and
 //     restores the PK level (obj+0x24f8) of players that left an event.
 
-func init() {
-	startHooks = append(startHooks, loadCustomEvents)
-	tick1000Hooks = append(tick1000Hooks, (*World).customEventSecond)
-	commandEventHook = (*World).customEventCommand
-	customEventAttackHook = (*World).customEventAttack
-	packetBlockHook = (*World).customEventPacketBlock
-	tradeRequestHook = (*World).customEventTrade
-	commandEventBlockHook = func(w *World, o *Object) bool { return w.inCustomEvent(o) }
-	deathHooks = append(deathHooks, (*World).customEventDeath)
-	beforeGateMoveHooks = append(beforeGateMoveHooks, (*World).customEventLeave)
-	leaveWorldHooks = append(leaveWorldHooks, (*World).customEventLeave)
+func registerCustomevent(h *hooks) {
+	h.start = append(h.start, loadCustomEvents)
+	h.tick1000 = append(h.tick1000, (*World).customEventSecond)
+	h.commandEvent = (*World).customEventCommand
+	h.customEventAttack = (*World).customEventAttack
+	h.packetBlock = (*World).customEventPacketBlock
+	h.tradeRequest = (*World).customEventTrade
+	h.commandEventBlock = func(w *World, o *Object) bool { return w.inCustomEvent(o) }
+	h.death = append(h.death, (*World).customEventDeath)
+	h.beforeGateMove = append(h.beforeGateMove, (*World).customEventLeave)
+	h.leaveWorld = append(h.leaveWorld, (*World).customEventLeave)
 }
-
-// Hooks owned by this file and called from shared code.
-var (
-	// commandEventHook runs before the commands of FUN_00435400 (name is
-	// the first word); true stops the line.
-	commandEventHook func(w *World, o *Object, name string) bool
-	// customEventAttackHook is false when an event forbids the attack
-	// (pvp.go attackFull).
-	customEventAttackHook func(w *World, a, t *Object) bool
-	// tradeRequestHook is true when the trade request was consumed or
-	// refused (trade.go handleTradeRequest).
-	tradeRequestHook func(w *World, o, t *Object) bool
-)
 
 // customEvents holds the custom events of an instance.
 type customEvents struct {
@@ -226,8 +213,8 @@ func (w *World) eventMurderer(o *Object) {
 
 // eventBag is CItemBagManager::DropItem (FUN_00491430) at the player.
 func (w *World) eventBag(o *Object, bag, index int) {
-	if itemBagHook != nil {
-		itemBagHook(w, o, bag, index, o.Map, o.X, o.Y)
+	if w.hooks.itemBag != nil {
+		w.hooks.itemBag(w, o, bag, index, o.Map, o.X, o.Y)
 	}
 }
 
@@ -566,9 +553,7 @@ func (w *World) commandPatente(o *Object, c command, arg string) {
 	w.setPatente(t, v)
 }
 
-func init() {
-	commandHandlers[130] = (*World).commandHideSeek
-	commandHandlers[134] = (*World).commandPatente
-	delete(pendingCommands, 130)
-	delete(pendingCommands, 134)
+func registerHideSeekCommands(h *hooks) {
+	h.commandHandlers[130] = (*World).commandHideSeek
+	h.commandHandlers[134] = (*World).commandPatente
 }

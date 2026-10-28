@@ -4,10 +4,6 @@ import "github.com/viniciosanacleto/mu-remake/apps/server/internal/protocol/fram
 
 // NPC talk: 30 (FUN_004c2eb0) and the window close 31 (FUN_004c3170).
 
-// npcCloseHook runs for 31 (close the NPC window): the module that opened
-// the window (shop, warehouse, chaos box...) resets its interface state.
-var npcCloseHook func(w *World, o *Object)
-
 // packetObjectChat is C1 size 01 idxHi idxLo text\0 (FUN_004d9c60): an
 // object (NPC) speaks; the text is cut at 59 bytes.
 func packetObjectChat(index int, text string) []byte {
@@ -46,7 +42,7 @@ func (w *World) handleNpcTalk(o *Object, p []byte) {
 func (w *World) npcTalk(o, npc *Object) bool {
 	// CMonsterSchedule (FUN_004bb8d0, monsterschedule.go) is checked first
 	// by FUN_004c2eb0: an NPC of a closed group answers NotTimeMessage.
-	if npcScheduleHook != nil && npcScheduleHook(w, o, npc) {
+	if w.hooks.npcSchedule != nil && w.hooks.npcSchedule(w, o, npc) {
 		return true
 	}
 	// BridgeFunction_OnNpcTalk(npc, user) (FUN_004e6f10, lua.go) follows;
@@ -56,10 +52,10 @@ func (w *World) npcTalk(o, npc *Object) bool {
 	}
 	// CQuest NPC talk (FUN_004dd850) runs first and ends the talk when it
 	// opens the quest window.
-	if questTalkHook != nil && questTalkHook(w, o, npc) {
+	if w.hooks.questTalk != nil && w.hooks.questTalk(w, o, npc) {
 		return true
 	}
-	if npcPreTalkHook != nil && npcPreTalkHook(w, o, npc) { // Luke Helper (lukehelper.go)
+	if w.hooks.npcPreTalk != nil && w.hooks.npcPreTalk(w, o, npc) { // Luke Helper (lukehelper.go)
 		return true
 	}
 	for _, e := range w.mw().talk {
@@ -69,10 +65,10 @@ func (w *World) npcTalk(o, npc *Object) bool {
 			break
 		}
 	}
-	if npcCommandHook != nil && npcCommandHook(w, o, npc) { // CustomNPCCommand (custom_world.go)
+	if w.hooks.npcCommand != nil && w.hooks.npcCommand(w, o, npc) { // CustomNPCCommand (custom_world.go)
 		return true
 	}
-	if h := npcTalkHooks[npc.Class]; h != nil {
+	if h := w.hooks.npcTalk[npc.Class]; h != nil {
 		return h(w, o, npc)
 	}
 	return false
@@ -83,12 +79,12 @@ func (w *World) handleNpcClose(o *Object, p []byte) {
 	if o.State != StatePlaying || !o.IsPlayer() || o.P.LogoutCountdown > 0 || o.P.Moving {
 		return
 	}
-	if npcCloseHook != nil {
-		npcCloseHook(w, o)
+	if w.hooks.npcClose != nil {
+		w.hooks.npcClose(w, o)
 	}
 }
 
-func init() {
-	worldHandlers[0x30] = (*World).handleNpcTalk
-	worldHandlers[0x31] = (*World).handleNpcClose
+func registerNpc(h *hooks) {
+	h.worldHandlers[0x30] = (*World).handleNpcTalk
+	h.worldHandlers[0x31] = (*World).handleNpcClose
 }

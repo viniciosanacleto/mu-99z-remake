@@ -24,9 +24,8 @@ type sobreEvent struct {
 	list    []int // object indexes in join order
 }
 
-func init() {
-	commandHandlers[131] = (*World).commandSobreStart
-	delete(pendingCommands, 131)
+func registerCustomeventSobre(h *hooks) {
+	h.commandHandlers[131] = (*World).commandSobreStart
 }
 
 func (e *sobreEvent) has(o *Object) bool {

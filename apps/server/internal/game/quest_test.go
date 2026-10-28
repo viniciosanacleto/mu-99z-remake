@@ -172,9 +172,7 @@ func TestQuestItemDrop(t *testing.T) {
 	m.Mon.Level = 50
 	m.Mon.Hits[0] = damageEntry{Index: o.Index, Damage: 10, Time: b.now()}
 	var dropped item.Item
-	old := dropMapItemHook
-	dropMapItemHook = func(w *World, mp, x, y int, it item.Item, owner int) bool { dropped = it; return owner == o.Index }
-	t.Cleanup(func() { dropMapItemHook = old })
+	b.hooks.dropMapItem = func(w *World, mp, x, y int, it item.Item, owner int) bool { dropped = it; return owner == o.Index }
 	fixRand(t, 10)
 	if b.questItemDrop(m) {
 		t.Fatal("dropped with rand 10 >= rate 10")

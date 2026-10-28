@@ -5,16 +5,16 @@ import "strings"
 // Custom player commands of FUN_00435400 (CommandManager indexes 5..17):
 // stat points, PK clear, zen, inventory clear and stat redistribution.
 
-func init() {
+func registerCommandPlayer(h *hooks) {
 	for i := 0; i < 5; i++ {
 		typ := i
-		commandHandlers[5+i] = func(w *World, o *Object, c command, arg string) { w.commandAddPoint(o, c, arg, typ) }
+		h.commandHandlers[5+i] = func(w *World, o *Object, c command, arg string) { w.commandAddPoint(o, c, arg, typ) }
 	}
-	commandHandlers[10] = (*World).commandPKClear
-	commandHandlers[11] = (*World).commandMoney
-	commandHandlers[16] = (*World).commandClearInventory
-	commandHandlers[17] = (*World).commandRedistribute
-	tick1000Hooks = append(tick1000Hooks, (*World).autoPointSecond)
+	h.commandHandlers[10] = (*World).commandPKClear
+	h.commandHandlers[11] = (*World).commandMoney
+	h.commandHandlers[16] = (*World).commandClearInventory
+	h.commandHandlers[17] = (*World).commandRedistribute
+	h.tick1000 = append(h.tick1000, (*World).autoPointSecond)
 }
 
 // autoPointState is obj+0x63c (types with an amount) and obj+0x640..0x650

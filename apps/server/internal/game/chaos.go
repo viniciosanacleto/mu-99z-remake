@@ -122,17 +122,17 @@ type chaosData struct {
 // them independently).
 func (w *World) chaosData() *chaosData { return w.chaos }
 
-func init() {
-	npcTalkHooks[chaosGoblin] = func(w *World, o, npc *Object) bool {
+func registerChaos(h *hooks) {
+	h.npcTalk[chaosGoblin] = func(w *World, o, npc *Object) bool {
 		w.chaosTalk(o)
 		return true
 	}
-	worldHandlers[0x86] = func(w *World, o *Object, p []byte) { w.handleChaosMix(o, p) }
-	worldHandlers[0x87] = func(w *World, o *Object, p []byte) { w.handleChaosClose(o) }
-	worldHandlers[0x88] = func(w *World, o *Object, p []byte) { w.handleChaosRate(o, p) }
-	startHooks = append(startHooks, loadChaosData)
-	leaveWorldHooks = append(leaveWorldHooks, func(w *World, o *Object) { w.chaosLogout(o) })
-	characterSaveHooks = append(characterSaveHooks, func(w *World, o *Object, c *store.Character) {
+	h.worldHandlers[0x86] = func(w *World, o *Object, p []byte) { w.handleChaosMix(o, p) }
+	h.worldHandlers[0x87] = func(w *World, o *Object, p []byte) { w.handleChaosClose(o) }
+	h.worldHandlers[0x88] = func(w *World, o *Object, p []byte) { w.handleChaosRate(o, p) }
+	h.start = append(h.start, loadChaosData)
+	h.leaveWorld = append(h.leaveWorld, func(w *World, o *Object) { w.chaosLogout(o) })
+	h.characterSave = append(h.characterSave, func(w *World, o *Object, c *store.Character) {
 		// GJSetCharacterInfo writes Inventory1: while the chaos box is open
 		// the saved inventory is the one from before it opened.
 		if o.P != nil && o.P.Chaos != nil && o.P.Chaos.Trans == 1 {

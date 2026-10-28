@@ -72,10 +72,10 @@ func loadDropTables(cfgDir string) (*dropTables, error) {
 // dt returns the drop tables (nil before start-up).
 func (w *World) dt() *dropTables { return w.mw().tables }
 
-func init() {
+func registerDrop(h *hooks) {
 	// drop.go sorts before monster.go: the tables are loaded before the
 	// start-up spawn so CustomMonster applies to it.
-	startHooks = append(startHooks, func(w *World) error {
+	h.start = append(h.start, func(w *World) error {
 		if w.configDir == "" {
 			return nil
 		}
@@ -86,7 +86,7 @@ func init() {
 		w.mw().tables = t
 		return nil
 	})
-	itemBagHook = func(w *World, o *Object, bag, index, mp, x, y int) bool {
+	h.itemBag = func(w *World, o *Object, bag, index, mp, x, y int) bool {
 		return w.dropBySpecialValue(o, bag, index, mp, x, y)
 	}
 }
@@ -274,10 +274,10 @@ func (w *World) createItem(owner *Object, mp, x, y int, s dropSpec) bool {
 	if s.ToInventory && owner != nil && owner.P != nil {
 		return w.giveInventoryItem(owner, it)
 	}
-	if dropMapItemHook == nil {
+	if w.hooks.dropMapItem == nil {
 		return false
 	}
-	return dropMapItemHook(w, mp, x, y, it, idx)
+	return w.hooks.dropMapItem(w, mp, x, y, it, idx)
 }
 
 // giveInventoryItem is the 0xEB branch of the DataServer reply
@@ -323,8 +323,8 @@ func (w *World) monsterItemDrop(o *Object, killer int) {
 	if owner < 0 {
 		owner = killer
 	}
-	if monsterKillHook != nil && validIdx(owner) && !validIdx(m.Owner) { // FUN_004b8f90 (killcount.go)
-		monsterKillHook(w, o, w.objects[owner])
+	if w.hooks.monsterKill != nil && validIdx(owner) && !validIdx(m.Owner) { // FUN_004b8f90 (killcount.go)
+		w.hooks.monsterKill(w, o, w.objects[owner])
 	}
 	if owner < 0 || owner >= MaxObjects || (m.Owner >= 0 && m.Owner < MaxObjects) || noDropMonster(o.Class) {
 		return
@@ -345,7 +345,7 @@ func (w *World) monsterItemDrop(o *Object, killer int) {
 		return
 	}
 	// Quest item drop (CQuestObjective FUN_004de9b0).
-	if questDropHook != nil && questDropHook(w, o) {
+	if w.hooks.questDrop != nil && w.hooks.questDrop(w, o) {
 		return
 	}
 	if w.dropEventDrop(p, o) { // CDropEvent FUN_00471690 (dropevent.go)
@@ -405,8 +405,8 @@ func (w *World) monsterItemDrop(o *Object, killer int) {
 		if amount < 1 {
 			amount = 1
 		}
-		if dropMapMoneyHook != nil {
-			dropMapMoneyHook(w, o.Map, o.X, o.Y, int(amount), owner)
+		if w.hooks.dropMapMoney != nil {
+			w.hooks.dropMapMoney(w, o.Map, o.X, o.Y, int(amount), owner)
 		}
 	}
 }
@@ -611,8 +611,8 @@ func (w *World) moneyDropRules(p, o *Object) bool {
 		if amount < 1 {
 			amount = 1
 		}
-		if dropMapMoneyHook != nil {
-			dropMapMoneyHook(w, o.Map, o.X, o.Y, int(amount), p.Index)
+		if w.hooks.dropMapMoney != nil {
+			w.hooks.dropMapMoney(w, o.Map, o.X, o.Y, int(amount), p.Index)
 		}
 		return true
 	}
@@ -736,8 +736,8 @@ func (w *World) bagDrop(b *gamedata.ItemBag, p *Object, mp, x, y int) {
 				continue
 			}
 			if rnd(100) >= b.ItemRate {
-				if dropMapMoneyHook != nil {
-					dropMapMoneyHook(w, mp, dx, dy, b.MoneyDrop, -1)
+				if w.hooks.dropMapMoney != nil {
+					w.hooks.dropMapMoney(w, mp, dx, dy, b.MoneyDrop, -1)
 				}
 				continue
 			}
@@ -835,8 +835,8 @@ func (w *World) dropSpecialItem(o *Object, it item.Item, x, y int) (consumed, re
 	if w.dropByItemIndex(o, it.Index, it.Level, o.Map, x, y) {
 		return true, false
 	}
-	if castleDropHook != nil { // mercenary / life stone scrolls (castlesiege_battle.go)
-		if handled, ok := castleDropHook(w, o, it, x, y); handled {
+	if w.hooks.castleDrop != nil { // mercenary / life stone scrolls (castlesiege_battle.go)
+		if handled, ok := w.hooks.castleDrop(w, o, it, x, y); handled {
 			return ok, !ok
 		}
 	}
@@ -850,8 +850,8 @@ func (w *World) dropSpecialItem(o *Object, it item.Item, x, y int) (consumed, re
 		w.broadcast(o, pk)
 		return true, false
 	}
-	if summonScrollHook != nil { // SummonScroll.txt (summonscroll.go)
-		if handled, ok := summonScrollHook(w, o, it, x, y); handled {
+	if w.hooks.summonScroll != nil { // SummonScroll.txt (summonscroll.go)
+		if handled, ok := w.hooks.summonScroll(w, o, it, x, y); handled {
 			return ok, !ok
 		}
 	}

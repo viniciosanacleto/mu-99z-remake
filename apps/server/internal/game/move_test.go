@@ -301,7 +301,7 @@ func TestSetPathHookMovesMonsters(t *testing.T) {
 	mon.Live, mon.Alive = LiveNormal, true
 	b.setMoveSpeed(mon, 400)
 	vpAdd(&mon.VP2, viewer.Index, byte(TypePlayer))
-	setPathHook(b.World, mon, x, y, []byte{3, 3})
+	b.hooks.setPath(b.World, mon, x, y, []byte{3, 3})
 	if p := find(b.drain(viewer), 0xD3, -1); p == nil || p[3] != 0 || p[4] != 100 || p[5] != byte(x+2) {
 		t.Fatalf("monster D3 = % X", p)
 	}
@@ -391,9 +391,7 @@ func TestImmobilizedByEffect(t *testing.T) {
 	b := newBareWorld(t)
 	x, y := b.openRow(0, 4)
 	a := b.player(PlayerStart, "Alpha", 0, x, y)
-	old := moveEffectHook
-	defer func() { moveEffectHook = old }()
-	moveEffectHook = func(_ *World, _ *Object, e int) bool { return e == 0x3D }
+	b.hooks.moveEffect = func(_ *World, _ *Object, e int) bool { return e == 0x3D }
 	b.handleWalk(a, walkPacket(x, y, 3, 3))
 	if len(b.drain(a)) != 0 {
 		t.Fatal("stunned player walked")

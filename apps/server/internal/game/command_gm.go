@@ -19,8 +19,8 @@ import (
 // only logs coin changes that this build never stores; it is not
 // reproduced.
 
-func init() {
-	for idx, h := range map[int]func(w *World, o *Object, c command, arg string){
+func registerCommandGm(h *hooks) {
+	for idx, handler := range map[int]func(w *World, o *Object, c command, arg string){
 		100: (*World).commandGMMove,
 		101: (*World).commandGMPost,
 		102: (*World).commandTrace,
@@ -50,8 +50,7 @@ func init() {
 		127: (*World).commandCCStart,
 		129: (*World).commandSetBuff,
 	} {
-		commandHandlers[idx] = h
-		delete(pendingCommands, idx)
+		h.commandHandlers[idx] = handler
 	}
 }
 

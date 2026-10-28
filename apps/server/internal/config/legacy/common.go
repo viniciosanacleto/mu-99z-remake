@@ -7,8 +7,6 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
-func init() { register("common", commonGroup) }
-
 // commonGroup converts the files at the root of Data/.
 func commonGroup(dataDir string) ([]byte, error) {
 	var c gamedata.CommonConfig

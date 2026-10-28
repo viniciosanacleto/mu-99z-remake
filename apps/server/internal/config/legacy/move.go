@@ -7,8 +7,6 @@ import (
 	"github.com/viniciosanacleto/mu-remake/apps/server/internal/gamedata"
 )
 
-func init() { register("move", moveGroup) }
-
 // moveGroup converts Data/Move/*.txt.
 func moveGroup(dataDir string) ([]byte, error) {
 	var c gamedata.MoveConfig

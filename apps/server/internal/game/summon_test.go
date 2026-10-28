@@ -80,9 +80,7 @@ func TestSummonAssistFollowKeepUpAndDeath(t *testing.T) {
 	}
 	// Far from the owner: teleported to it.
 	var tp []int
-	old := teleportHook
-	teleportHook = func(w *World, o *Object, mp, x, y, dir int) { tp = []int{o.Index, mp, x, y} }
-	t.Cleanup(func() { teleportHook = old })
+	b.hooks.teleport = func(w *World, o *Object, mp, x, y, dir int) { tp = []int{o.Index, mp, x, y} }
 	if b.summonKeepUp(s) {
 		t.Fatal("teleport while close")
 	}
@@ -104,7 +102,7 @@ func TestSummonAssistFollowKeepUpAndDeath(t *testing.T) {
 	}
 	// Owner death removes a new summon.
 	b.summonMonster(p, 31)
-	for _, h := range deathHooks {
+	for _, h := range b.hooks.death {
 		h(b.World, mob, p)
 	}
 	if b.summonOf(p) != nil {

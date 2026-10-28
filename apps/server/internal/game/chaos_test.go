@@ -29,7 +29,7 @@ func chaosPlayer(b *bareWorld) *Object {
 	o.Class = 0
 	o.P.Char.Class = 0
 	o.P.Char.Money = 100000000
-	npcTalkHooks[chaosGoblin](b.World, o, fakeNPC(b, 50, chaosGoblin, 0, 131, 130))
+	b.hooks.npcTalk[chaosGoblin](b.World, o, fakeNPC(b, 50, chaosGoblin, 0, 131, 130))
 	b.drain(o)
 	return o
 }
@@ -70,7 +70,7 @@ func TestChaosPacketLayouts(t *testing.T) {
 func TestChaosTalkOpensBoxAndTransaction(t *testing.T) {
 	b := newBareWorld(t)
 	o := b.player(PlayerStart, "Mixer", 0, 130, 130)
-	h := npcTalkHooks[chaosGoblin]
+	h := b.hooks.npcTalk[chaosGoblin]
 	if h == nil || !h(b.World, o, fakeNPC(b, 50, chaosGoblin, 0, 131, 130)) {
 		t.Fatal("chaos goblin not handled")
 	}
@@ -414,7 +414,7 @@ func TestChaosCloseAndLogout(t *testing.T) {
 	}
 	// 87 clears and commits.
 	items(o).If = ifState{}
-	npcTalkHooks[chaosGoblin](b.World, o, fakeNPC(b, 50, chaosGoblin, 0, 131, 130))
+	b.hooks.npcTalk[chaosGoblin](b.World, o, fakeNPC(b, 50, chaosGoblin, 0, 131, 130))
 	b.handleItemMove(o, move24(0, BagStart, 3, 0))
 	b.drain(o)
 	b.handleChaosClose(o)
