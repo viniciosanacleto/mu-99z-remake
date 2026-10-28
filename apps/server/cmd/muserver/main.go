@@ -53,6 +53,7 @@ type Ready struct {
 	Connect string
 	Games   map[int]string // server code -> address
 	Metrics string         // -metrics-addr listener, empty when off
+	Editor  string         // -editor-addr listener, empty when off
 }
 
 type config struct {
@@ -64,6 +65,10 @@ type config struct {
 	bindHost    string
 	publicIP    string
 	instances   string
+	// Web character editor (internal/editor), with live edits of playing
+	// characters.
+	editorAddr     string
+	editorPassword string
 	// Load test (docs/server-plan/18-teste-de-carga.md).
 	metricsAddr  string
 	maxConnPerIP int
@@ -82,6 +87,8 @@ func parseFlags(args []string) (*config, []string, error) {
 	fs.StringVar(&c.bindHost, "bind", "", "host for every listener (default all interfaces)")
 	fs.StringVar(&c.publicIP, "public-ip", "", "address sent to clients instead of the ServerList / MapServerInfo addresses")
 	fs.StringVar(&c.instances, "instances", "gameserver,gameserver-cs", "game server instances (files under <config>/gameserver, without .toml)")
+	fs.StringVar(&c.editorAddr, "editor-addr", "", "address for the web character editor, which also edits playing characters (empty = off)")
+	fs.StringVar(&c.editorPassword, "editor-password", os.Getenv("MU_EDITOR_PASSWORD"), "HTTP basic auth password of the editor (empty = no auth)")
 	fs.StringVar(&c.metricsAddr, "metrics-addr", "", "address for the pprof and /debug/load HTTP endpoint (empty = off)")
 	fs.IntVar(&c.maxConnPerIP, "max-conn-per-ip", -1, "MaxConnectionPerIP for the ConnectServer, JoinServer and every GameServer (0 = unlimited, -1 = configured)")
 	fs.IntVar(&c.maxUsers, "max-users", 0, "ServerMaxUserNumber of every GameServer (0 = configured, at most 1000)")
@@ -155,6 +162,19 @@ func run(ctx context.Context, args []string, log *slog.Logger, ready chan<- Read
 		rd.Metrics = mln.Addr().String()
 		log.Info("metrics listening", "addr", rd.Metrics)
 		g.Go(func() error { return serveMetrics(gctx, mln, users) })
+	}
+	if cfg.editorAddr != "" {
+		ed, err := newEditor(cfg, st, hub)
+		if err != nil {
+			return fmt.Errorf("editor: %w", err)
+		}
+		eln, err := net.Listen("tcp", cfg.editorAddr)
+		if err != nil {
+			return err
+		}
+		rd.Editor = eln.Addr().String()
+		log.Info("editor listening", "url", "http://"+rd.Editor, "auth", cfg.editorPassword != "")
+		g.Go(func() error { return serveEditor(gctx, eln, ed, cfg.editorPassword, log.With("module", "editor")) })
 	}
 	for _, inst := range strings.Split(cfg.instances, ",") {
 		inst = strings.TrimSpace(inst)

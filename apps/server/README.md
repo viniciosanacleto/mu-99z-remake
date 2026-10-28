@@ -116,6 +116,8 @@ docker compose logs -f server
 | `-bind` | all interfaces | Host for every listener |
 | `-public-ip` | — | IP sent to the client instead of the `ServerList` and `MapServerInfo` addresses |
 | `-blacklist` | — | Comma-separated IPs the ConnectServer refuses, instead of the `BlackList` in `server.toml`; `none` = no IPs |
+| `-editor-addr` | — | Serves the web character editor (see [Character editor](#character-editor)), which also edits playing characters. Keep it off public addresses |
+| `-editor-password` | `$MU_EDITOR_PASSWORD` | HTTP basic auth password of the editor; empty = no authentication |
 | `-metrics-addr` | — | Serves `net/http/pprof` and `GET /debug/load` (CPU, memory, goroutines, GC, users per GameServer) for load tests. Keep it off public addresses |
 | `-max-conn-per-ip` | `-1` (configured) | `MaxConnectionPerIP` of the ConnectServer, JoinServer and every GameServer; `0` = no limit |
 | `-max-users` | `0` (configured) | `ServerMaxUserNumber` of every GameServer (at most 1000) |
@@ -226,7 +228,17 @@ For the network code, use `-race` on a subset (`go test -race -p 1 -run <Test> .
 
 ## Character editor
 
-`cmd/mueditor` is a web editor that changes stats, zen and items (inventory and warehouse 0) of **offline** characters directly in PostgreSQL. Online accounts are read-only, because the GameServer rewrites the character on logout.
+A web editor changes stats, zen and items (inventory and warehouse 0) of characters. It runs in two ways.
+
+**Inside the server (online and offline characters).** `-editor-addr` starts the editor in the `muserver` process:
+
+```sh
+go run ./cmd/muserver -db postgres://... -editor-addr 127.0.0.1:8080 [-editor-password secret]
+```
+
+The GameServer keeps a playing character in memory and writes it over the database on every save, so a database edit would be undone. The editor in the server applies edits of a playing character on its GameServer instead: the change goes to memory, the client gets the packets the server already sends for it (`C1 A4 F3 E0` refresh as in `/edit`, zen, `C1 0C F3 14` new item, `C1 05 28` removed item, equipment broadcast) and the character is saved. A warehouse open in the game is changed in memory and sent again. When the warehouse is closed, it is written to the database while the game keeps it locked. Characters that are not playing, including other characters of an online account, are written to the database. A `409` ("tente novamente") means the character was entering or leaving the game, or the warehouse was loading. The limits come from the first instance in `-instances`.
+
+**Standalone (offline characters only).** `cmd/mueditor` edits PostgreSQL directly. Online accounts are read-only there, because the GameServer rewrites the character on logout.
 
 ```sh
 go run ./cmd/mueditor -db postgres://... [-config config] [-addr 127.0.0.1:8080] [-password secret]

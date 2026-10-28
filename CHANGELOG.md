@@ -2,6 +2,13 @@
 
 All changes to this project are recorded here, newest first.
 
+## 2026-10-28
+
+- Added live editing of playing characters to the web editor. `internal/game/admin.go` adds `Hub.EditCharacter`, which runs an edit on the character's World goroutine, applies the difference to memory, sends the packets the server already uses (`F3 E0` refresh as in `/edit`, zen, `F3 14`, `28`, equipment `25`, the open vault list) and saves. It also adds `Hub.LockVault`, which keeps a closed vault from being opened while the editor writes it, and `Hub.AccountCharacter`. `warehouseRecord` was extracted from `closeWarehouse` (`warehouse.go`). Tests: `internal/game/admin_test.go`.
+- The editor (`internal/editor/editor.go`) takes an optional `Live` (`WithLive`). With it, playing characters and an open vault are edited in the game and the other characters of an online account in the store, a `409` `ErrBusy` covers the entering/leaving and vault-loading states, and `CharacterView.live` makes online accounts editable in the page (`web/index.html`). Without it (`cmd/mueditor`) online accounts stay read-only. Tests: `internal/editor/live_test.go`.
+- Moved the editor setup from `cmd/mueditor` to `editor.Load` (`internal/editor/load.go`, test moved to `load_test.go`).
+- Added `-editor-addr` and `-editor-password` (default `MU_EDITOR_PASSWORD`) to `muserver`, which serve the editor in the server process with live edits (`cmd/muserver/editor.go`, `main.go`; `Ready.Editor`). Updated `apps/server/README.md` and `docs/server-plan/13-progresso.md` (open item U-EDIT-01: client check of `F3 14` on an empty equipment slot and the resent vault list).
+
 ## 2026-10-27
 
 - Fixed players being disconnected when about 50 are in the same area (U-LOAD-01). The patente packet (`C1 F3 E5`) went to each player for every online player, every second and again for each new viewport entry, which overflowed the 1024-packet send queue. It now covers only the player and its viewport (`internal/game/patente.go` `patenteViewport`), and a new `C2 12` entry sends only that player's patente (`patenteEntry`, `custom_world_ext.go`). Test: `TestPatenteViewportOnly`. Reran the load test up to 200 players with no disconnects; results in `docs/server-plan/18-teste-de-carga.md`, notes in `10f-gm-eventos-custom.md` and `13-progresso.md`.

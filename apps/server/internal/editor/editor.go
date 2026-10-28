@@ -25,13 +25,31 @@ type Store interface {
 	NextItemSerial(ctx context.Context) (uint32, error)
 }
 
+// Live is the in-memory state of playing characters (*game.Hub when the
+// editor runs inside the muserver process). Without it an online account
+// is read-only.
+type Live interface {
+	EditCharacter(ctx context.Context, name string, f func(*game.LiveEdit) error) (bool, error)
+	AccountCharacter(login string) (string, bool)
+	LockVault(ctx context.Context, name string) (loaded bool, release func(), err error)
+}
+
 // Errors returned to the HTTP layer.
 var (
 	ErrOnline   = errors.New("a conta está online: deslogue o personagem antes de editar")
 	ErrNotFound = errors.New("personagem não encontrado")
 	ErrInvalid  = errors.New("dados inválidos")
 	ErrNoSpace  = errors.New("não há espaço livre para o item")
+	ErrBusy     = errors.New("o personagem está entrando ou saindo do jogo, ou o baú está em uso: tente novamente")
 )
+
+// liveErr maps the game's transient states to ErrBusy.
+func liveErr(err error) error {
+	if errors.Is(err, game.ErrCharLeaving) || errors.Is(err, game.ErrVaultBusy) {
+		return ErrBusy
+	}
+	return err
+}
 
 // Inventory layout (game/inventory.go): 0..11 equipment, 12..75 the 8x8 bag.
 // The extended rows 76..107 are not reachable in this build and are left
@@ -61,16 +79,24 @@ type Limits struct {
 	Exp      *gamedata.Experience // level table: the experience follows the level
 }
 
-// Editor applies edits to offline characters.
+// Editor applies edits to characters: in the store, or in the game's
+// memory for playing characters when it has a Live.
 type Editor struct {
-	st  Store
-	cat *Catalog
-	lim Limits
+	st   Store
+	cat  *Catalog
+	lim  Limits
+	live Live
 }
 
 // New returns an editor over a store and the item catalog.
 func New(st Store, cat *Catalog, lim Limits) *Editor {
 	return &Editor{st: st, cat: cat, lim: lim}
+}
+
+// WithLive makes edits of playing characters go through l.
+func (e *Editor) WithLive(l Live) *Editor {
+	e.live = l
+	return e
 }
 
 // maxStat is MaxStatPoint_AL<accountLevel>.
@@ -115,10 +141,11 @@ func (e *Editor) find(ctx context.Context, name string) (store.CharacterRef, err
 	return store.CharacterRef{}, ErrNotFound
 }
 
-// load returns the character and its search entry, and fails with
-// ErrOnline when write is set and the account is connected: the GameServer
-// keeps online characters in memory and saves them back on logout, which
-// would undo the edit.
+// load returns the character from the store and its search entry. Without
+// a Live it fails with ErrOnline when write is set and the account is
+// connected: the GameServer keeps online characters in memory and saves
+// them back on logout, which would undo the edit. With a Live, callers
+// reach the store only for characters that are not playing.
 func (e *Editor) load(ctx context.Context, name string, write bool) (*store.Character, store.CharacterRef, error) {
 	ref, err := e.find(ctx, name)
 	if err != nil {
@@ -127,7 +154,7 @@ func (e *Editor) load(ctx context.Context, name string, write bool) (*store.Char
 	if ref.Online, err = e.st.AccountOnline(ctx, ref.AccountID); err != nil {
 		return nil, ref, err
 	}
-	if write && ref.Online {
+	if write && ref.Online && e.live == nil {
 		return nil, ref, ErrOnline
 	}
 	c, err := e.st.LoadCharacter(ctx, ref.AccountID, ref.Name)
@@ -135,6 +162,94 @@ func (e *Editor) load(ctx context.Context, name string, write bool) (*store.Char
 		return nil, ref, ErrNotFound
 	}
 	return c, ref, err
+}
+
+// target resolves the character of an edit; like load, an online account
+// is refused without a Live.
+func (e *Editor) target(ctx context.Context, name string) (store.CharacterRef, error) {
+	ref, err := e.find(ctx, name)
+	if err != nil || e.live != nil {
+		return ref, err
+	}
+	online, err := e.st.AccountOnline(ctx, ref.AccountID)
+	if err == nil && online {
+		err = ErrOnline
+	}
+	return ref, err
+}
+
+// editLive runs f on a playing character in the game's memory. done is
+// false when the character is not playing (or there is no Live) and the
+// store holds it.
+func (e *Editor) editLive(ctx context.Context, name string, f func(*game.LiveEdit) error) (bool, error) {
+	if e.live == nil {
+		return false, nil
+	}
+	done, err := e.live.EditCharacter(ctx, name, f)
+	return done, liveErr(err)
+}
+
+// editVault applies edit to the items of the account vault (warehouse 0):
+// in the game's memory when the playing character of the account has it
+// open, otherwise in the store, with the vault locked in the game so the
+// player cannot open it meanwhile.
+func (e *Editor) editVault(ctx context.Context, ref store.CharacterRef, edit func(items []byte) error) error {
+	if e.live != nil {
+		if holder, ok := e.live.AccountCharacter(ref.Login); ok {
+			loaded, release, err := e.live.LockVault(ctx, holder)
+			if err != nil {
+				return liveErr(err)
+			}
+			if loaded {
+				done, err := e.editLive(ctx, holder, func(le *game.LiveEdit) error {
+					if !le.VaultLoaded || le.VaultNumber != 0 {
+						return game.ErrVaultBusy
+					}
+					return edit(le.Vault)
+				})
+				if err == nil && !done {
+					err = ErrBusy
+				}
+				return err
+			}
+			defer release()
+		}
+	}
+	w, err := e.st.LoadWarehouse(ctx, ref.AccountID, 0)
+	if err != nil {
+		return err
+	}
+	if err := edit(w.Items); err != nil {
+		return err
+	}
+	return e.st.SaveWarehouse(ctx, w)
+}
+
+// vault returns the items and zen of the account vault, from the game's
+// memory while the playing character of the account has it open.
+func (e *Editor) vault(ctx context.Context, ref store.CharacterRef) ([]byte, int64, error) {
+	if e.live != nil {
+		if holder, ok := e.live.AccountCharacter(ref.Login); ok {
+			var items []byte
+			var money int64
+			if _, err := e.live.EditCharacter(ctx, holder, func(le *game.LiveEdit) error {
+				if le.VaultLoaded && le.VaultNumber == 0 {
+					items, money = le.Vault, le.VaultMoney
+				}
+				return nil
+			}); err != nil {
+				return nil, 0, liveErr(err)
+			}
+			if items != nil {
+				return items, money, nil
+			}
+		}
+	}
+	w, err := e.st.LoadWarehouse(ctx, ref.AccountID, 0)
+	if err != nil {
+		return nil, 0, err
+	}
+	return w.Items, w.Money, nil
 }
 
 // ItemView is one occupied slot.
@@ -159,6 +274,7 @@ type CharacterView struct {
 	Name          string     `json:"name"`
 	AccountID     int64      `json:"accountId"`
 	Online        bool       `json:"online"`
+	Live          bool       `json:"live"` // online accounts are editable (changes reach the game)
 	Class         byte       `json:"class"`
 	Level         int        `json:"level"`
 	LevelUpPoints int        `json:"points"`
@@ -185,9 +301,18 @@ func (e *Editor) Character(ctx context.Context, name string) (*CharacterView, er
 	if err != nil {
 		return nil, err
 	}
+	// A playing character is shown as the game holds it.
+	if _, err := e.editLive(ctx, ref.Name, func(le *game.LiveEdit) error {
+		lc := le.Char
+		lc.Inventory = le.Inventory
+		c = &lc
+		return nil
+	}); err != nil {
+		return nil, err
+	}
 	online := ref.Online
 	v := &CharacterView{
-		Name: c.Name, AccountID: c.AccountID, Online: online, Class: c.Class, Level: c.Level,
+		Name: c.Name, AccountID: c.AccountID, Online: online, Live: e.live != nil, Class: c.Class, Level: c.Level,
 		LevelUpPoints: c.LevelUpPoints, Strength: c.Strength, Dexterity: c.Dexterity, Vitality: c.Vitality,
 		Energy: c.Energy, Leadership: c.Leadership, Money: c.Money, Resets: c.Resets,
 		Map: c.Map, X: c.X, Y: c.Y, MaxLevel: e.lim.MaxLevel,
@@ -198,16 +323,16 @@ func (e *Editor) Character(ctx context.Context, name string) (*CharacterView, er
 	}
 	v.MaxStat = e.maxStat(al)
 	v.Inventory = e.views(c.Inventory, bagStart+bagRows*gridCols)
-	if online {
+	if online && e.live == nil {
 		// Reading the vault would create it (LoadWarehouse inserts on first
 		// use); skip it while the game owns the account.
 		return v, nil
 	}
-	w, err := e.st.LoadWarehouse(ctx, c.AccountID, 0)
+	items, money, err := e.vault(ctx, ref)
 	if err != nil {
 		return nil, err
 	}
-	v.Vault, v.VaultMoney = e.views(w.Items, warehouseSlots), w.Money
+	v.Vault, v.VaultMoney = e.views(items, warehouseSlots), money
 	return v, nil
 }
 
@@ -261,7 +386,7 @@ func (e *Editor) UpdateStats(ctx context.Context, name string, s Stats) error {
 	if s.Level < 1 || s.Level > e.lim.MaxLevel || s.LevelUpPoints < 0 || s.Money < 0 || s.Money > maxZen || s.Resets < 0 {
 		return ErrInvalid
 	}
-	c, ref, err := e.load(ctx, name, true)
+	ref, err := e.target(ctx, name)
 	if err != nil {
 		return err
 	}
@@ -278,11 +403,24 @@ func (e *Editor) UpdateStats(ctx context.Context, name string, s Stats) error {
 	if s.Leadership < 0 || s.Leadership > maxStat {
 		return ErrInvalid
 	}
-	if c.Level != s.Level && e.lim.Exp != nil {
-		c.Experience = int64(e.lim.Exp.Floor(s.Level))
+	apply := func(c *store.Character) {
+		if c.Level != s.Level && e.lim.Exp != nil {
+			c.Experience = int64(e.lim.Exp.Floor(s.Level))
+		}
+		c.Level, c.LevelUpPoints, c.Money, c.Resets = s.Level, s.LevelUpPoints, s.Money, s.Resets
+		c.Strength, c.Dexterity, c.Vitality, c.Energy, c.Leadership = s.Strength, s.Dexterity, s.Vitality, s.Energy, s.Leadership
 	}
-	c.Level, c.LevelUpPoints, c.Money, c.Resets = s.Level, s.LevelUpPoints, s.Money, s.Resets
-	c.Strength, c.Dexterity, c.Vitality, c.Energy, c.Leadership = s.Strength, s.Dexterity, s.Vitality, s.Energy, s.Leadership
+	if done, err := e.editLive(ctx, ref.Name, func(le *game.LiveEdit) error {
+		apply(&le.Char)
+		return nil
+	}); done || err != nil {
+		return err
+	}
+	c, _, err := e.load(ctx, ref.Name, true)
+	if err != nil {
+		return err
+	}
+	apply(c)
 	return e.st.SaveCharacter(ctx, c)
 }
 
@@ -335,7 +473,10 @@ func (e *Editor) AddItem(ctx context.Context, name string, n NewItem) (int, erro
 	if err != nil {
 		return -1, err
 	}
-	c, _, err := e.load(ctx, name, true)
+	if n.Container != Inventory && n.Container != Vault {
+		return -1, ErrInvalid
+	}
+	ref, err := e.target(ctx, name)
 	if err != nil {
 		return -1, err
 	}
@@ -344,54 +485,65 @@ func (e *Editor) AddItem(ctx context.Context, name string, n NewItem) (int, erro
 			return -1, err
 		}
 	}
-	switch n.Container {
-	case Inventory:
-		slot, err := e.place(c.Inventory, ci, n.Slot, bagStart, bagRows, true)
+	slot := -1
+	put := func(blob []byte, start, rows int, equip bool) error {
+		s, err := e.place(blob, ci, n.Slot, start, rows, equip)
 		if err != nil {
-			return -1, err
+			return err
 		}
-		it.EncodeDB(c.Inventory[slot*item.DBSize:])
-		return slot, e.st.SaveInventory(ctx, c.ID, c.Inventory)
-	case Vault:
-		w, err := e.st.LoadWarehouse(ctx, c.AccountID, 0)
-		if err != nil {
-			return -1, err
-		}
-		slot, err := e.place(w.Items, ci, n.Slot, 0, warehouseRows, false)
-		if err != nil {
-			return -1, err
-		}
-		it.EncodeDB(w.Items[slot*item.DBSize:])
-		return slot, e.st.SaveWarehouse(ctx, w)
+		it.EncodeDB(blob[s*item.DBSize:])
+		slot = s
+		return nil
 	}
-	return -1, ErrInvalid
+	if n.Container == Vault {
+		err := e.editVault(ctx, ref, func(items []byte) error { return put(items, 0, warehouseRows, false) })
+		return slot, err
+	}
+	if done, err := e.editLive(ctx, ref.Name, func(le *game.LiveEdit) error {
+		return put(le.Inventory, bagStart, bagRows, true)
+	}); done || err != nil {
+		return slot, err
+	}
+	c, _, err := e.load(ctx, ref.Name, true)
+	if err != nil {
+		return -1, err
+	}
+	if err := put(c.Inventory, bagStart, bagRows, true); err != nil {
+		return -1, err
+	}
+	return slot, e.st.SaveInventory(ctx, c.ID, c.Inventory)
 }
 
 // RemoveItem clears one slot.
 func (e *Editor) RemoveItem(ctx context.Context, name string, ct Container, slot int) error {
-	c, _, err := e.load(ctx, name, true)
+	switch {
+	case ct == Inventory && slot >= 0 && slot < bagStart+bagRows*gridCols:
+	case ct == Vault && slot >= 0 && slot < warehouseSlots:
+	default:
+		return ErrInvalid
+	}
+	ref, err := e.target(ctx, name)
 	if err != nil {
 		return err
 	}
-	switch ct {
-	case Inventory:
-		if slot < 0 || slot >= bagStart+bagRows*gridCols {
-			return ErrInvalid
-		}
-		item.Empty().EncodeDB(c.Inventory[slot*item.DBSize:])
-		return e.st.SaveInventory(ctx, c.ID, c.Inventory)
-	case Vault:
-		if slot < 0 || slot >= warehouseSlots {
-			return ErrInvalid
-		}
-		w, err := e.st.LoadWarehouse(ctx, c.AccountID, 0)
-		if err != nil {
-			return err
-		}
-		item.Empty().EncodeDB(w.Items[slot*item.DBSize:])
-		return e.st.SaveWarehouse(ctx, w)
+	clear := func(blob []byte) error {
+		item.Empty().EncodeDB(blob[slot*item.DBSize:])
+		return nil
 	}
-	return ErrInvalid
+	if ct == Vault {
+		return e.editVault(ctx, ref, clear)
+	}
+	if done, err := e.editLive(ctx, ref.Name, func(le *game.LiveEdit) error {
+		return clear(le.Inventory)
+	}); done || err != nil {
+		return err
+	}
+	c, _, err := e.load(ctx, ref.Name, true)
+	if err != nil {
+		return err
+	}
+	clear(c.Inventory)
+	return e.st.SaveInventory(ctx, c.ID, c.Inventory)
 }
 
 // place picks the target slot of a new item. In the inventory, slot 0..11

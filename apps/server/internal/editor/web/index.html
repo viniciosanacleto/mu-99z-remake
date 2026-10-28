@@ -139,12 +139,16 @@ function statInput(key, label) {
   const attr = max ? ` max="${max}" title="máximo ${max}"` : "";
   return `<label>${label}<input type="number" data-stat="${key}" value="${current[key]}"${attr}></label>`;
 }
+// An online account is read-only unless the editor runs inside the muserver
+// (live: the changes go to the playing character).
+function readOnly(c) { return c.online && !c.live; }
 function renderChar() {
   const c = current;
-  const ro = c.online;
+  const ro = readOnly(c);
   $("charPanel").innerHTML = `
     <h2>${esc(c.name)} <span class="sub">· ${className(c.class)} · mapa ${c.map} (${c.x}, ${c.y})</span></h2>
     ${ro ? '<div class="banner">A conta está online. Deslogue o personagem para editar (o jogo sobrescreveria as mudanças ao sair).</div>' : ""}
+    ${c.online && c.live ? '<div class="banner">A conta está online: as mudanças são aplicadas no jogo na hora.</div>' : ""}
     <div class="stats">
       ${statInput("level","Nível")}${statInput("points","Pontos livres")}${statInput("resets","Resets")}
       ${statInput("str","Força")}${statInput("dex","Agilidade")}${statInput("vit","Vitalidade")}
@@ -204,7 +208,7 @@ function renderGrid(id, container, items, start, rows) {
   }
 }
 function setTarget(container, slot) {
-  if (current.online) return;
+  if (readOnly(current)) return;
   target = (target && target.container === container && target.slot === slot) ? null : { container, slot };
   if (target) $("dest").value = container;
   selected = null;
@@ -222,7 +226,7 @@ function renderDetail() {
     <b>${esc(itemTitle(it))}</b> <span class="sub">(${Math.floor(it.index / 512)},${it.index % 512} · ${selected.container === "vault" ? "baú" : "slot"} ${it.slot})</span><br>
     <span class="sub">${it.skill ? "Skill · " : ""}${it.luck ? "Luck · " : ""}${byIndex[it.index] && byIndex[it.index].stack ? "Quantidade" : "Durabilidade"} ${it.dur}${it.serial ? " · serial " + it.serial : ""}</span>
     ${it.excLabels && it.excLabels.length ? `<ul class="exc-list">${it.excLabels.map(l => `<li>${esc(l)}</li>`).join("")}</ul>` : ""}
-    <div style="margin-top:8px"><button class="danger" id="rmBtn" ${current.online ? "disabled" : ""}>Remover item</button></div></div>`;
+    <div style="margin-top:8px"><button class="danger" id="rmBtn" ${readOnly(current) ? "disabled" : ""}>Remover item</button></div></div>`;
   $("rmBtn").onclick = removeSelected;
 }
 async function saveStats() {
@@ -271,7 +275,7 @@ function fillOptions() {
 function updateSlotInfo() {
   $("slotInfo").textContent = target ? `${target.container === "vault" ? "baú" : "inventário"}, slot ${target.slot}` + (target.slot < 12 && target.container === "inventory" ? " (" + EQUIP[target.slot] + ")" : "") : "automática (clique numa célula vazia para escolher)";
 }
-function updateAddButton() { $("addBtn").disabled = !(current && !current.online && selectedCatalogItem()); }
+function updateAddButton() { $("addBtn").disabled = !(current && !readOnly(current) && selectedCatalogItem()); }
 $("cat").onchange = fillItems;
 $("itemFilter").oninput = fillItems;
 $("itemList").onchange = fillOptions;
