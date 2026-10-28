@@ -30,6 +30,20 @@ The original files (a customized 97D/99z emulator and its client) are in `/Users
 - **Database: PostgreSQL.** It replaces the original data storage that DataServer and JoinServer accessed.
 - **`docs/`** holds reverse-engineering findings (packet formats, protocol flows, data structures, game formulas) that the rewrite depends on.
 
+## Go skills
+
+The project ships Go skills in `.claude/skills/`. Whenever you write, change or review Go code (anything in `apps/server`), load the skills that apply to the task with the Skill tool before writing code, and follow them where they don't conflict with this file:
+
+- `golang-code-style`, `golang-naming`, `golang-documentation` — every Go change
+- `golang-testing` — every Go change (tests are mandatory, see below)
+- `golang-error-handling`, `golang-safety` — every Go change
+- `golang-concurrency`, `golang-context` — goroutines, channels, locks, network code, cancellation and timeouts
+- `golang-database` — `internal/store`, migrations, `cmd/migrate`, PostgreSQL access
+- `golang-security` — packet parsing, client input, authentication, anything exposed to the network
+- `golang-performance` — hot paths (game loop, viewport, packet send/receive) and load-test findings
+- `golang-design-patterns` — new modules, interfaces and refactors
+- `golang-project-layout` — new packages, commands (`cmd/`) or moving code between packages
+
 ## Testing
 
 - Every piece of server (`apps/server`) code you write or change must ship with unit tests that cover its behavior, so later changes that break it are caught. For code that implements a reverse-engineered protocol, packet layout or formula, test against the values documented in `docs/`.

@@ -2,6 +2,10 @@
 
 All changes to this project are recorded here, newest first.
 
+## 2026-10-28
+
+- Copied 13 Go skills (`golang-code-style`, `golang-testing`, `golang-error-handling`, `golang-security`, `golang-design-patterns`, `golang-performance`, `golang-concurrency`, `golang-context`, `golang-naming`, `golang-database`, `golang-safety`, `golang-project-layout`, `golang-documentation`) into `.claude/skills/`, and added a "Go skills" section to `CLAUDE.md` saying when to load each one for Go work.
+
 ## 2026-10-27
 
 - Fixed players being disconnected when about 50 are in the same area (U-LOAD-01). The patente packet (`C1 F3 E5`) went to each player for every online player, every second and again for each new viewport entry, which overflowed the 1024-packet send queue. It now covers only the player and its viewport (`internal/game/patente.go` `patenteViewport`), and a new `C2 12` entry sends only that player's patente (`patenteEntry`, `custom_world_ext.go`). Test: `TestPatenteViewportOnly`. Reran the load test up to 200 players with no disconnects; results in `docs/server-plan/18-teste-de-carga.md`, notes in `10f-gm-eventos-custom.md` and `13-progresso.md`.
